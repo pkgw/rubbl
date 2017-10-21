@@ -518,6 +518,16 @@ impl DataSet {
     }
 
 
+    pub fn items<'a>(&'a mut self) -> Result<DataSetItemsIterator<'a>> {
+        if !self.large_items_scanned {
+            self.scan_large_items()?;
+            self.large_items_scanned = true;
+        }
+
+        Ok(DataSetItemsIterator::new(self))
+    }
+
+
     /// Get a handle to an item in this data set.
     pub fn get(&mut self, item_name: &str) -> Result<Item> {
         // The HashMap access approach I use here feels awkward to me but it's
@@ -556,6 +566,34 @@ impl<'a> Iterator for DataSetItemNamesIterator<'a> {
 
     fn next(&mut self) -> Option<Self::Item> {
         self.inner.next().map(|s| s.as_ref())
+    }
+}
+
+
+/// This helper struct stores state when iterating over the items inside a
+/// MIRIAD data set.
+pub struct DataSetItemsIterator<'a> {
+    dset: &'a DataSet,
+    inner: std::collections::hash_map::Iter<'a, String, InternalItemInfo>,
+}
+
+impl<'a> DataSetItemsIterator<'a> {
+    pub fn new(dset: &'a DataSet) -> Self {
+        DataSetItemsIterator {
+            dset: dset,
+            inner: dset.items.iter(),
+        }
+    }
+}
+
+impl<'a> Iterator for DataSetItemsIterator<'a> {
+    type Item = Item<'a>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.inner.next().map(|info| Item {
+            dset: self.dset,
+            info: info.1,
+        })
     }
 }
 

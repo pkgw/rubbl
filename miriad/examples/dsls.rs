@@ -30,10 +30,9 @@ fn main() {
         }
     };
     
-    for item_name in ds.item_names().expect("cannot scan directory") {
-        //let ii = ds.item_info(&item_name);
-        //println!("{:8}  {:8}  {}", item_name, ii.ty, ii.n_vals);
-        println!("{}", item_name);
+    for item in ds.items().expect("cannot scan directory") {
+        let ii = item.into_info();
+        println!("{:8}  {:8}  {}", ii.name, ii.ty, ii.n_vals);
     }
 
     println!("ncorr: {}", ds.get("ncorr").unwrap().read_scalar::<i64>("ncorr").expect("error extracting ncorr"));
