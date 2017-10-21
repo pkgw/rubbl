@@ -7,8 +7,10 @@ Access to MIRIAD-format data sets.
 
  */
 
+extern crate byteorder;
 #[macro_use] extern crate error_chain;
 
+use byteorder::{BigEndian, ReadBytesExt};
 use std::collections::HashMap;
 use std::fs::File;
 use std::io;
@@ -46,6 +48,22 @@ pub enum Type {
 }
 
 impl Type {
+    pub fn try_from(type_code: i32) -> Result<Self> {
+        // Kind of gross ...
+        match type_code {
+            0 => Ok(Type::Binary),
+            1 => Ok(Type::Int8),
+            3 => Ok(Type::Int16),
+            2 => Ok(Type::Int32),
+            8 => Ok(Type::Int64),
+            4 => Ok(Type::Float32),
+            5 => Ok(Type::Float64),
+            7 => Ok(Type::Complex64),
+            6 => Ok(Type::Text),
+            _ => err_msg!("illegal MIRIAD type code {}", type_code),
+        }
+    }
+
     pub fn abbrev_char(&self) -> char {
         match self {
             &Type::Binary => '?',
@@ -86,6 +104,22 @@ impl Type {
             &Type::Complex64 => 4, // this is the only surprising one
             &Type::Text => 1,
         }
+    }
+}
+
+impl std::fmt::Display for Type {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        f.pad(match self {
+            &Type::Binary => "binary",
+            &Type::Int8 => "int8",
+            &Type::Int16 => "int16",
+            &Type::Int32 => "int32",
+            &Type::Int64 => "int64",
+            &Type::Float32 => "float32",
+            &Type::Float64 => "float64",
+            &Type::Complex64 => "complex64",
+            &Type::Text => "text",
+        })
     }
 }
 
@@ -202,8 +236,8 @@ impl MiriadVectorType for Vec<i8> {
 // XXX complex64
 
 
-pub struct ItemInfo {
-    pub name: String,
+pub struct ItemInfo<'a> {
+    pub name: &'a str,
     pub is_large: bool,
     pub ty: Type,
     pub n_vals: usize,
@@ -222,21 +256,39 @@ struct HeaderItem {
 }
 
 
-#[repr(C)]
 struct SmallItem {
     pub name: String,
     pub ty: Type,
-    pub nvals: u8,
-    pub values: [u8; 64],
+    pub data: Vec<u8>,
 }
 
 impl SmallItem {
-    pub fn new<S: ToString>(name: S, ty: Type, nvals: u8) -> Self {
+    pub fn new<S: ToString>(name: S, ty: Type, data: Vec<u8>) -> Self {
         SmallItem {
             name: name.to_string(),
             ty: ty,
-            nvals: nvals,
-            values: [0; 64],
+            data: data,
+        }
+    }
+
+    pub fn n_vals(&self) -> usize {
+        if self.ty == Type::Text {
+            1
+        } else {
+            self.data.len() / self.ty.size()
+        }
+    }
+
+    pub fn is_scalar(&self) -> bool {
+        self.n_vals() == 1
+    }
+
+    pub fn as_info<'a>(&'a self) -> ItemInfo<'a> {
+        ItemInfo {
+            name: &self.name,
+            is_large: false,
+            ty: self.ty,
+            n_vals: self.n_vals(),
         }
     }
 }
@@ -278,12 +330,53 @@ impl DataSet {
                 return Err(e.into());
             }
 
-            let name = std::str::from_utf8(&rec.name[..])?;
-            println!("NAME: {}  LEN; {}", name, rec.aligned_len);
-            header.seek(io::SeekFrom::Current(rec.aligned_len as i64))?;
+            // If we pass the trailing NULs to from_utf8, they will silently
+            // be included at the end of the `name` String.
+            let mut name_len = 0;
+
+            while rec.name[name_len] != 0 {
+                name_len += 1;
+            }
+            
+            let name = std::str::from_utf8(&rec.name[..name_len])?;
+            // TODO: validate "len": must be between 5 and 64
+
+            let (ty, data) =  if rec.aligned_len == 0 {
+                (Type::Binary, Vec::new())
+            } else {
+                let type_code = header.read_i32::<BigEndian>()?;
+                // TODO: warn and press on if conversion fails
+                let mut ty = Type::try_from(type_code)?;
+
+                // The "Text" type is internal-only; textual header items are
+                // expressed as arrays of int8's.
+                if ty == Type::Int8 && rec.aligned_len > 5 {
+                    ty = Type::Text;
+                }
+
+                // The header-writing code aligns based on the type sizes, not
+                // the type alignment values.
+
+                let align = std::cmp::max(4, ty.size());
+                let mut align_buf = [0u8; 8];
+                header.read_exact(&mut align_buf[..align - 4])?;
+
+                let n_bytes = rec.aligned_len as usize - align;
+
+                if n_bytes % ty.size() != 0 {
+                    // TODO: warn and press on
+                    return err_msg!("illegal array size {} for type {:?}", n_bytes, ty);
+                }
+
+                let mut data = Vec::with_capacity(n_bytes);
+                unsafe { data.set_len(n_bytes); } // better way?
+                header.read_exact(&mut data[..])?;
+
+                (ty, data)
+            };
 
             // TODO: could/should warn if a redundant item is encountered
-            ds.small_items.insert(name.to_owned(), SmallItem::new(name, Type::Binary, 0));
+            ds.small_items.insert(name.to_owned(), SmallItem::new(name, ty, data));
         }
 
         Ok(ds)
@@ -298,8 +391,53 @@ impl DataSet {
     }
 
 
+    pub fn item_names<'a>(&'a self) -> DataSetItemNamesIterator<'a> {
+        DataSetItemNamesIterator::new(self)
+    }
+
+    pub fn item_info<'a>(&'a self, item_name: &str) -> ItemInfo<'a> {
+        if let Some(small_item) = self.small_items.get(item_name) {
+            return small_item.as_info();
+        }
+
+        panic!("NYI");
+    }
+
     //pub fn read_whole_item<T: MiriadVectorType>(&self, name: &str) -> Result<T> {
     //}
+}
+
+
+/// This helper struct stores state when iterating over the item names
+/// provided by a MIRIAD data set.
+pub struct DataSetItemNamesIterator<'a> {
+    dset: &'a DataSet,
+    small_names_iter: Option<std::collections::hash_map::Keys<'a, String, SmallItem>>
+}
+
+impl<'a> DataSetItemNamesIterator<'a> {
+    pub fn new(dset: &'a DataSet) -> Self {
+        DataSetItemNamesIterator {
+            dset: dset,
+            small_names_iter: Some(dset.small_items.keys())
+        }
+    }
+}
+
+impl<'a> Iterator for DataSetItemNamesIterator<'a> {
+    type Item = &'a str;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if let Some(ref mut sni) = self.small_names_iter {
+            if let Some(k) = sni.next() {
+                return Some(k);
+            }
+        }
+
+        self.small_names_iter = None;
+
+        None
+    }
 }
 
 

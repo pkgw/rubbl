@@ -8,5 +8,6 @@ authors = ["Peter Williams <peter@newton.cx>"]
 license = "MIT"
 
 [dependencies]
+byteorder = "^1.1"
 clap = "^2.26"
 error-chain = "^0.10"
