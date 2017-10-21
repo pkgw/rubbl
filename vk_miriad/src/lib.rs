@@ -10,7 +10,7 @@ Access to MIRIAD-format data sets.
 extern crate byteorder;
 #[macro_use] extern crate error_chain;
 
-use byteorder::{BigEndian, ReadBytesExt};
+use byteorder::{BigEndian, ByteOrder, ReadBytesExt};
 use std::collections::HashMap;
 use std::fs::File;
 use std::io;
@@ -124,113 +124,102 @@ impl std::fmt::Display for Type {
 }
 
 
-/// This trait marks that the given type maps onto an "elementary" type
-/// defined in the MIRIAD data format. It is implemented by u8, i8, i16, i32,
-/// i64, f32, and f64; string values are not included because of the
-/// encoding/decoding issues that pop up.
-pub trait MiriadElementaryType {
-    /// The particular MIRIAD `Type` to which this Rust type maps.
-    const TYPE: Type;
-}
-
-impl MiriadElementaryType for u8 {
-    const TYPE: Type = Type::Binary;
-}
-
-impl MiriadElementaryType for i8 {
-    const TYPE: Type = Type::Int8;
-}
-
-impl MiriadElementaryType for i16 {
-    const TYPE: Type = Type::Int16;
-}
-
-impl MiriadElementaryType for i32 {
-    const TYPE: Type = Type::Int32;
-}
-
-impl MiriadElementaryType for i64 {
-    const TYPE: Type = Type::Int64;
-}
-
-impl MiriadElementaryType for f32 {
-    const TYPE: Type = Type::Float32;
-}
-
-impl MiriadElementaryType for f64 {
-    const TYPE: Type = Type::Float64;
-}
-
-
-/// This trait marks that the given type maps on to a vector type
-/// defined in the MIRIAD data format.
-
-pub trait MiriadVectorType: Sized {
+/// This trait marks that the given type maps onto a type defined in the
+/// MIRIAD data format.
+pub trait MiriadMappedType: Sized {
     /// The particular MIRIAD `Type` to which this Rust type maps.
     const TYPE: Type;
 
-    /// Each chunk is guaranteed to be a size that is a multiple of
-    /// `TYPE.size()`.
-    fn from_miriad_byte_chunks<'a, T: Iterator<Item = Result<&'a [u8]>>>(chunks: T) -> Result<Self>;
+    fn vec_from_miriad_reader<R: Read>(stream: R) -> Result<Vec<Self>>;
 
-    fn from_miriad_bytes(buf: &[u8]) -> Result<Self> {
-        Self::from_miriad_byte_chunks(std::iter::once(Ok(buf)))
+    fn vec_from_miriad_bytes(buf: &[u8]) -> Result<Vec<Self>> {
+        Self::vec_from_miriad_reader(std::io::Cursor::new(buf))
+    }
+
+    fn scalar_from_miriad_reader<R: Read>(stream: R) -> Result<Self> {
+        let vec = Self::vec_from_miriad_reader(stream)?;
+
+        if vec.len() != 1 {
+            return err_msg!("expected scalar value but got {}-element vector", vec.len());
+        }
+
+        Ok(vec.into_iter().next().unwrap())
+    }
+
+    fn scalar_from_miriad_bytes(buf: &[u8]) -> Result<Self> {
+        Self::scalar_from_miriad_reader(std::io::Cursor::new(buf))
     }
 }
 
-impl MiriadVectorType for Vec<u8> {
+impl MiriadMappedType for u8 {
     const TYPE: Type = Type::Binary;
 
-    fn from_miriad_byte_chunks<'a, T: Iterator<Item = Result<&'a [u8]>>>(chunks: T) -> Result<Self> {
-        let mut val = Self::new();
-
-        for maybe_chunk in chunks {
-            val.extend_from_slice(maybe_chunk?);
-        }
-
+    fn vec_from_miriad_reader<R: Read>(mut stream: R) -> Result<Vec<Self>> {
+        let mut val = Vec::new();
+        stream.read_to_end(&mut val)?;
         Ok(val)
     }
 }
 
-impl MiriadVectorType for Vec<i8> {
+impl MiriadMappedType for i8 {
     const TYPE: Type = Type::Int8;
 
-    fn from_miriad_byte_chunks<'a, T: Iterator<Item = Result<&'a [u8]>>>(chunks: T) -> Result<Self> {
-        let mut val = Self::new();
-
-        for maybe_chunk in chunks {
-            let bytes = maybe_chunk?;
-            // XXX There Must Be A Better Way™
-            let signeds = unsafe { std::mem::transmute::<&[u8], &[i8]>(bytes) };
-            val.extend_from_slice(signeds);
-        }
-
-        Ok(val)
+    fn vec_from_miriad_reader<R: Read>(mut stream: R) -> Result<Vec<Self>> {
+        let mut val = Vec::new();
+        stream.read_to_end(&mut val)?;
+        Ok(unsafe { std::mem::transmute::<Vec<u8>, Vec<i8>>(val) }) // yeehaw!
     }
 }
 
-//impl MiriadVectorType for Vec<i16> {
+//impl MiriadMappedType for i16 {
 //    const TYPE: Type = Type::Int16;
 //}
 //
-//impl MiriadVectorType for Vec<i32> {
+//impl MiriadMappedType for i32 {
 //    const TYPE: Type = Type::Int32;
 //}
-//
-//impl MiriadVectorType for Vec<i64> {
-//    const TYPE: Type = Type::Int64;
-//}
-//
-//impl MiriadVectorType for Vec<f32> {
+
+impl MiriadMappedType for i64 {
+    const TYPE: Type = Type::Int64;
+
+    fn vec_from_miriad_reader<R: Read>(mut stream: R) -> Result<Vec<Self>> {
+        let mut val = Vec::new();
+
+        loop {
+            // XXX won't barf if the stream only has, e.g., 3 bytes
+            match stream.read_i64::<BigEndian>() {
+                Err(e) => {
+                    if e.kind() == io::ErrorKind::UnexpectedEof {
+                        break;
+                    }
+
+                    return Err(e.into());
+                },
+                Ok(x) => { val.push(x); }
+            }
+        }
+
+        Ok(val)
+    }
+}
+
+impl MiriadMappedType for String {
+    const TYPE: Type = Type::Text;
+
+    /// As a special hack, this only ever returns a 1-element vector.
+    fn vec_from_miriad_reader<R: Read>(mut stream: R) -> Result<Vec<Self>> {
+        let mut val = String::new();
+        stream.read_to_string(&mut val)?;
+        Ok(vec!(val))
+    }
+}
+
+//impl MiriadMappedType for f32 {
 //    const TYPE: Type = Type::Float32;
 //}
 //
-//impl MiriadVectorType for Vec<f64> {
+//impl MiriadMappedType for f64 {
 //    const TYPE: Type = Type::Float64;
-//}
-//
-//impl MiriadVectorType for String {
-//    const TYPE: Type = Type::Text;
 //}
 
 // XXX complex64
@@ -337,7 +326,7 @@ impl DataSet {
             while rec.name[name_len] != 0 {
                 name_len += 1;
             }
-            
+
             let name = std::str::from_utf8(&rec.name[..name_len])?;
             // TODO: validate "len": must be between 5 and 64
 
@@ -403,8 +392,31 @@ impl DataSet {
         panic!("NYI");
     }
 
-    //pub fn read_whole_item<T: MiriadVectorType>(&self, name: &str) -> Result<T> {
-    //}
+    pub fn read_scalar_item<T: MiriadMappedType>(&self, name: &str) -> Result<T> {
+        // TODO: upcasting
+        if let Some(small_item) = self.small_items.get(name) {
+            if small_item.ty != T::TYPE {
+                return err_msg!("expected type {} but got {}", T::TYPE, small_item.ty);
+            }
+
+            return T::scalar_from_miriad_bytes(&small_item.data[..]);
+        }
+
+        panic!("NYI");
+    }
+
+    pub fn read_vector_item<T: MiriadMappedType>(&self, name: &str) -> Result<Vec<T>> {
+        // TODO: upcasting
+        if let Some(small_item) = self.small_items.get(name) {
+            if small_item.ty != T::TYPE {
+                return err_msg!("expected type {} but got {}", T::TYPE, small_item.ty);
+            }
+
+            return T::vec_from_miriad_bytes(&small_item.data[..]);
+        }
+
+        panic!("NYI");
+    }
 }
 
 

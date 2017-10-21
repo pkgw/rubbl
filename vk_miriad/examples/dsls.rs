@@ -34,4 +34,9 @@ fn main() {
         let ii = ds.item_info(item_name);
         println!("{:8}  {:8}  {}", item_name.to_string(), ii.ty, ii.n_vals);
     }
+
+    println!("ncorr: {}", ds.read_scalar_item::<i64>("ncorr").expect("error extracting ncorr"));
+    println!("nwcorr: {}", ds.read_scalar_item::<i64>("nwcorr").expect("error extracting nwcorr"));
+    println!("vislen: {}", ds.read_scalar_item::<i64>("vislen").expect("error extracting vislen"));
+    println!("obstype: {}", ds.read_scalar_item::<String>("obstype").expect("error extracting obstype"));
 }
