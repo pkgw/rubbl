@@ -9,6 +9,7 @@ Access to MIRIAD-format data sets.
 
 extern crate byteorder;
 #[macro_use] extern crate error_chain;
+extern crate openat;
 
 use byteorder::{BigEndian, ByteOrder, ReadBytesExt};
 use std::collections::HashMap;
@@ -284,19 +285,19 @@ impl SmallItem {
 
 
 pub struct DataSet {
-    path: PathBuf,
+    dir: openat::Dir,
     small_items: HashMap<String, SmallItem>
 }
 
 
 impl DataSet {
-    pub fn open<P: AsRef<Path>>(path: P) -> Result<Self> {
+    pub fn open<P: openat::AsPath>(path: P) -> Result<Self> {
         let mut ds = DataSet {
-            path: path.as_ref().into(),
+            dir: openat::Dir::open(path)?,
             small_items: HashMap::new(),
         };
 
-        let mut header = ds.open_file_lowlevel("header")?;
+        let mut header = ds.dir.open_file("header")?;
         let mut rec: HeaderItem = HeaderItem { name: [0; 15], aligned_len: 0 };
 
         loop {
@@ -370,15 +371,6 @@ impl DataSet {
 
         Ok(ds)
     }
-
-
-    fn open_file_lowlevel(&self, name: &str) -> Result<File> {
-        // Note: not checking for length, validity, etc.
-        let mut p = self.path.clone();
-        p.push(name);
-        Ok(File::open(p)?)
-    }
-
 
     pub fn item_names<'a>(&'a self) -> DataSetItemNamesIterator<'a> {
         DataSetItemNamesIterator::new(self)

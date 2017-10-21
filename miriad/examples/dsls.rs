@@ -22,7 +22,7 @@ fn main() {
 
     let path = matches.value_of_os("PATH").unwrap();
 
-    let ds = match vk_miriad::DataSet::open(&path) {
+    let ds = match vk_miriad::DataSet::open(path) {
         Ok(ds) => ds,
         Err(e) => {
             eprintln!("error opening {}: {}", path.to_string_lossy(), e);
