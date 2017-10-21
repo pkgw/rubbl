@@ -35,8 +35,8 @@ fn main() {
         println!("{:8}  {:8}  {}", ii.name, ii.ty, ii.n_vals);
     }
 
-    println!("ncorr: {}", ds.get("ncorr").unwrap().read_scalar::<i64>("ncorr").expect("error extracting ncorr"));
-    println!("nwcorr: {}", ds.get("nwcorr").unwrap().read_scalar::<i64>("nwcorr").expect("error extracting nwcorr"));
-    println!("vislen: {}", ds.get("vislen").unwrap().read_scalar::<i64>("vislen").expect("error extracting vislen"));
-    println!("obstype: {}", ds.get("obstype").unwrap().read_scalar::<String>("obstype").expect("error extracting obstype"));
+    println!("ncorr: {}", ds.get("ncorr").unwrap().read_scalar::<i64>().expect("error extracting ncorr"));
+    println!("nwcorr: {}", ds.get("nwcorr").unwrap().read_scalar::<i64>().expect("error extracting nwcorr"));
+    println!("vislen: {}", ds.get("vislen").unwrap().read_scalar::<i64>().expect("error extracting vislen"));
+    println!("obstype: {}", ds.get("obstype").unwrap().read_scalar::<String>().expect("error extracting obstype"));
 }

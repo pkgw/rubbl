@@ -327,19 +327,24 @@ impl InternalItemInfo {
 
 pub struct Item<'a> {
     dset: &'a DataSet,
+    name: &'a str,
     info: &'a InternalItemInfo,
 }
 
 impl<'a> Item<'a> {
+    pub fn name(&self) -> &str {
+        self.name
+    }
+
     pub fn into_info(self) -> ItemInfo<'a> {
         self.info.as_info()
     }
 
-    pub fn read_vector<T: MiriadMappedType>(self, item_name: &str) -> Result<Vec<T>> {
+    pub fn read_vector<T: MiriadMappedType>(&self) -> Result<Vec<T>> {
         match self.info.storage {
             ItemStorage::Small(ref data) => T::vec_from_miriad_bytes(data),
             ItemStorage::Large(_) => {
-                let mut f = self.dset.dir.open_file(item_name)?;
+                let mut f = self.dset.dir.open_file(self.name)?;
 
                 if self.info.ty != Type::Text {
                     let align = std::cmp::max(4, self.info.ty.alignment()) as usize;
@@ -352,11 +357,12 @@ impl<'a> Item<'a> {
         }
     }
 
-    pub fn read_scalar<T: MiriadMappedType>(self, item_name: &str) -> Result<T> {
-        let vec = self.read_vector(item_name)?;
+    pub fn read_scalar<T: MiriadMappedType>(&self) -> Result<T> {
+        let vec = self.read_vector()?;
 
         if vec.len() != 1 {
-            return err_msg!("expected scalar value but got {}-element vector", vec.len());
+            return err_msg!("expected scalar value for {} but got {}-element vector",
+                            self.name, vec.len());
         }
 
         Ok(vec.into_iter().next().unwrap())
@@ -529,7 +535,7 @@ impl DataSet {
 
 
     /// Get a handle to an item in this data set.
-    pub fn get(&mut self, item_name: &str) -> Result<Item> {
+    pub fn get<'a>(&'a mut self, item_name: &'a str) -> Result<Item<'a>> {
         // The HashMap access approach I use here feels awkward to me but it's
         // the only way I can get the lifetimes to work out.
 
@@ -541,6 +547,7 @@ impl DataSet {
 
         Ok(Item {
             dset: self,
+            name: item_name,
             info: self.items.get(item_name).unwrap(),
         })
     }
@@ -590,9 +597,10 @@ impl<'a> Iterator for DataSetItemsIterator<'a> {
     type Item = Item<'a>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.inner.next().map(|info| Item {
+        self.inner.next().map(|kv| Item {
             dset: self.dset,
-            info: info.1,
+            name: kv.0,
+            info: kv.1,
         })
     }
 }
