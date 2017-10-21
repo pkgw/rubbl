@@ -295,11 +295,15 @@ impl DataSet {
             small_items: HashMap::new(),
         };
 
-        let mut header = ds.dir.open_file("header")?;
-        let mut rec: HeaderItem = HeaderItem { name: [0; 15], aligned_len: 0 };
+        // Parse the header
+
+        let mut header = io::BufReader::new(ds.dir.open_file("header")?);
+        let mut rec = HeaderItem { name: [0; 15], aligned_len: 0 };
+        let mut offset = 0;
 
         loop {
-            // XXX There Must Be A Better Way™
+            // Read data directly into `rec`. As far as I can tell this is the
+            // least-bad way to do this:
             let r = {
                 let rec_as_bytes: &mut [u8] = unsafe {
                     std::slice::from_raw_parts_mut(
@@ -310,6 +314,7 @@ impl DataSet {
                 header.read_exact(rec_as_bytes)
             };
 
+
             if let Err(e) = r {
                 if e.kind() == io::ErrorKind::UnexpectedEof {
                     break;
@@ -317,6 +322,8 @@ impl DataSet {
 
                 return Err(e.into());
             }
+
+            offset += std::mem::size_of::<HeaderItem>();
 
             // If we pass the trailing NULs to from_utf8, they will silently
             // be included at the end of the `name` String.
@@ -329,7 +336,7 @@ impl DataSet {
             let name = std::str::from_utf8(&rec.name[..name_len])?;
             // TODO: validate "len": must be between 5 and 64
 
-            let (ty, data) =  if rec.aligned_len == 0 {
+            let (ty, data) = if rec.aligned_len == 0 {
                 (Type::Binary, Vec::new())
             } else {
                 let type_code = header.read_i32::<BigEndian>()?;
@@ -363,8 +370,27 @@ impl DataSet {
                 (ty, data)
             };
 
+            offset += rec.aligned_len as usize;
+
             // TODO: could/should warn if a redundant item is encountered
             ds.small_items.insert(name.to_owned(), SmallItem::new(name, ty, data));
+
+            // Maintain alignment.
+            let misalignment = offset % std::mem::size_of::<HeaderItem>();
+
+            if misalignment != 0 {
+                let mut align_buf = [0u8; 16];
+                let n_to_read = 16 - misalignment;
+
+                if let Err(e) = header.read_exact(&mut align_buf[..n_to_read]) {
+                    if e.kind() == io::ErrorKind::UnexpectedEof {
+                        break;
+                    }
+                    return Err(e.into());
+                }
+
+                offset += n_to_read;
+            }
         }
 
         Ok(ds)
