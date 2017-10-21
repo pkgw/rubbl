@@ -22,7 +22,7 @@ fn main() {
 
     let path = matches.value_of_os("PATH").unwrap();
 
-    let ds = match rubbl_miriad::DataSet::open(path) {
+    let mut ds = match rubbl_miriad::DataSet::open(path) {
         Ok(ds) => ds,
         Err(e) => {
             eprintln!("error opening {}: {}", path.to_string_lossy(), e);
@@ -36,8 +36,8 @@ fn main() {
         println!("{}", item_name);
     }
 
-    println!("ncorr: {}", ds.read_scalar_item::<i64>("ncorr").expect("error extracting ncorr"));
-    println!("nwcorr: {}", ds.read_scalar_item::<i64>("nwcorr").expect("error extracting nwcorr"));
-    println!("vislen: {}", ds.read_scalar_item::<i64>("vislen").expect("error extracting vislen"));
-    println!("obstype: {}", ds.read_scalar_item::<String>("obstype").expect("error extracting obstype"));
+    println!("ncorr: {}", ds.get("ncorr").unwrap().read_scalar::<i64>("ncorr").expect("error extracting ncorr"));
+    println!("nwcorr: {}", ds.get("nwcorr").unwrap().read_scalar::<i64>("nwcorr").expect("error extracting nwcorr"));
+    println!("vislen: {}", ds.get("vislen").unwrap().read_scalar::<i64>("vislen").expect("error extracting vislen"));
+    println!("obstype: {}", ds.get("obstype").unwrap().read_scalar::<String>("obstype").expect("error extracting obstype"));
 }

@@ -23,7 +23,7 @@ fn main() {
 
     let path = matches.value_of_os("PATH").unwrap();
 
-    let ds = match rubbl_miriad::DataSet::open(&path) {
+    let _ds = match rubbl_miriad::DataSet::open(path) {
         Ok(ds) => ds,
         Err(e) => {
             eprintln!("error opening {}: {}", path.to_string_lossy(), e);

@@ -134,20 +134,6 @@ pub trait MiriadMappedType: Sized {
     fn vec_from_miriad_bytes(buf: &[u8]) -> Result<Vec<Self>> {
         Self::vec_from_miriad_reader(std::io::Cursor::new(buf))
     }
-
-    fn scalar_from_miriad_reader<R: Read>(stream: R) -> Result<Self> {
-        let vec = Self::vec_from_miriad_reader(stream)?;
-
-        if vec.len() != 1 {
-            return err_msg!("expected scalar value but got {}-element vector", vec.len());
-        }
-
-        Ok(vec.into_iter().next().unwrap())
-    }
-
-    fn scalar_from_miriad_bytes(buf: &[u8]) -> Result<Self> {
-        Self::scalar_from_miriad_reader(std::io::Cursor::new(buf))
-    }
 }
 
 impl MiriadMappedType for u8 {
@@ -224,6 +210,7 @@ impl MiriadMappedType for String {
 // XXX complex64
 
 
+#[derive(Debug, Eq, PartialEq)]
 pub struct ItemInfo<'a> {
     pub name: &'a str,
     pub is_large: bool,
@@ -243,38 +230,94 @@ struct HeaderItem {
     pub aligned_len: u8,
 }
 
-
-struct SmallItem {
-    pub name: String,
-    pub ty: Type,
-    pub data: Vec<u8>,
+enum ItemStorage {
+    Small(Vec<u8>),
+    Large(usize),
 }
 
-impl SmallItem {
-    pub fn new<S: ToString>(name: S, ty: Type, data: Vec<u8>) -> Self {
-        SmallItem {
+struct InternalItemInfo {
+    pub name: String,
+    pub ty: Type,
+    pub storage: ItemStorage,
+}
+
+impl InternalItemInfo {
+    pub fn new_small<S: ToString>(name: S, ty: Type, data: Vec<u8>) -> Self {
+        InternalItemInfo {
             name: name.to_string(),
             ty: ty,
-            data: data,
+            storage: ItemStorage::Small(data),
         }
+    }
+
+    pub fn new_large<S: ToString>(dir: &mut openat::Dir, name: S) -> Result<Self> {
+        let name = name.to_string();
+        let mut f = dir.open_file(&name)?;
+        let mut size_offset = 4;
+        let mut type_buf = [0u8; 4];
+
+        if let Err(e) = f.read_exact(&mut type_buf) {
+            if e.kind() == io::ErrorKind::UnexpectedEof {
+                size_offset = 0;
+                for b in type_buf.iter_mut() {
+                    *b = 0;
+                }
+            } else {
+                return Err(e.into());
+            }
+        }
+
+        let type_code = BigEndian::read_i32(&type_buf);
+
+        let ty = match Type::try_from(type_code) {
+            Ok(t) => t,
+            Err(_) => {
+                // This is probably a text file, but might be something we
+                // don't understand. We test for ASCII printability which
+                // might not be quite right.
+
+                if type_buf.iter().all(|c| *c >= 0x20 && *c <= 0x7e) {
+                    size_offset = 0;
+                    Type::Text
+                } else {
+                    Type::Binary
+                }
+            }
+        };
+
+        let data_size = f.metadata()?.len() - size_offset;
+
+        if data_size % ty.size() as u64 != 0 {
+            return err_msg!("non-integral number of elements in {}", name);
+        }
+
+        Ok(InternalItemInfo {
+            name: name,
+            ty: ty,
+            storage: ItemStorage::Large((data_size / ty.size() as u64) as usize),
+        })
     }
 
     pub fn n_vals(&self) -> usize {
         if self.ty == Type::Text {
             1
         } else {
-            self.data.len() / self.ty.size()
+            match self.storage {
+                ItemStorage::Small(ref data) => data.len() / self.ty.size(),
+                ItemStorage::Large(n) => n,
+            }
         }
     }
 
-    pub fn is_scalar(&self) -> bool {
-        self.n_vals() == 1
-    }
-
     pub fn as_info<'a>(&'a self) -> ItemInfo<'a> {
+        let is_large = match self.storage {
+            ItemStorage::Small(_) => false,
+            ItemStorage::Large(_) => true,
+        };
+
         ItemInfo {
             name: &self.name,
-            is_large: false,
+            is_large: is_large,
             ty: self.ty,
             n_vals: self.n_vals(),
         }
@@ -282,9 +325,49 @@ impl SmallItem {
 }
 
 
+pub struct Item<'a> {
+    dset: &'a DataSet,
+    info: &'a InternalItemInfo,
+}
+
+impl<'a> Item<'a> {
+    pub fn into_info(self) -> ItemInfo<'a> {
+        self.info.as_info()
+    }
+
+    pub fn read_vector<T: MiriadMappedType>(self, item_name: &str) -> Result<Vec<T>> {
+        match self.info.storage {
+            ItemStorage::Small(ref data) => T::vec_from_miriad_bytes(data),
+            ItemStorage::Large(_) => {
+                let mut f = self.dset.dir.open_file(item_name)?;
+
+                if self.info.ty != Type::Text {
+                    let align = std::cmp::max(4, self.info.ty.alignment()) as usize;
+                    let mut align_buf = [0u8; 8];
+                    f.read_exact(&mut align_buf[..align])?;
+                }
+
+                T::vec_from_miriad_reader(f)
+            },
+        }
+    }
+
+    pub fn read_scalar<T: MiriadMappedType>(self, item_name: &str) -> Result<T> {
+        let vec = self.read_vector(item_name)?;
+
+        if vec.len() != 1 {
+            return err_msg!("expected scalar value but got {}-element vector", vec.len());
+        }
+
+        Ok(vec.into_iter().next().unwrap())
+    }
+}
+
+
 pub struct DataSet {
     dir: openat::Dir,
-    small_items: HashMap<String, SmallItem>
+    items: HashMap<String, InternalItemInfo>,
+    large_items_scanned: bool,
 }
 
 
@@ -292,7 +375,8 @@ impl DataSet {
     pub fn open<P: openat::AsPath>(path: P) -> Result<Self> {
         let mut ds = DataSet {
             dir: openat::Dir::open(path)?,
-            small_items: HashMap::new(),
+            items: HashMap::new(),
+            large_items_scanned: false,
         };
 
         // Parse the header
@@ -373,7 +457,7 @@ impl DataSet {
             offset += rec.aligned_len as usize;
 
             // TODO: could/should warn if a redundant item is encountered
-            ds.small_items.insert(name.to_owned(), SmallItem::new(name, ty, data));
+            ds.items.insert(name.to_owned(), InternalItemInfo::new_small(name, ty, data));
 
             // Maintain alignment.
             let misalignment = offset % std::mem::size_of::<HeaderItem>();
@@ -393,45 +477,62 @@ impl DataSet {
             }
         }
 
+        // All done
+
         Ok(ds)
     }
 
-    pub fn item_names<'a>(&'a self) -> Result<DataSetItemNamesIterator<'a>> {
-        DataSetItemNamesIterator::new(self)
-    }
 
-    pub fn item_info<'a>(&'a self, item_name: &str) -> ItemInfo<'a> {
-        if let Some(small_item) = self.small_items.get(item_name) {
-            return small_item.as_info();
-        }
+    fn scan_large_items(&mut self) -> Result<()> {
+        for maybe_item in self.dir.list_dir(".")? {
+            let item = maybe_item?;
 
-        panic!("NYI");
-    }
+            if let Some(s) = item.file_name().to_str() {
+                if s == "header" {
+                    continue;
+                }
 
-    pub fn read_scalar_item<T: MiriadMappedType>(&self, name: &str) -> Result<T> {
-        // TODO: upcasting
-        if let Some(small_item) = self.small_items.get(name) {
-            if small_item.ty != T::TYPE {
-                return err_msg!("expected type {} but got {}", T::TYPE, small_item.ty);
+                if s.starts_with(".") {
+                    continue;
+                }
+
+                // TODO: could/should warn if a large item shadowing a small
+                // item is encountered.
+                let iii = InternalItemInfo::new_large(&mut self.dir, s)?;
+                self.items.insert(s.to_owned(), iii);
             }
-
-            return T::scalar_from_miriad_bytes(&small_item.data[..]);
         }
 
-        panic!("NYI");
+        self.large_items_scanned = true;
+        Ok(())
     }
 
-    pub fn read_vector_item<T: MiriadMappedType>(&self, name: &str) -> Result<Vec<T>> {
-        // TODO: upcasting
-        if let Some(small_item) = self.small_items.get(name) {
-            if small_item.ty != T::TYPE {
-                return err_msg!("expected type {} but got {}", T::TYPE, small_item.ty);
-            }
 
-            return T::vec_from_miriad_bytes(&small_item.data[..]);
+    pub fn item_names<'a>(&'a mut self) -> Result<DataSetItemNamesIterator<'a>> {
+        if !self.large_items_scanned {
+            self.scan_large_items()?;
+            self.large_items_scanned = true;
         }
 
-        panic!("NYI");
+        Ok(DataSetItemNamesIterator::new(self))
+    }
+
+
+    /// Get a handle to an item in this data set.
+    pub fn get(&mut self, item_name: &str) -> Result<Item> {
+        // The HashMap access approach I use here feels awkward to me but it's
+        // the only way I can get the lifetimes to work out.
+
+        if !self.items.contains_key(item_name) {
+            // Assume it's an as-yet-unprobed large item on the filesystem.
+            let iii = InternalItemInfo::new_large(&mut self.dir, item_name)?;
+            self.items.insert(item_name.to_owned(), iii);
+        }
+
+        Ok(Item {
+            dset: self,
+            info: self.items.get(item_name).unwrap(),
+        })
     }
 }
 
@@ -439,44 +540,22 @@ impl DataSet {
 /// This helper struct stores state when iterating over the item names
 /// provided by a MIRIAD data set.
 pub struct DataSetItemNamesIterator<'a> {
-    small_names_iter: Option<std::collections::hash_map::Keys<'a, String, SmallItem>>,
-    dir_iter: Option<openat::DirIter>,
+    inner: std::collections::hash_map::Keys<'a, String, InternalItemInfo>,
 }
 
 impl<'a> DataSetItemNamesIterator<'a> {
-    pub fn new(dset: &'a DataSet) -> Result<Self> {
-        Ok(DataSetItemNamesIterator {
-            small_names_iter: Some(dset.small_items.keys()),
-            dir_iter: Some(dset.dir.list_dir(".")?),
-        })
+    pub fn new(dset: &'a DataSet) -> Self {
+        DataSetItemNamesIterator {
+            inner: dset.items.keys(),
+        }
     }
 }
 
 impl<'a> Iterator for DataSetItemNamesIterator<'a> {
-    type Item = String;
+    type Item = &'a str;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if let Some(ref mut sni) = self.small_names_iter {
-            if let Some(k) = sni.next() {
-                return Some(k.to_owned());
-            }
-        }
-
-        self.small_names_iter = None;
-
-        if let Some(ref mut di) = self.dir_iter {
-            // XXX lose error if iteration fails
-            if let Some(Ok(p)) = di.next() {
-                if let Some(s) = p.file_name().to_str() {
-                    if !s.starts_with(".") {
-                        return Some(s.to_owned());
-                    }
-                }
-            }
-        }
-
-        self.dir_iter = None;
-        None
+        self.inner.next().map(|s| s.as_ref())
     }
 }
 
