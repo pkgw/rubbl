@@ -2,4 +2,4 @@
 # Licensed under the MIT License.
 
 [workspace]
-members = ["vk_miriad"]
+members = ["miriad"]
