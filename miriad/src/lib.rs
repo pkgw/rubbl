@@ -370,7 +370,7 @@ impl DataSet {
         Ok(ds)
     }
 
-    pub fn item_names<'a>(&'a self) -> DataSetItemNamesIterator<'a> {
+    pub fn item_names<'a>(&'a self) -> Result<DataSetItemNamesIterator<'a>> {
         DataSetItemNamesIterator::new(self)
     }
 
@@ -413,31 +413,43 @@ impl DataSet {
 /// This helper struct stores state when iterating over the item names
 /// provided by a MIRIAD data set.
 pub struct DataSetItemNamesIterator<'a> {
-    dset: &'a DataSet,
-    small_names_iter: Option<std::collections::hash_map::Keys<'a, String, SmallItem>>
+    small_names_iter: Option<std::collections::hash_map::Keys<'a, String, SmallItem>>,
+    dir_iter: Option<openat::DirIter>,
 }
 
 impl<'a> DataSetItemNamesIterator<'a> {
-    pub fn new(dset: &'a DataSet) -> Self {
-        DataSetItemNamesIterator {
-            dset: dset,
-            small_names_iter: Some(dset.small_items.keys())
-        }
+    pub fn new(dset: &'a DataSet) -> Result<Self> {
+        Ok(DataSetItemNamesIterator {
+            small_names_iter: Some(dset.small_items.keys()),
+            dir_iter: Some(dset.dir.list_dir(".")?),
+        })
     }
 }
 
 impl<'a> Iterator for DataSetItemNamesIterator<'a> {
-    type Item = &'a str;
+    type Item = String;
 
     fn next(&mut self) -> Option<Self::Item> {
         if let Some(ref mut sni) = self.small_names_iter {
             if let Some(k) = sni.next() {
-                return Some(k);
+                return Some(k.to_owned());
             }
         }
 
         self.small_names_iter = None;
 
+        if let Some(ref mut di) = self.dir_iter {
+            // XXX lose error if iteration fails
+            if let Some(Ok(p)) = di.next() {
+                if let Some(s) = p.file_name().to_str() {
+                    if !s.starts_with(".") {
+                        return Some(s.to_owned());
+                    }
+                }
+            }
+        }
+
+        self.dir_iter = None;
         None
     }
 }

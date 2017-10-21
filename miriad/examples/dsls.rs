@@ -5,7 +5,7 @@ Describe the contents of a generic MIRIAD data set.
  */
 
 extern crate clap;
-extern crate vk_miriad;
+extern crate rubbl_miriad;
 
 use clap::{Arg, App};
 
@@ -22,7 +22,7 @@ fn main() {
 
     let path = matches.value_of_os("PATH").unwrap();
 
-    let ds = match vk_miriad::DataSet::open(path) {
+    let ds = match rubbl_miriad::DataSet::open(path) {
         Ok(ds) => ds,
         Err(e) => {
             eprintln!("error opening {}: {}", path.to_string_lossy(), e);
@@ -30,9 +30,10 @@ fn main() {
         }
     };
     
-    for item_name in ds.item_names() {
-        let ii = ds.item_info(item_name);
-        println!("{:8}  {:8}  {}", item_name.to_string(), ii.ty, ii.n_vals);
+    for item_name in ds.item_names().expect("cannot scan directory") {
+        //let ii = ds.item_info(&item_name);
+        //println!("{:8}  {:8}  {}", item_name, ii.ty, ii.n_vals);
+        println!("{}", item_name);
     }
 
     println!("ncorr: {}", ds.read_scalar_item::<i64>("ncorr").expect("error extracting ncorr"));
