@@ -29,10 +29,9 @@ fn main() {
             std::process::exit(1);
         }
     };
-    
+
     for item in ds.items().expect("cannot scan directory") {
-        let ii = item.into_info();
-        println!("{:8}  {:8}  {}", ii.name, ii.ty, ii.n_vals);
+        println!("{:8}  {:8}  {}", item.name(), item.type_(), item.n_vals());
     }
 
     println!("ncorr: {}", ds.get("ncorr").unwrap().read_scalar::<i64>().expect("error extracting ncorr"));

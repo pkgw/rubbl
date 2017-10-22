@@ -26,11 +26,6 @@ use errors::Result;
 pub const MAX_ITEM_NAME_LENGTH: usize = 8;
 
 
-//pub trait IoBackend {
-//    type Error: std::error::Error;
-//    type Item: Read + Write;
-//}
-
 
 #[repr(u8)]
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -210,14 +205,6 @@ impl MiriadMappedType for String {
 // XXX complex64
 
 
-#[derive(Debug, Eq, PartialEq)]
-pub struct ItemInfo<'a> {
-    pub name: &'a str,
-    pub is_large: bool,
-    pub ty: Type,
-    pub n_vals: usize,
-}
-
 
 #[repr(C)]
 struct HeaderItem {
@@ -236,23 +223,20 @@ enum ItemStorage {
 }
 
 struct InternalItemInfo {
-    pub name: String,
     pub ty: Type,
     pub storage: ItemStorage,
 }
 
 impl InternalItemInfo {
-    pub fn new_small<S: ToString>(name: S, ty: Type, data: Vec<u8>) -> Self {
+    pub fn new_small(ty: Type, data: Vec<u8>) -> Self {
         InternalItemInfo {
-            name: name.to_string(),
             ty: ty,
             storage: ItemStorage::Small(data),
         }
     }
 
-    pub fn new_large<S: ToString>(dir: &mut openat::Dir, name: S) -> Result<Self> {
-        let name = name.to_string();
-        let mut f = dir.open_file(&name)?;
+    pub fn new_large(dir: &mut openat::Dir, name: &str) -> Result<Self> {
+        let mut f = dir.open_file(name)?;
         let mut size_offset = 4;
         let mut type_buf = [0u8; 4];
 
@@ -292,7 +276,6 @@ impl InternalItemInfo {
         }
 
         Ok(InternalItemInfo {
-            name: name,
             ty: ty,
             storage: ItemStorage::Large((data_size / ty.size() as u64) as usize),
         })
@@ -306,20 +289,6 @@ impl InternalItemInfo {
                 ItemStorage::Small(ref data) => data.len() / self.ty.size(),
                 ItemStorage::Large(n) => n,
             }
-        }
-    }
-
-    pub fn as_info<'a>(&'a self) -> ItemInfo<'a> {
-        let is_large = match self.storage {
-            ItemStorage::Small(_) => false,
-            ItemStorage::Large(_) => true,
-        };
-
-        ItemInfo {
-            name: &self.name,
-            is_large: is_large,
-            ty: self.ty,
-            n_vals: self.n_vals(),
         }
     }
 }
@@ -336,8 +305,19 @@ impl<'a> Item<'a> {
         self.name
     }
 
-    pub fn into_info(self) -> ItemInfo<'a> {
-        self.info.as_info()
+    pub fn is_large(&self) -> bool {
+        match self.info.storage {
+            ItemStorage::Small(_) => false,
+            ItemStorage::Large(_) => true,
+        }
+    }
+
+    pub fn type_(&self) -> Type {
+        self.info.ty
+    }
+
+    pub fn n_vals(&self) -> usize {
+        self.info.n_vals()
     }
 
     pub fn read_vector<T: MiriadMappedType>(&self) -> Result<Vec<T>> {
@@ -463,7 +443,7 @@ impl DataSet {
             offset += rec.aligned_len as usize;
 
             // TODO: could/should warn if a redundant item is encountered
-            ds.items.insert(name.to_owned(), InternalItemInfo::new_small(name, ty, data));
+            ds.items.insert(name.to_owned(), InternalItemInfo::new_small(ty, data));
 
             // Maintain alignment.
             let misalignment = offset % std::mem::size_of::<HeaderItem>();
