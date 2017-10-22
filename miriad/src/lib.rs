@@ -294,6 +294,7 @@ impl<'a> Item<'a> {
         self.name
     }
 
+
     pub fn is_large(&self) -> bool {
         match self.info.storage {
             ItemStorage::Small(_) => false,
@@ -301,13 +302,16 @@ impl<'a> Item<'a> {
         }
     }
 
+
     pub fn type_(&self) -> Type {
         self.info.ty
     }
 
+
     pub fn n_vals(&self) -> usize {
         self.info.n_vals()
     }
+
 
     pub fn read_vector<T: MiriadMappedType>(&self) -> Result<Vec<T>> {
         match self.info.storage {
@@ -326,6 +330,7 @@ impl<'a> Item<'a> {
         }
     }
 
+
     pub fn read_scalar<T: MiriadMappedType>(&self) -> Result<T> {
         let vec = self.read_vector()?;
 
@@ -336,6 +341,7 @@ impl<'a> Item<'a> {
 
         Ok(vec.into_iter().next().unwrap())
     }
+
 
     pub fn into_lines(self) -> Result<io::Lines<io::BufReader<fs::File>>> {
         if self.info.ty != Type::Text {
@@ -349,6 +355,26 @@ impl<'a> Item<'a> {
         // Text items don't need any alignment futzing so we don't have to
         // skip initial bytes.
         Ok(io::BufReader::new(self.dset.dir.open_file(self.name)?).lines())
+    }
+
+
+    pub fn into_byte_stream(self) -> Result<io::BufReader<fs::File>> {
+        if let ItemStorage::Small(_) = self.info.storage {
+            // We *could* do this, but for coding simplicity we only allow it
+            // for large items.
+            return err_msg!("cannot turn small item {} into byte stream", self.name);
+        }
+
+        let f = self.dset.dir.open_file(self.name)?;
+        let mut br = io::BufReader::new(f);
+
+        if self.info.ty != Type::Text {
+            let align = std::cmp::max(4, self.info.ty.alignment()) as usize;
+            let mut align_buf = [0u8; 8];
+            br.read_exact(&mut align_buf[..align])?;
+        }
+
+        Ok(br)
     }
 }
 
