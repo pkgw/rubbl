@@ -147,6 +147,8 @@ pub trait MiriadMappedType: Sized {
     fn vec_from_miriad_bytes(buf: &[u8]) -> Result<Vec<Self>> {
         Self::vec_from_miriad_reader(std::io::Cursor::new(buf))
     }
+
+    fn decode_buf_into_vec(buf: &[u8], vec: &mut Vec<Self>);
 }
 
 impl MiriadMappedType for u8 {
@@ -157,6 +159,11 @@ impl MiriadMappedType for u8 {
         stream.read_to_end(&mut val)?;
         Ok(val)
     }
+
+    fn decode_buf_into_vec(buf: &[u8], vec: &mut Vec<Self>) {
+        vec.resize(buf.len(), 0);
+        vec.copy_from_slice(buf);
+    }
 }
 
 impl MiriadMappedType for i8 {
@@ -166,6 +173,11 @@ impl MiriadMappedType for i8 {
         let mut val = Vec::new();
         stream.read_to_end(&mut val)?;
         Ok(unsafe { std::mem::transmute::<Vec<u8>, Vec<i8>>(val) }) // yeehaw!
+    }
+
+    fn decode_buf_into_vec(buf: &[u8], vec: &mut Vec<Self>) {
+        vec.resize(buf.len(), 0);
+        vec.copy_from_slice(unsafe { std::mem::transmute::<&[u8], &[i8]>(buf) });
     }
 }
 
@@ -199,7 +211,16 @@ impl MiriadMappedType for i64 {
 
         Ok(val)
     }
+
+    fn decode_buf_into_vec(buf: &[u8], vec: &mut Vec<Self>) {
+        vec.clear();
+
+        for chunk in buf.chunks(8) {
+            vec.push(BigEndian::read_i64(chunk));
+        }
+    }
 }
+
 
 impl MiriadMappedType for String {
     const TYPE: Type = Type::Text;
@@ -209,6 +230,11 @@ impl MiriadMappedType for String {
         let mut val = String::new();
         stream.read_to_string(&mut val)?;
         Ok(vec!(val))
+    }
+
+    fn decode_buf_into_vec(buf: &[u8], vec: &mut Vec<Self>) {
+        vec.resize(1, String::new());
+        vec[0] = String::from_utf8_lossy(buf).into_owned();
     }
 }
 
@@ -334,6 +360,11 @@ impl<'a> Item<'a> {
 
 
     pub fn read_vector<T: MiriadMappedType>(&self) -> Result<Vec<T>> {
+        // TODO: upcasting
+        if T::TYPE != self.info.ty {
+            return err_msg!("expected variable of type {}, but found {}", T::TYPE, self.info.ty);
+        }
+
         match self.info.storage {
             ItemStorage::Small(ref data) => T::vec_from_miriad_bytes(data),
             ItemStorage::Large(_) => {

@@ -8,13 +8,13 @@ Access to MIRIAD "uv" data sets containing visibility data.
  */
 
 use byteorder::{BigEndian, ReadBytesExt};
-//use std::collections::HashMap;
+use std::collections::HashMap;
 use std::fs::File;
 use std::io;
 use std::io::prelude::*;
 
 use errors::Result;
-use super::{DataSet, Type};
+use super::{DataSet, MiriadMappedType, Type};
 
 
 #[derive(Copy, Clone, Debug, Eq, Hash, PartialEq)]
@@ -47,14 +47,19 @@ impl UvVariable {
 }
 
 
+#[derive(Copy, Clone, Debug, Eq, Hash, PartialEq)]
+pub struct UvVariableReference(u8);
+
+
 /// A struct that holds state for reading visibility data out of a MIRIAD uv
 /// dataset.
 pub struct Reader {
     obstype: ObsType,
     eff_vislen: u64,
-    ncorr: i64,
+    ncorr: u64,
     //nwcorr: i64,
     vars: Vec<UvVariable>,
+    vars_by_name: HashMap<String, u8>,
     stream: io::BufReader<File>,
     offset: u64,
 }
@@ -75,10 +80,11 @@ impl Reader {
         };
 
         let vislen = ds.get("vislen")?.read_scalar::<i64>()?;
-        let ncorr = ds.get("ncorr")?.read_scalar()?;
+        let ncorr = ds.get("ncorr")?.read_scalar::<i64>()?;
         //let nwcorr = ds.get("nwcorr")?.read_scalar()?;
 
         let mut vars = Vec::new();
+        let mut vars_by_name = HashMap::new();
         let mut var_num = 0u8;
 
         for maybe_line in ds.get("vartable")?.into_lines()? {
@@ -99,6 +105,9 @@ impl Reader {
 
             vars.push(UvVariable::new(ty, name, var_num));
 
+            // TODO: check for duplicates
+            vars_by_name.insert(name.to_owned(), var_num);
+
             if var_num == 255 {
                 return err_msg!("too many UV variables");
             }
@@ -111,9 +120,10 @@ impl Reader {
         Ok(Reader {
             obstype: obstype,
             eff_vislen: vislen as u64 - 4, // this is always too big
-            ncorr: ncorr,
+            ncorr: ncorr as u64,
             //nwcorr: nwcorr,
             vars: vars,
+            vars_by_name: vars_by_name,
             stream: stream,
             offset: 4, // account for the mixed-binary tag.
         })
@@ -219,5 +229,22 @@ impl Reader {
         }
 
         Ok(true)
+    }
+
+
+    pub fn lookup_variable(&self, var_name: &str) -> Option<UvVariableReference> {
+        self.vars_by_name.get(var_name).map(|o| UvVariableReference(*o))
+    }
+
+
+    pub fn get<T: MiriadMappedType>(&self, var: UvVariableReference, buf: &mut Vec<T>) {
+        let var = &self.vars[var.0 as usize];
+
+        // TODO: upcasting
+        if T::TYPE != var.ty {
+            panic!("attempting to decode UV variable of incompatible type");
+        }
+
+        T::decode_buf_into_vec(&var.data, buf);
     }
 }
