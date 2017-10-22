@@ -7,7 +7,7 @@ Access to MIRIAD "uv" data sets containing visibility data.
 
  */
 
-use byteorder::{BigEndian, ByteOrder, ReadBytesExt};
+use byteorder::{BigEndian, ReadBytesExt};
 //use std::collections::HashMap;
 use std::fs::File;
 use std::io;
@@ -51,12 +51,12 @@ impl UvVariable {
 /// dataset.
 pub struct Reader {
     obstype: ObsType,
-    eff_vislen: usize,
+    eff_vislen: u64,
     ncorr: i64,
-    nwcorr: i64,
+    //nwcorr: i64,
     vars: Vec<UvVariable>,
     stream: io::BufReader<File>,
-    offset: usize,
+    offset: u64,
 }
 
 
@@ -76,7 +76,7 @@ impl Reader {
 
         let vislen = ds.get("vislen")?.read_scalar::<i64>()?;
         let ncorr = ds.get("ncorr")?.read_scalar()?;
-        let nwcorr = ds.get("nwcorr")?.read_scalar()?;
+        //let nwcorr = ds.get("nwcorr")?.read_scalar()?;
 
         let mut vars = Vec::new();
         let mut var_num = 0u8;
@@ -108,18 +108,31 @@ impl Reader {
 
         let stream = ds.get("visdata")?.into_byte_stream()?;
 
-        println!("OFS: {}", stream.into_inner().seek(io::SeekFrom::Current(0))?);
-        panic!("X");
-
         Ok(Reader {
             obstype: obstype,
-            eff_vislen: vislen as usize - 4, // this is always too big
+            eff_vislen: vislen as u64 - 4, // this is always too big
             ncorr: ncorr,
-            nwcorr: nwcorr,
+            //nwcorr: nwcorr,
             vars: vars,
             stream: stream,
             offset: 4, // account for the mixed-binary tag.
         })
+    }
+
+
+    pub fn obs_type(&self) -> ObsType {
+        self.obstype
+    }
+
+
+    pub fn num_correlations(&self) -> u64 {
+        self.ncorr as u64
+    }
+
+
+    /// Get the size of the bulk visibility data file in bytes.
+    pub fn visdata_bytes(&self) -> u64 {
+        self.eff_vislen
     }
 
 
@@ -129,15 +142,6 @@ impl Reader {
         let mut header_buf = [0u8; 4];
 
         while keep_going {
-            // The "vislen" variable is what we should use to determine when
-            // to stop reading, rather than the EOF signal -- it's insurance
-            // to save datasets if some extra vis data are written out when a
-            // data-taker crashes.
-            println!("{} {}", self.offset, self.eff_vislen);
-            if self.offset == self.eff_vislen {
-                return Ok(false);
-            }
-
             self.stream.read_exact(&mut header_buf)?;
             self.offset += 4;
             let varnum = header_buf[0];
@@ -175,16 +179,16 @@ impl Reader {
 
                     let var = &mut self.vars[varnum as usize];
 
-                    let remainder = self.offset % var.ty.alignment() as usize;
+                    let remainder = self.offset % var.ty.alignment() as u64;
                     if remainder != 0 {
-                        let misalignment = var.ty.alignment() as usize - remainder;
+                        let misalignment = (var.ty.alignment() as u64 - remainder) as usize;
                         let mut align_buf = [0u8; 8];
                         self.stream.read_exact(&mut align_buf[..misalignment])?;
-                        self.offset += misalignment;
+                        self.offset += misalignment as u64;
                     }
 
                     self.stream.read_exact(&mut var.data)?;
-                    self.offset += var.data.len();
+                    self.offset += var.data.len() as u64;
                 },
                 EOR => {
                     keep_going = false;
@@ -194,13 +198,23 @@ impl Reader {
                 }
             }
 
+            // The "vislen" variable is what we should use to determine when
+            // to stop reading, rather than EOF -- it's insurance to save
+            // datasets if some extra vis data are written out when a
+            // data-taker crashes. "vislen" should always be set to land on
+            // the end of a UV record.
+
+            if self.offset >= self.eff_vislen {
+                return Ok(false);
+            }
+
             let remainder = self.offset % 8;
 
             if remainder != 0 {
-                let misalignment = 8 - remainder;
+                let misalignment = 8 - remainder as usize;
                 let mut align_buf = [0u8; 8];
                 self.stream.read_exact(&mut align_buf[..misalignment])?;
-                self.offset += misalignment;
+                self.offset += misalignment as u64;
             }
         }
 

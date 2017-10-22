@@ -9,6 +9,7 @@ extern crate clap;
 extern crate rubbl_miriad;
 
 use clap::{Arg, App};
+use std::time::Instant;
 
 
 fn main() {
@@ -32,7 +33,16 @@ fn main() {
     };
 
     let mut uv = ds.open_uv().expect("could not open as UV dataset");
+    let mib = uv.visdata_bytes() as f64 / (1024. * 1024.);
+    let mut n = 0usize;
+    let t0 = Instant::now();
 
     while uv.next().expect("could not read UV data") {
+        n += 1
     }
+
+    let dur = t0.elapsed();
+    let dur_secs = dur.subsec_nanos() as f64 * 1e-9 + dur.as_secs() as f64;
+    
+    println!("{} records, {:.1} MiB in {:.3} seconds = {:.3} MiB/s", n, mib, dur_secs, mib / dur_secs);
 }
