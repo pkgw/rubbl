@@ -31,5 +31,8 @@ fn main() {
         }
     };
 
-    let _uv = ds.open_uv().expect("could not open as UV dataset");
+    let mut uv = ds.open_uv().expect("could not open as UV dataset");
+
+    while uv.next().expect("could not read UV data") {
+    }
 }
