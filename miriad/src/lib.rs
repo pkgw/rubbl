@@ -29,7 +29,7 @@ pub const MAX_ITEM_NAME_LENGTH: usize = 8;
 
 
 #[repr(u8)]
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+#[derive(Copy, Clone, Debug, Eq, Hash, PartialEq)]
 pub enum Type {
     Binary = 0,
     Int8 = 1,
@@ -206,11 +206,13 @@ impl MiriadMappedType for String {
 // XXX complex64
 
 
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
 enum ItemStorage {
     Small(Vec<u8>),
     Large(usize),
 }
 
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
 struct InternalItemInfo {
     pub ty: Type,
     pub storage: ItemStorage,
@@ -283,6 +285,7 @@ impl InternalItemInfo {
 }
 
 
+#[derive(Debug)]
 pub struct Item<'a> {
     dset: &'a DataSet,
     name: &'a str,
@@ -379,6 +382,7 @@ impl<'a> Item<'a> {
 }
 
 
+#[derive(Debug)]
 pub struct DataSet {
     dir: openat::Dir,
     items: HashMap<String, InternalItemInfo>,
@@ -387,6 +391,7 @@ pub struct DataSet {
 
 
 #[repr(C)]
+#[derive(Copy, Clone, Debug, Eq, Hash, PartialEq)]
 struct HeaderItem {
     /// The name of this item, encoded in UTF-8 with no trailing NUL. Classic
     /// MIRIAD is, of course, completely unaware of UTF-8, but it seems like a
@@ -581,6 +586,7 @@ impl DataSet {
 
 /// This helper struct stores state when iterating over the item names
 /// provided by a MIRIAD data set.
+#[derive(Debug)]
 pub struct DataSetItemNamesIterator<'a> {
     inner: std::collections::hash_map::Keys<'a, String, InternalItemInfo>,
 }
@@ -604,6 +610,7 @@ impl<'a> Iterator for DataSetItemNamesIterator<'a> {
 
 /// This helper struct stores state when iterating over the items inside a
 /// MIRIAD data set.
+#[derive(Debug)]
 pub struct DataSetItemsIterator<'a> {
     dset: &'a DataSet,
     inner: std::collections::hash_map::Iter<'a, String, InternalItemInfo>,
