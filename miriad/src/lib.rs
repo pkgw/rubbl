@@ -13,6 +13,7 @@ extern crate openat;
 
 use byteorder::{BigEndian, ByteOrder, ReadBytesExt};
 use std::collections::HashMap;
+use std::fs;
 use std::io;
 use std::io::prelude::*;
 
@@ -205,18 +206,6 @@ impl MiriadMappedType for String {
 // XXX complex64
 
 
-
-#[repr(C)]
-struct HeaderItem {
-    /// The name of this item, encoded in UTF-8 with no trailing NUL. Classic
-    /// MIRIAD is, of course, completely unaware of UTF-8, but it seems like a
-    /// sensible extension.
-    pub name: [u8; 15],
-
-    /// The length of the item including the necessary padding for alignment.
-    pub aligned_len: u8,
-}
-
 enum ItemStorage {
     Small(Vec<u8>),
     Large(usize),
@@ -347,6 +336,20 @@ impl<'a> Item<'a> {
 
         Ok(vec.into_iter().next().unwrap())
     }
+
+    pub fn into_lines(self) -> Result<io::Lines<io::BufReader<fs::File>>> {
+        if self.info.ty != Type::Text {
+            return err_msg!("cannot read lines of non-text item {}", self.name);
+        }
+
+        if let ItemStorage::Small(_) = self.info.storage {
+            return err_msg!("cannot read lines of small text item {}", self.name);
+        }
+
+        // Text items don't need any alignment futzing so we don't have to
+        // skip initial bytes.
+        Ok(io::BufReader::new(self.dset.dir.open_file(self.name)?).lines())
+    }
 }
 
 
@@ -354,6 +357,18 @@ pub struct DataSet {
     dir: openat::Dir,
     items: HashMap<String, InternalItemInfo>,
     large_items_scanned: bool,
+}
+
+
+#[repr(C)]
+struct HeaderItem {
+    /// The name of this item, encoded in UTF-8 with no trailing NUL. Classic
+    /// MIRIAD is, of course, completely unaware of UTF-8, but it seems like a
+    /// sensible extension.
+    pub name: [u8; 15],
+
+    /// The length of the item including the necessary padding for alignment.
+    pub aligned_len: u8,
 }
 
 
@@ -515,6 +530,10 @@ impl DataSet {
 
 
     /// Get a handle to an item in this data set.
+    ///
+    /// I feel like there should be a better way to do this, but right now the
+    /// reference to *item_name* needs to have a lifetime compatible with the
+    /// reference to the dataset itself.
     pub fn get<'a>(&'a mut self, item_name: &'a str) -> Result<Item<'a>> {
         // The HashMap access approach I use here feels awkward to me but it's
         // the only way I can get the lifetimes to work out.
