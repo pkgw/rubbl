@@ -43,7 +43,7 @@ pub enum Type {
 }
 
 impl Type {
-    pub fn try_from(type_code: i32) -> Result<Self> {
+    pub fn try_from_i32(type_code: i32) -> Result<Self> {
         // Kind of gross ...
         match type_code {
             0 => Ok(Type::Binary),
@@ -56,6 +56,23 @@ impl Type {
             7 => Ok(Type::Complex64),
             6 => Ok(Type::Text),
             _ => err_msg!("illegal MIRIAD type code {}", type_code),
+        }
+    }
+
+    /// This function takes a &str as an argument since working with
+    /// individual characters is usually a hassle.
+    pub fn try_from_abbrev(abbrev: &str) -> Result<Self> {
+        // Ditto.
+        match abbrev {
+            "b" => Ok(Type::Int8),
+            "j" => Ok(Type::Int16),
+            "i" => Ok(Type::Int32),
+            "l" => Ok(Type::Int64),
+            "r" => Ok(Type::Float32),
+            "d" => Ok(Type::Float64),
+            "c" => Ok(Type::Complex64),
+            "a" => Ok(Type::Text),
+            _ => err_msg!("illegal MIRIAD type abbreviation {}", abbrev),
         }
     }
 
@@ -244,7 +261,7 @@ impl InternalItemInfo {
 
         let type_code = BigEndian::read_i32(&type_buf);
 
-        let ty = match Type::try_from(type_code) {
+        let ty = match Type::try_from_i32(type_code) {
             Ok(t) => t,
             Err(_) => {
                 // This is probably a text file, but might be something we
@@ -457,7 +474,7 @@ impl DataSet {
             } else {
                 let type_code = header.read_i32::<BigEndian>()?;
                 // TODO: warn and press on if conversion fails
-                let mut ty = Type::try_from(type_code)?;
+                let mut ty = Type::try_from_i32(type_code)?;
 
                 // The "Text" type is internal-only; textual header items are
                 // expressed as arrays of int8's.
@@ -580,6 +597,11 @@ impl DataSet {
             name: item_name,
             info: self.items.get(item_name).unwrap(),
         })
+    }
+
+
+    pub fn open_uv(&mut self) -> Result<visdata::Reader> {
+        visdata::Reader::create(self)
     }
 }
 

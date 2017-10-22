@@ -23,11 +23,13 @@ fn main() {
 
     let path = matches.value_of_os("PATH").unwrap();
 
-    let _ds = match rubbl_miriad::DataSet::open(path) {
+    let mut ds = match rubbl_miriad::DataSet::open(path) {
         Ok(ds) => ds,
         Err(e) => {
             eprintln!("error opening {}: {}", path.to_string_lossy(), e);
             std::process::exit(1);
         }
     };
+
+    let _uv = ds.open_uv().expect("could not open as UV dataset");
 }
