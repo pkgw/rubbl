@@ -5,6 +5,13 @@
 
 Access to MIRIAD "uv" data sets containing visibility data.
 
+TODO:
+
+- overrides
+- writing UV data
+- upcasting of data types
+- flags
+
  */
 
 use byteorder::{BigEndian, ReadBytesExt};
@@ -53,6 +60,7 @@ pub struct UvVariableReference(u8);
 
 /// A struct that holds state for reading visibility data out of a MIRIAD uv
 /// dataset.
+#[derive(Debug)]
 pub struct Reader {
     obstype: ObsType,
     eff_vislen: u64,

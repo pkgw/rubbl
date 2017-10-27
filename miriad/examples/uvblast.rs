@@ -43,6 +43,6 @@ fn main() {
 
     let dur = t0.elapsed();
     let dur_secs = dur.subsec_nanos() as f64 * 1e-9 + dur.as_secs() as f64;
-    
+
     println!("{} records, {:.1} MiB in {:.3} seconds = {:.3} MiB/s", n, mib, dur_secs, mib / dur_secs);
 }
