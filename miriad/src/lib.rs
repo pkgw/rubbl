@@ -8,8 +8,8 @@ Access to MIRIAD-format data sets.
  */
 
 extern crate byteorder;
-#[macro_use] extern crate error_chain;
 extern crate openat;
+#[macro_use] extern crate rubbl_core;
 
 use byteorder::{BigEndian, ByteOrder, ReadBytesExt};
 use std::collections::HashMap;
@@ -18,10 +18,10 @@ use std::io;
 use std::io::prelude::*;
 
 
-#[macro_use] pub mod errors; // must come first to provide macros for other modules
+pub mod mask;
 pub mod visdata;
 
-use errors::Result;
+use rubbl_core::errors::{Error, ErrorKind, Result};
 
 /// The maximum length of the name of a dataset "item", in bytes.
 pub const MAX_ITEM_NAME_LENGTH: usize = 8;
@@ -613,21 +613,33 @@ impl DataSet {
     /// I feel like there should be a better way to do this, but right now the
     /// reference to *item_name* needs to have a lifetime compatible with the
     /// reference to the dataset itself.
-    pub fn get<'a>(&'a mut self, item_name: &'a str) -> Result<Item<'a>> {
+    pub fn get<'a>(&'a mut self, item_name: &'a str) -> Result<Option<Item<'a>>> {
         // The HashMap access approach I use here feels awkward to me but it's
         // the only way I can get the lifetimes to work out.
 
         if !self.items.contains_key(item_name) {
             // Assume it's an as-yet-unprobed large item on the filesystem.
-            let iii = InternalItemInfo::new_large(&mut self.dir, item_name)?;
+            let iii = match InternalItemInfo::new_large(&mut self.dir, item_name) {
+                Ok(iii) => iii,
+                Err(Error(ErrorKind::Io(ioe), _)) => {
+                    if ioe.kind() == io::ErrorKind::NotFound {
+                        // No such item. Don't bother to cache negative results.
+                        return Ok(None);
+                    }
+                    return Err(ioe.into());
+                },
+                Err(e) => {
+                    return Err(e);
+                },
+            };
             self.items.insert(item_name.to_owned(), iii);
         }
 
-        Ok(Item {
+        Ok(Some(Item {
             dset: self,
             name: item_name,
             info: self.items.get(item_name).unwrap(),
-        })
+        }))
     }
 
 

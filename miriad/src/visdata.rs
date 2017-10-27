@@ -10,17 +10,18 @@ TODO:
 - overrides
 - writing UV data
 - upcasting of data types
-- flags
+- special handling of j-format "corr" variable?
 
  */
 
 use byteorder::{BigEndian, ReadBytesExt};
+use rubbl_core::errors::Result;
+use rubbl_core::io::OpenResultExt;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io;
 use std::io::prelude::*;
 
-use errors::Result;
 use super::{DataSet, MiriadMappedType, Type};
 
 
@@ -75,7 +76,7 @@ pub struct Reader {
 
 impl Reader {
     pub fn create(ds: &mut DataSet) -> Result<Self> {
-        let ot_str: String = ds.get("obstype")?.read_scalar()?;
+        let ot_str: String = ds.get("obstype").require_found()?.read_scalar()?;
 
         let obstype = if ot_str.starts_with("auto") {
             ObsType::Auto
@@ -87,15 +88,15 @@ impl Reader {
             return err_msg!("unexpected \"obstype\" value {}", ot_str);
         };
 
-        let vislen = ds.get("vislen")?.read_scalar::<i64>()?;
-        let ncorr = ds.get("ncorr")?.read_scalar::<i64>()?;
-        //let nwcorr = ds.get("nwcorr")?.read_scalar()?;
+        let vislen = ds.get("vislen").require_found()?.read_scalar::<i64>()?;
+        let ncorr = ds.get("ncorr").require_found()?.read_scalar::<i64>()?;
+        //let nwcorr = ds.get("nwcorr").require_found()?.read_scalar()?;
 
         let mut vars = Vec::new();
         let mut vars_by_name = HashMap::new();
         let mut var_num = 0u8;
 
-        for maybe_line in ds.get("vartable")?.into_lines()? {
+        for maybe_line in ds.get("vartable").require_found()?.into_lines()? {
             let line = maybe_line?;
 
             if line.len() < 3 {
@@ -123,7 +124,7 @@ impl Reader {
             var_num += 1;
         }
 
-        let stream = ds.get("visdata")?.into_byte_stream()?;
+        let stream = ds.get("visdata").require_found()?.into_byte_stream()?;
 
         Ok(Reader {
             obstype: obstype,

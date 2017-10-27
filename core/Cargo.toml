@@ -2,13 +2,11 @@
 # Licensed under the MIT License.
 
 [package]
-name = "rubbl_miriad"
+name = "rubbl_core"
 version = "0.1.0"
 authors = ["Peter Williams <peter@newton.cx>"]
 license = "MIT"
 
 [dependencies]
 byteorder = "^1.1"
-clap = "^2.26"
-openat = "^0.1"
-rubbl_core = { path = "../core", version = "0.1.0" }
+error-chain = "^0.11"
