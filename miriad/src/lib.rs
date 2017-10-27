@@ -8,10 +8,12 @@ Access to MIRIAD-format data sets.
  */
 
 extern crate byteorder;
+extern crate num_complex;
 extern crate openat;
 #[macro_use] extern crate rubbl_core;
 
 use byteorder::{BigEndian, ByteOrder, ReadBytesExt};
+use num_complex::Complex;
 use std::collections::HashMap;
 use std::fs;
 use std::io;
@@ -217,6 +219,44 @@ impl MiriadMappedType for i64 {
 
         for chunk in buf.chunks(8) {
             vec.push(BigEndian::read_i64(chunk));
+        }
+    }
+}
+
+
+impl MiriadMappedType for Complex<f32> {
+    const TYPE: Type = Type::Complex64;
+
+    fn vec_from_miriad_reader<R: Read>(mut stream: R) -> Result<Vec<Self>> {
+        let mut val = Vec::new();
+
+        loop {
+            // XXX won't barf if the stream only has, e.g., 3 bytes
+            let real = match stream.read_f32::<BigEndian>() {
+                Err(e) => {
+                    if e.kind() == io::ErrorKind::UnexpectedEof {
+                        break;
+                    }
+
+                    return Err(e.into());
+                },
+                Ok(x) => x
+            };
+
+            let imag = stream.read_f32::<BigEndian>()?;
+            val.push(Complex::new(real, imag));
+        }
+
+        Ok(val)
+    }
+
+    fn decode_buf_into_vec(buf: &[u8], vec: &mut Vec<Self>) {
+        vec.clear();
+
+        for chunk in buf.chunks(8) {
+            let real = BigEndian::read_f32(&chunk[..4]);
+            let imag = BigEndian::read_f32(&chunk[4..]);
+            vec.push(Complex::new(real, imag));
         }
     }
 }
