@@ -12,8 +12,9 @@ extern crate openat;
 #[macro_use] extern crate rubbl_core;
 
 use byteorder::{BigEndian, ByteOrder, ReadBytesExt};
-use rubbl_core::io::EofReadExactExt;
 use rubbl_core::Complex;
+use rubbl_core::errors::{Error, ErrorKind, Result};
+use rubbl_core::io::{AligningReader, EofReadExactExt};
 use std::collections::HashMap;
 use std::fs;
 use std::io;
@@ -23,7 +24,6 @@ use std::io::prelude::*;
 pub mod mask;
 pub mod visdata;
 
-use rubbl_core::errors::{Error, ErrorKind, Result};
 
 /// The maximum length of the name of a dataset "item", in bytes.
 pub const MAX_ITEM_NAME_LENGTH: usize = 8;
@@ -263,8 +263,6 @@ impl MiriadMappedType for String {
 //    const TYPE: Type = Type::Float64;
 //}
 
-// XXX complex64
-
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 enum ItemStorage {
@@ -427,7 +425,7 @@ impl<'a> Item<'a> {
     }
 
 
-    pub fn into_byte_stream(self) -> Result<io::BufReader<fs::File>> {
+    pub fn into_byte_stream(self) -> Result<AligningReader<io::BufReader<fs::File>>> {
         if let ItemStorage::Small(_) = self.info.storage {
             // We *could* do this, but for coding simplicity we only allow it
             // for large items.
@@ -435,15 +433,13 @@ impl<'a> Item<'a> {
         }
 
         let f = self.dset.dir.open_file(self.name)?;
-        let mut br = io::BufReader::new(f);
+        let mut ar = AligningReader::new(io::BufReader::new(f));
 
         if self.info.ty != Type::Text {
-            let align = std::cmp::max(4, self.info.ty.alignment()) as usize;
-            let mut align_buf = [0u8; 8];
-            br.read_exact(&mut align_buf[..align])?;
+            ar.align_to(std::cmp::max(4, self.info.ty.alignment()) as usize)?;
         }
 
-        Ok(br)
+        Ok(ar)
     }
 }
 
@@ -479,9 +475,8 @@ impl DataSet {
 
         // Parse the header
 
-        let mut header = io::BufReader::new(ds.dir.open_file("header")?);
+        let mut header = AligningReader::new(io::BufReader::new(ds.dir.open_file("header")?));
         let mut rec = HeaderItem { name: [0; 15], aligned_len: 0 };
-        let mut offset = 0;
 
         loop {
             // Read data directly into `rec`. As far as I can tell this is the
@@ -504,8 +499,6 @@ impl DataSet {
 
                 return Err(e.into());
             }
-
-            offset += std::mem::size_of::<HeaderItem>();
 
             // If we pass the trailing NULs to from_utf8, they will silently
             // be included at the end of the `name` String.
@@ -535,9 +528,7 @@ impl DataSet {
                 // the type alignment values.
 
                 let align = std::cmp::max(4, ty.size());
-                let mut align_buf = [0u8; 8];
-                header.read_exact(&mut align_buf[..align - 4])?;
-
+                header.align_to(align)?;
                 let n_bytes = rec.aligned_len as usize - align;
 
                 if n_bytes % ty.size() != 0 {
@@ -552,24 +543,9 @@ impl DataSet {
                 (ty, data)
             };
 
-            offset += rec.aligned_len as usize;
-
             // TODO: could/should warn if a redundant item is encountered
             ds.items.insert(name.to_owned(), InternalItemInfo::new_small(ty, data));
-
-            // Maintain alignment.
-            let misalignment = offset % std::mem::size_of::<HeaderItem>();
-
-            if misalignment != 0 {
-                let mut align_buf = [0u8; 16];
-                let n_to_read = 16 - misalignment;
-
-                if !header.eof_read_exact(&mut align_buf[..n_to_read])? {
-                    break;
-                }
-
-                offset += n_to_read;
-            }
+            header.align_to(std::mem::size_of::<HeaderItem>())?;
         }
 
         // All done

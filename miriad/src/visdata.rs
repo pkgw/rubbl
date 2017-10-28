@@ -16,7 +16,7 @@ TODO:
 
 use byteorder::{BigEndian, ReadBytesExt};
 use rubbl_core::errors::Result;
-use rubbl_core::io::OpenResultExt;
+use rubbl_core::io::{AligningReader, OpenResultExt};
 use std::collections::HashMap;
 use std::fs::File;
 use std::io;
@@ -69,8 +69,7 @@ pub struct Reader {
     //nwcorr: i64,
     vars: Vec<UvVariable>,
     vars_by_name: HashMap<String, u8>,
-    stream: io::BufReader<File>,
-    offset: u64,
+    stream: AligningReader<io::BufReader<File>>,
 }
 
 
@@ -134,7 +133,6 @@ impl Reader {
             vars: vars,
             vars_by_name: vars_by_name,
             stream: stream,
-            offset: 4, // account for the mixed-binary tag.
         })
     }
 
@@ -162,7 +160,6 @@ impl Reader {
 
         while keep_going {
             self.stream.read_exact(&mut header_buf)?;
-            self.offset += 4;
             let varnum = header_buf[0];
             let entry_type = header_buf[2];
 
@@ -178,7 +175,6 @@ impl Reader {
 
                     let var = &mut self.vars[varnum as usize];
                     let n_bytes = self.stream.read_i32::<BigEndian>()?;
-                    self.offset += 4;
 
                     if n_bytes < 0 {
                         return err_msg!("invalid visdata: negative data size");
@@ -197,17 +193,8 @@ impl Reader {
                     }
 
                     let var = &mut self.vars[varnum as usize];
-
-                    let remainder = self.offset % var.ty.alignment() as u64;
-                    if remainder != 0 {
-                        let misalignment = (var.ty.alignment() as u64 - remainder) as usize;
-                        let mut align_buf = [0u8; 8];
-                        self.stream.read_exact(&mut align_buf[..misalignment])?;
-                        self.offset += misalignment as u64;
-                    }
-
+                    self.stream.align_to(var.ty.alignment() as usize)?;
                     self.stream.read_exact(&mut var.data)?;
-                    self.offset += var.data.len() as u64;
                 },
                 EOR => {
                     keep_going = false;
@@ -223,18 +210,11 @@ impl Reader {
             // data-taker crashes. "vislen" should always be set to land on
             // the end of a UV record.
 
-            if self.offset >= self.eff_vislen {
+            if self.stream.offset() >= self.eff_vislen {
                 return Ok(false);
             }
 
-            let remainder = self.offset % 8;
-
-            if remainder != 0 {
-                let misalignment = 8 - remainder as usize;
-                let mut align_buf = [0u8; 8];
-                self.stream.read_exact(&mut align_buf[..misalignment])?;
-                self.offset += misalignment as u64;
-            }
+            self.stream.align_to(8)?;
         }
 
         Ok(true)
