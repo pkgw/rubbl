@@ -33,7 +33,12 @@ fn main() {
         }
     };
 
-    for maybe_line in ds.get("history").expect("cannot probe history").into_lines().expect("cannot open history") {
+    for maybe_line in ds.get("history")
+        .expect("cannot probe history")
+        .expect("no history item")
+        .into_lines()
+        .expect("cannot open history")
+    {
         let line = maybe_line.expect("error reading history");
         println!("{}", line);
     }
