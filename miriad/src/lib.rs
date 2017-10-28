@@ -452,19 +452,6 @@ pub struct DataSet {
 }
 
 
-#[repr(C)]
-#[derive(Copy, Clone, Debug, Eq, Hash, PartialEq)]
-struct HeaderItem {
-    /// The name of this item, encoded in UTF-8 with no trailing NUL. Classic
-    /// MIRIAD is, of course, completely unaware of UTF-8, but it seems like a
-    /// sensible extension.
-    pub name: [u8; 15],
-
-    /// The length of the item including the necessary padding for alignment.
-    pub aligned_len: u8,
-}
-
-
 impl DataSet {
     pub fn open<P: openat::AsPath>(path: P) -> Result<Self> {
         let mut ds = DataSet {
@@ -476,42 +463,30 @@ impl DataSet {
         // Parse the header
 
         let mut header = AligningReader::new(io::BufReader::new(ds.dir.open_file("header")?));
-        let mut rec = HeaderItem { name: [0; 15], aligned_len: 0 };
+        let mut buf = [0u8; 16];
 
         loop {
-            // Read data directly into `rec`. As far as I can tell this is the
-            // least-bad way to do this:
-            let r = {
-                let rec_as_bytes: &mut [u8] = unsafe {
-                    std::slice::from_raw_parts_mut(
-                        &mut rec as *mut HeaderItem as *mut u8,
-                        std::mem::size_of::<HeaderItem>()
-                    )
-                };
-                header.read_exact(rec_as_bytes)
-            };
-
-
-            if let Err(e) = r {
-                if e.kind() == io::ErrorKind::UnexpectedEof {
-                    break;
-                }
-
-                return Err(e.into());
+            if !header.eof_read_exact(&mut buf)? {
+                break; // no more data
             }
 
-            // If we pass the trailing NULs to from_utf8, they will silently
-            // be included at the end of the `name` String.
+            // First 15 bytes are variable name, last byte is "aligned
+            // length". For the name, if we pass the trailing NULs to
+            // from_utf8, they will silently be included at the end of the
+            // `name` String.
+
             let mut name_len = 0;
 
-            while rec.name[name_len] != 0 {
+            while name_len < 15 && buf[name_len] != 0 {
                 name_len += 1;
             }
 
-            let name = std::str::from_utf8(&rec.name[..name_len])?;
+            let aligned_len = buf[15];
+
+            let name = std::str::from_utf8(&buf[..name_len])?;
             // TODO: validate "len": must be between 5 and 64
 
-            let (ty, data) = if rec.aligned_len == 0 {
+            let (ty, data) = if aligned_len == 0 {
                 (Type::Binary, Vec::new())
             } else {
                 let type_code = header.read_i32::<BigEndian>()?;
@@ -520,7 +495,7 @@ impl DataSet {
 
                 // The "Text" type is internal-only; textual header items are
                 // expressed as arrays of int8's.
-                if ty == Type::Int8 && rec.aligned_len > 5 {
+                if ty == Type::Int8 && aligned_len > 5 {
                     ty = Type::Text;
                 }
 
@@ -529,7 +504,7 @@ impl DataSet {
 
                 let align = std::cmp::max(4, ty.size());
                 header.align_to(align)?;
-                let n_bytes = rec.aligned_len as usize - align;
+                let n_bytes = aligned_len as usize - align;
 
                 if n_bytes % ty.size() != 0 {
                     // TODO: warn and press on
@@ -545,7 +520,7 @@ impl DataSet {
 
             // TODO: could/should warn if a redundant item is encountered
             ds.items.insert(name.to_owned(), InternalItemInfo::new_small(ty, data));
-            header.align_to(std::mem::size_of::<HeaderItem>())?;
+            header.align_to(16)?;
         }
 
         // All done
@@ -690,16 +665,5 @@ impl<'a> Iterator for DataSetItemsIterator<'a> {
             name: kv.0,
             info: kv.1,
         })
-    }
-}
-
-
-#[cfg(test)]
-mod test {
-    use super::*;
-
-    #[test]
-    fn test_header_item_size() {
-        assert_eq!(::std::mem::size_of::<HeaderItem>(), HEADER_RECORD_SIZE);
     }
 }
