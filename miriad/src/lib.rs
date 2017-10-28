@@ -8,12 +8,12 @@ Access to MIRIAD-format data sets.
  */
 
 extern crate byteorder;
-extern crate num_complex;
 extern crate openat;
 #[macro_use] extern crate rubbl_core;
 
 use byteorder::{BigEndian, ByteOrder, ReadBytesExt};
-use num_complex::Complex;
+use rubbl_core::io::EofReadExactExt;
+use rubbl_core::Complex;
 use std::collections::HashMap;
 use std::fs;
 use std::io;
@@ -197,18 +197,8 @@ impl MiriadMappedType for i64 {
     fn vec_from_miriad_reader<R: Read>(mut stream: R) -> Result<Vec<Self>> {
         let mut val = Vec::new();
 
-        loop {
-            // XXX won't barf if the stream only has, e.g., 3 bytes
-            match stream.read_i64::<BigEndian>() {
-                Err(e) => {
-                    if e.kind() == io::ErrorKind::UnexpectedEof {
-                        break;
-                    }
-
-                    return Err(e.into());
-                },
-                Ok(x) => { val.push(x); }
-            }
+        while let Some(n) = stream.eof_read_be_i64()? {
+            val.push(n);
         }
 
         Ok(val)
@@ -230,21 +220,8 @@ impl MiriadMappedType for Complex<f32> {
     fn vec_from_miriad_reader<R: Read>(mut stream: R) -> Result<Vec<Self>> {
         let mut val = Vec::new();
 
-        loop {
-            // XXX won't barf if the stream only has, e.g., 3 bytes
-            let real = match stream.read_f32::<BigEndian>() {
-                Err(e) => {
-                    if e.kind() == io::ErrorKind::UnexpectedEof {
-                        break;
-                    }
-
-                    return Err(e.into());
-                },
-                Ok(x) => x
-            };
-
-            let imag = stream.read_f32::<BigEndian>()?;
-            val.push(Complex::new(real, imag));
+        while let Some(x) = stream.eof_read_be_c64()? {
+            val.push(x);
         }
 
         Ok(val)
@@ -316,6 +293,7 @@ impl InternalItemInfo {
 
         if let Err(e) = f.read_exact(&mut type_buf) {
             if e.kind() == io::ErrorKind::UnexpectedEof {
+                // We will assume that an (e.g.) 3-byte file is text or binary
                 size_offset = 0;
                 for b in type_buf.iter_mut() {
                     *b = 0;
@@ -586,11 +564,8 @@ impl DataSet {
                 let mut align_buf = [0u8; 16];
                 let n_to_read = 16 - misalignment;
 
-                if let Err(e) = header.read_exact(&mut align_buf[..n_to_read]) {
-                    if e.kind() == io::ErrorKind::UnexpectedEof {
-                        break;
-                    }
-                    return Err(e.into());
+                if !header.eof_read_exact(&mut align_buf[..n_to_read])? {
+                    break;
                 }
 
                 offset += n_to_read;
