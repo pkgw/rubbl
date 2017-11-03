@@ -1,4 +1,6 @@
 #! /bin/bash
+# Copyright 2017 Peter Williams <peter@newton.cx> and collaborators
+# Licensed under the MIT License.
 
 if [ "$1" = "" ] ; then
     echo >&2 "usage: $0 <path-to-casacore-build-directory>"

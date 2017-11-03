@@ -1,3 +1,6 @@
+// Copyright 2017 Peter Williams <peter@newton.cx> and collaborators
+// Licensed under the MIT License.
+
 /* We process this header with bindgen to create Rust prototypes for our glue
  * to the casacore library. We need manually-written glue to deal with things
  * like exceptions safely.

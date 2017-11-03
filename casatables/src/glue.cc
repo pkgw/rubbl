@@ -1,3 +1,6 @@
+// Copyright 2017 Peter Williams <peter@newton.cx> and collaborators
+// Licensed under the MIT License.
+
 #include <casacore/casa/BasicSL.h>
 #include <casacore/tables/Tables.h>
 

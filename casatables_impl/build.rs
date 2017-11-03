@@ -1,3 +1,6 @@
+// Copyright 2017 Peter Williams <peter@newton.cx> and collaborators
+// Licensed under the MIT License.
+
 extern crate gcc;
 
 const FILES: &[&str] = &[
