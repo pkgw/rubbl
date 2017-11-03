@@ -72,7 +72,7 @@
 
 using namespace casacore;
 
-#line 76 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:339  */
+#line 76 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:339  */
 
 # ifndef YY_NULLPTR
 #  if defined __cplusplus && 201103L <= __cplusplus
@@ -316,7 +316,7 @@ TaQLMultiNode* nodelist;
 TaQLQueryNode* nodeselect;
 TaQLRecFldNodeRep* noderecfldrep;
 
-#line 320 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:355  */
+#line 320 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:355  */
 };
 
 typedef union YYSTYPE YYSTYPE;
@@ -338,7 +338,7 @@ Bool theFromQueryDone;           /* for flex for knowing how to handle a , */
 } //# NAMESPACE CASACORE - END
 int TableGramlex (YYSTYPE*);
 
-#line 342 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:358  */
+#line 342 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:358  */
 
 #ifdef short
 # undef short
@@ -2080,91 +2080,91 @@ yyreduce:
         case 6:
 #line 262 "TaQL/TableGram.yy" /* yacc.c:1646  */
     { TaQLNode::theirStyle.setTiming (True); }
-#line 2084 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 2084 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 8:
 #line 265 "TaQL/TableGram.yy" /* yacc.c:1646  */
     { TaQLNode::theirStyle.setTiming (True); }
-#line 2090 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 2090 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 9:
 #line 267 "TaQL/TableGram.yy" /* yacc.c:1646  */
     { TaQLNode::theirStyle.setTiming (True); }
-#line 2096 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 2096 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 10:
 #line 269 "TaQL/TableGram.yy" /* yacc.c:1646  */
     { TaQLNode::theirStyle.setTiming (True); }
-#line 2102 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 2102 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 14:
 #line 280 "TaQL/TableGram.yy" /* yacc.c:1646  */
     { TaQLNode::theirStyle.set ((yyvsp[0].val)->getString()); }
-#line 2108 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 2108 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 15:
 #line 282 "TaQL/TableGram.yy" /* yacc.c:1646  */
     { TaQLNode::theirStyle.set ((yyvsp[0].val)->getString()); }
-#line 2114 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 2114 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 16:
 #line 284 "TaQL/TableGram.yy" /* yacc.c:1646  */
     { TaQLNode::theirStyle.defineSynonym ((yyvsp[0].val)->getString()); }
-#line 2120 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 2120 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 17:
 #line 286 "TaQL/TableGram.yy" /* yacc.c:1646  */
     { TaQLNode::theirStyle.defineSynonym ((yyvsp[0].val)->getString()); }
-#line 2126 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 2126 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 18:
 #line 290 "TaQL/TableGram.yy" /* yacc.c:1646  */
     { TaQLNode::theirNode = *(yyvsp[0].nodeselect); }
-#line 2132 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 2132 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 19:
 #line 292 "TaQL/TableGram.yy" /* yacc.c:1646  */
     { TaQLNode::theirNode = *(yyvsp[0].node); }
-#line 2138 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 2138 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 20:
 #line 294 "TaQL/TableGram.yy" /* yacc.c:1646  */
     { TaQLNode::theirNode = *(yyvsp[0].node); }
-#line 2144 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 2144 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 21:
 #line 296 "TaQL/TableGram.yy" /* yacc.c:1646  */
     { TaQLNode::theirNode = *(yyvsp[0].node); }
-#line 2150 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 2150 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 22:
 #line 298 "TaQL/TableGram.yy" /* yacc.c:1646  */
     { TaQLNode::theirNode = *(yyvsp[0].node); }
-#line 2156 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 2156 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 23:
 #line 300 "TaQL/TableGram.yy" /* yacc.c:1646  */
     { TaQLNode::theirNode = *(yyvsp[0].nodeselect); }
-#line 2162 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 2162 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 24:
 #line 302 "TaQL/TableGram.yy" /* yacc.c:1646  */
     { TaQLNode::theirNode = *(yyvsp[0].node); }
-#line 2168 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 2168 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 25:
@@ -2173,7 +2173,7 @@ yyreduce:
                (yyval.node) = new TaQLNode(new TaQLShowNodeRep (*(yyvsp[0].nodelist)));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
            }
-#line 2177 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 2177 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 26:
@@ -2182,13 +2182,13 @@ yyreduce:
                (yyval.nodelist) = new TaQLMultiNode();
 	       TaQLNode::theirNodesCreated.push_back ((yyval.nodelist));
            }
-#line 2186 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 2186 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 27:
 #line 316 "TaQL/TableGram.yy" /* yacc.c:1646  */
     { (yyval.nodelist) = (yyvsp[0].nodelist); }
-#line 2192 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 2192 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 28:
@@ -2197,7 +2197,7 @@ yyreduce:
                (yyval.nodelist) = (yyvsp[-1].nodelist);
                (yyval.nodelist)->add (*(yyvsp[0].nodename));
            }
-#line 2201 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 2201 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 29:
@@ -2208,25 +2208,25 @@ yyreduce:
                (yyval.nodelist)->setSeparator (" ");
                (yyval.nodelist)->add (*(yyvsp[0].nodename));
            }
-#line 2212 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 2212 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 30:
 #line 332 "TaQL/TableGram.yy" /* yacc.c:1646  */
     { (yyval.nodeselect) = (yyvsp[0].nodeselect); }
-#line 2218 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 2218 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 31:
 #line 334 "TaQL/TableGram.yy" /* yacc.c:1646  */
     { (yyval.nodeselect) = (yyvsp[0].nodeselect); }
-#line 2224 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 2224 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 32:
 #line 336 "TaQL/TableGram.yy" /* yacc.c:1646  */
     { (yyval.nodeselect) = (yyvsp[0].nodeselect); }
-#line 2230 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 2230 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 33:
@@ -2234,7 +2234,7 @@ yyreduce:
     {
                (yyval.nodeselect) = (yyvsp[0].nodeselect);
 	   }
-#line 2238 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 2238 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 34:
@@ -2243,7 +2243,7 @@ yyreduce:
                (yyval.nodeselect) = (yyvsp[-1].nodeselect);
 	       (yyval.nodeselect)->setBrackets();
 	   }
-#line 2247 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 2247 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 35:
@@ -2252,7 +2252,7 @@ yyreduce:
                (yyval.nodeselect) = (yyvsp[-1].nodeselect);
 	       (yyval.nodeselect)->setBrackets();
 	   }
-#line 2256 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 2256 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 36:
@@ -2261,7 +2261,7 @@ yyreduce:
                (yyval.nodeselect) = (yyvsp[-1].nodeselect);
 	       (yyval.nodeselect)->setBrackets();
 	   }
-#line 2265 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 2265 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 37:
@@ -2270,7 +2270,7 @@ yyreduce:
                (yyval.nodeselect) = (yyvsp[-1].nodeselect);
 	       (yyval.nodeselect)->setBrackets();
 	   }
-#line 2274 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 2274 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 38:
@@ -2278,7 +2278,7 @@ yyreduce:
     {
                (yyval.nodeselect) = (yyvsp[0].nodeselect);
            }
-#line 2282 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 2282 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 39:
@@ -2289,7 +2289,7 @@ yyreduce:
 					   *(yyvsp[-3].node), *(yyvsp[-2].node), *(yyvsp[-1].node), *(yyvsp[0].nodelist)));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.nodeselect));
            }
-#line 2293 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 2293 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 40:
@@ -2300,7 +2300,7 @@ yyreduce:
 					   *(yyvsp[-2].node), *(yyvsp[-1].node), *(yyvsp[-8].node), *(yyvsp[0].nodelist)));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.nodeselect));
            }
-#line 2304 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 2304 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 41:
@@ -2311,7 +2311,7 @@ yyreduce:
 					   *(yyvsp[-3].node), *(yyvsp[-2].node), *(yyvsp[-1].node), *(yyvsp[0].nodelist)));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.nodeselect));
            }
-#line 2315 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 2315 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 42:
@@ -2322,7 +2322,7 @@ yyreduce:
 					   *(yyvsp[-2].node), *(yyvsp[-1].node), *(yyvsp[-6].node), *(yyvsp[0].nodelist)));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.nodeselect));
            }
-#line 2326 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 2326 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 43:
@@ -2330,7 +2330,7 @@ yyreduce:
     {
                (yyval.node) = (yyvsp[0].node);
            }
-#line 2334 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 2334 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 44:
@@ -2340,7 +2340,7 @@ yyreduce:
                     new TaQLColumnsNodeRep (False, *(yyvsp[0].nodelist)));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
            }
-#line 2344 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 2344 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 45:
@@ -2350,7 +2350,7 @@ yyreduce:
                     new TaQLColumnsNodeRep (True, *(yyvsp[0].nodelist)));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
            }
-#line 2354 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 2354 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 46:
@@ -2360,7 +2360,7 @@ yyreduce:
                     new TaQLColumnsNodeRep (False, *(yyvsp[0].nodelist)));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
            }
-#line 2364 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 2364 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 47:
@@ -2370,7 +2370,7 @@ yyreduce:
                     new TaQLCountNodeRep (*(yyvsp[-3].node), *(yyvsp[-1].nodelist), *(yyvsp[0].node)));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.nodeselect));
            }
-#line 2374 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 2374 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 48:
@@ -2378,7 +2378,7 @@ yyreduce:
     {
                (yyval.node) = (yyvsp[0].node);
            }
-#line 2382 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 2382 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 49:
@@ -2388,7 +2388,7 @@ yyreduce:
                     new TaQLUpdateNodeRep (*(yyvsp[-7].nodelist), *(yyvsp[-5].nodelist), *(yyvsp[-3].nodelist), *(yyvsp[-2].node), *(yyvsp[-1].node), *(yyvsp[0].node)));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
            }
-#line 2392 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 2392 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 50:
@@ -2398,7 +2398,7 @@ yyreduce:
 		    new TaQLUpdateNodeRep (*(yyvsp[-5].nodelist), *(yyvsp[-3].nodelist), 0, *(yyvsp[-2].node), *(yyvsp[-1].node), *(yyvsp[0].node)));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
            }
-#line 2402 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 2402 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 51:
@@ -2407,7 +2407,7 @@ yyreduce:
                (yyval.nodelist) = (yyvsp[-2].nodelist);
                (yyval.nodelist)->add (*(yyvsp[0].node));
            }
-#line 2411 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 2411 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 52:
@@ -2417,7 +2417,7 @@ yyreduce:
 	       TaQLNode::theirNodesCreated.push_back ((yyval.nodelist));
                (yyval.nodelist)->add (*(yyvsp[0].node));
            }
-#line 2421 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 2421 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 53:
@@ -2427,7 +2427,7 @@ yyreduce:
                     new TaQLUpdExprNodeRep ((yyvsp[-2].val)->getString(), "", *(yyvsp[0].node)));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
            }
-#line 2431 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 2431 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 54:
@@ -2438,7 +2438,7 @@ yyreduce:
                     new TaQLUpdExprNodeRep ((yyvsp[-5].val)->getString(), "", *(yyvsp[-3].nodelist), *(yyvsp[0].node)));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
            }
-#line 2442 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 2442 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 55:
@@ -2449,7 +2449,7 @@ yyreduce:
                     new TaQLUpdExprNodeRep ((yyvsp[-8].val)->getString(), "", *(yyvsp[-6].nodelist), *(yyvsp[-3].nodelist), *(yyvsp[0].node)));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
            }
-#line 2453 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 2453 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 56:
@@ -2460,7 +2460,7 @@ yyreduce:
                                             (yyvsp[-3].val)->getString(), *(yyvsp[0].node)));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
            }
-#line 2464 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 2464 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 57:
@@ -2471,7 +2471,7 @@ yyreduce:
                                             (yyvsp[-6].val)->getString(), *(yyvsp[-3].nodelist), *(yyvsp[0].node)));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
            }
-#line 2475 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 2475 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 58:
@@ -2479,7 +2479,7 @@ yyreduce:
     {
                (yyval.node) = (yyvsp[0].node);
            }
-#line 2483 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 2483 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 59:
@@ -2491,7 +2491,7 @@ yyreduce:
                     new TaQLInsertNodeRep (*(yyvsp[-2].nodelist), *(yyvsp[-1].nodelist), *(yyvsp[0].nodeselect), TaQLNode()));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
            }
-#line 2495 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 2495 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 60:
@@ -2502,7 +2502,7 @@ yyreduce:
                     new TaQLInsertNodeRep (*(yyvsp[-2].nodelist), *(yyvsp[-1].nodelist), *(yyvsp[0].node), TaQLNode()));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
            }
-#line 2506 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 2506 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 61:
@@ -2512,7 +2512,7 @@ yyreduce:
                     new TaQLInsertNodeRep (*(yyvsp[-2].nodelist), *(yyvsp[-1].nodelist), *(yyvsp[0].node), *(yyvsp[-4].node)));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
            }
-#line 2516 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 2516 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 62:
@@ -2522,7 +2522,7 @@ yyreduce:
                     new TaQLInsertNodeRep (*(yyvsp[-4].nodelist), *(yyvsp[-3].nodelist), *(yyvsp[-2].node), *(yyvsp[0].node)));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
            }
-#line 2526 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 2526 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 63:
@@ -2533,7 +2533,7 @@ yyreduce:
                     new TaQLInsertNodeRep (*(yyvsp[-2].nodelist), *(yyvsp[0].nodelist)));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
            }
-#line 2537 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 2537 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 64:
@@ -2542,7 +2542,7 @@ yyreduce:
                (yyval.nodelist) = new TaQLMultiNode();
 	       TaQLNode::theirNodesCreated.push_back ((yyval.nodelist));
            }
-#line 2546 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 2546 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 65:
@@ -2550,7 +2550,7 @@ yyreduce:
     {
                (yyval.nodelist) = (yyvsp[-1].nodelist);
            }
-#line 2554 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 2554 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 66:
@@ -2558,7 +2558,7 @@ yyreduce:
     {
                (yyval.nodelist) = (yyvsp[-1].nodelist);
            }
-#line 2562 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 2562 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 67:
@@ -2567,7 +2567,7 @@ yyreduce:
 	       (yyvsp[0].nodelist)->setPPFix ("VALUES ", "");
                (yyval.node) = (yyvsp[0].nodelist);
            }
-#line 2571 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 2571 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 68:
@@ -2576,7 +2576,7 @@ yyreduce:
                (yyval.nodelist) = (yyvsp[-2].nodelist);
 	       (yyval.nodelist)->add (*(yyvsp[0].nodelist));
            }
-#line 2580 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 2580 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 69:
@@ -2586,7 +2586,7 @@ yyreduce:
 	       TaQLNode::theirNodesCreated.push_back ((yyval.nodelist));
 	       (yyval.nodelist)->add (*(yyvsp[0].nodelist));
            }
-#line 2590 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 2590 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 70:
@@ -2594,7 +2594,7 @@ yyreduce:
     {
                (yyval.nodelist) = (yyvsp[-1].nodelist);
            }
-#line 2598 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 2598 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 71:
@@ -2602,7 +2602,7 @@ yyreduce:
     {
                (yyval.nodelist) = (yyvsp[-1].nodelist);
            }
-#line 2606 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 2606 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 72:
@@ -2611,7 +2611,7 @@ yyreduce:
                (yyval.nodelist) = (yyvsp[-2].nodelist);
 	       (yyval.nodelist)->add (*(yyvsp[0].node));
            }
-#line 2615 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 2615 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 73:
@@ -2622,7 +2622,7 @@ yyreduce:
 	       (yyval.nodelist)->setPPFix ("[", "]");
 	       (yyval.nodelist)->add (*(yyvsp[0].node));
            }
-#line 2626 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 2626 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 74:
@@ -2632,7 +2632,7 @@ yyreduce:
                     new TaQLDeleteNodeRep (*(yyvsp[-3].nodelist), *(yyvsp[-2].node), *(yyvsp[-1].node), *(yyvsp[0].node)));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
            }
-#line 2636 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 2636 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 75:
@@ -2643,7 +2643,7 @@ yyreduce:
                                          TaQLNode(), TaQLNode(), TaQLNode()));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
            }
-#line 2647 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 2647 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 76:
@@ -2655,7 +2655,7 @@ yyreduce:
                                     TaQLNode(), TaQLNode(), TaQLNode()));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
            }
-#line 2659 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 2659 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 77:
@@ -2665,7 +2665,7 @@ yyreduce:
                     new TaQLCalcNodeRep (*(yyvsp[-3].nodelist), *(yyvsp[-5].node), *(yyvsp[-2].node), *(yyvsp[-1].node), *(yyvsp[0].node)));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
            }
-#line 2669 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 2669 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 78:
@@ -2675,7 +2675,7 @@ yyreduce:
                     new TaQLCreTabNodeRep (*(yyvsp[-3].node), *(yyvsp[-2].nodelist), *(yyvsp[-1].node), *(yyvsp[0].nodelist)));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.nodeselect));
            }
-#line 2679 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 2679 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 79:
@@ -2685,7 +2685,7 @@ yyreduce:
                     new TaQLCreTabNodeRep (*(yyvsp[-5].node), *(yyvsp[-3].nodelist), *(yyvsp[-1].node), *(yyvsp[0].nodelist)));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.nodeselect));
            }
-#line 2689 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 2689 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 80:
@@ -2695,7 +2695,7 @@ yyreduce:
                     new TaQLCreTabNodeRep (*(yyvsp[-5].node), *(yyvsp[-3].nodelist), *(yyvsp[-1].node), *(yyvsp[0].nodelist)));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.nodeselect));
            }
-#line 2699 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 2699 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 81:
@@ -2705,7 +2705,7 @@ yyreduce:
                     new TaQLAltTabNodeRep (*(yyvsp[-1].node), TaQLMultiNode(), *(yyvsp[0].nodelist)));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.nodeselect));
            }
-#line 2709 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 2709 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 82:
@@ -2715,7 +2715,7 @@ yyreduce:
                     new TaQLAltTabNodeRep (*(yyvsp[-3].node), *(yyvsp[-1].nodelist), *(yyvsp[0].nodelist)));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.nodeselect));
            }
-#line 2719 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 2719 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 83:
@@ -2724,7 +2724,7 @@ yyreduce:
                (yyval.nodelist) = (yyvsp[-1].nodelist);
 	       (yyval.nodelist)->add (*(yyvsp[0].node));
            }
-#line 2728 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 2728 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 84:
@@ -2735,7 +2735,7 @@ yyreduce:
                (yyval.nodelist)->setSeparator (" ");
 	       (yyval.nodelist)->add (*(yyvsp[0].node));
            }
-#line 2739 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 2739 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 85:
@@ -2745,7 +2745,7 @@ yyreduce:
                     new TaQLAddColNodeRep(*(yyvsp[-1].nodelist), *(yyvsp[0].nodelist)));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
            }
-#line 2749 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 2749 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 86:
@@ -2755,7 +2755,7 @@ yyreduce:
                     new TaQLRenDropNodeRep(0, *(yyvsp[0].nodelist)));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
            }
-#line 2759 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 2759 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 87:
@@ -2765,7 +2765,7 @@ yyreduce:
                     new TaQLRenDropNodeRep(1, *(yyvsp[0].nodelist)));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
            }
-#line 2769 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 2769 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 88:
@@ -2775,7 +2775,7 @@ yyreduce:
                     new TaQLSetKeyNodeRep (*(yyvsp[0].nodelist)));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
            }
-#line 2779 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 2779 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 89:
@@ -2785,7 +2785,7 @@ yyreduce:
                     new TaQLSetKeyNodeRep (*(yyvsp[0].nodelist)));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
            }
-#line 2789 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 2789 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 90:
@@ -2795,7 +2795,7 @@ yyreduce:
                     new TaQLRenDropNodeRep(2, *(yyvsp[0].nodelist)));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
            }
-#line 2799 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 2799 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 91:
@@ -2805,7 +2805,7 @@ yyreduce:
                     new TaQLRenDropNodeRep(3, *(yyvsp[0].nodelist)));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
            }
-#line 2809 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 2809 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 92:
@@ -2815,7 +2815,7 @@ yyreduce:
                     new TaQLAddRowNodeRep(*(yyvsp[0].node)));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
            }
-#line 2819 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 2819 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 93:
@@ -2825,7 +2825,7 @@ yyreduce:
                (yyval.nodelist)->add (new TaQLKeyColNodeRep ((yyvsp[-2].val)->getString()));
                (yyval.nodelist)->add (new TaQLKeyColNodeRep ((yyvsp[0].val)->getString()));
            }
-#line 2829 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 2829 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 94:
@@ -2837,7 +2837,7 @@ yyreduce:
                (yyval.nodelist)->add (new TaQLKeyColNodeRep ((yyvsp[-2].val)->getString()));
                (yyval.nodelist)->add (new TaQLKeyColNodeRep ((yyvsp[0].val)->getString()));
            }
-#line 2841 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 2841 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 95:
@@ -2846,7 +2846,7 @@ yyreduce:
                (yyval.nodelist) = (yyvsp[-2].nodelist);
                (yyval.nodelist)->add (new TaQLKeyColNodeRep ((yyvsp[0].val)->getString()));
            }
-#line 2850 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 2850 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 96:
@@ -2856,7 +2856,7 @@ yyreduce:
 	       TaQLNode::theirNodesCreated.push_back ((yyval.nodelist));
                (yyval.nodelist)->add (new TaQLKeyColNodeRep ((yyvsp[0].val)->getString()));
            }
-#line 2860 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 2860 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 97:
@@ -2866,7 +2866,7 @@ yyreduce:
                (yyval.nodelist)->add (new TaQLKeyColNodeRep ((yyvsp[-2].nodename)->getString()));
                (yyval.nodelist)->add (new TaQLKeyColNodeRep ((yyvsp[0].val)->getString()));
            }
-#line 2870 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 2870 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 98:
@@ -2878,7 +2878,7 @@ yyreduce:
                (yyval.nodelist)->add (new TaQLKeyColNodeRep ((yyvsp[-2].nodename)->getString()));
                (yyval.nodelist)->add (new TaQLKeyColNodeRep ((yyvsp[0].val)->getString()));
            }
-#line 2882 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 2882 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 99:
@@ -2887,7 +2887,7 @@ yyreduce:
                (yyval.nodelist) = (yyvsp[-2].nodelist);
                (yyval.nodelist)->add (new TaQLKeyColNodeRep ((yyvsp[0].nodename)->getString()));
            }
-#line 2891 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 2891 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 100:
@@ -2897,7 +2897,7 @@ yyreduce:
 	       TaQLNode::theirNodesCreated.push_back ((yyval.nodelist));
                (yyval.nodelist)->add (new TaQLKeyColNodeRep ((yyvsp[0].nodename)->getString()));
            }
-#line 2901 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 2901 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 101:
@@ -2906,7 +2906,7 @@ yyreduce:
                (yyval.nodelist) = (yyvsp[-2].nodelist);
                (yyval.nodelist)->add (*(yyvsp[0].node));
            }
-#line 2910 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 2910 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 102:
@@ -2916,7 +2916,7 @@ yyreduce:
 	       TaQLNode::theirNodesCreated.push_back ((yyval.nodelist));
                (yyval.nodelist)->add (*(yyvsp[0].node));
            }
-#line 2920 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 2920 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 103:
@@ -2927,7 +2927,7 @@ yyreduce:
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
                delete (yyvsp[0].noderecfldrep);
            }
-#line 2931 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 2931 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 104:
@@ -2936,7 +2936,7 @@ yyreduce:
                (yyval.nodelist) = (yyvsp[-2].nodelist);
                (yyval.nodelist)->add (*(yyvsp[0].node));
            }
-#line 2940 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 2940 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 105:
@@ -2946,7 +2946,7 @@ yyreduce:
 	       TaQLNode::theirNodesCreated.push_back ((yyval.nodelist));
                (yyval.nodelist)->add (*(yyvsp[0].node));
            }
-#line 2950 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 2950 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 106:
@@ -2957,7 +2957,7 @@ yyreduce:
                                           (yyvsp[-1].nodename)->getString(), (yyvsp[0].val)->getString()));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
            }
-#line 2961 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 2961 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 107:
@@ -2965,7 +2965,7 @@ yyreduce:
     {
                (yyval.noderecfldrep) = (yyvsp[0].noderecfldrep);
            }
-#line 2969 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 2969 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 108:
@@ -2973,7 +2973,7 @@ yyreduce:
     {
                (yyval.noderecfldrep) = (yyvsp[0].noderecfldrep);
            }
-#line 2977 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 2977 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 109:
@@ -2981,7 +2981,7 @@ yyreduce:
     {
 	       (yyval.noderecfldrep) = new TaQLRecFldNodeRep ("", *(yyvsp[-1].nodelist), "");
            }
-#line 2985 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 2985 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 110:
@@ -2992,7 +2992,7 @@ yyreduce:
                empty.setPPFix ("[", "]");
                (yyval.noderecfldrep) = new TaQLRecFldNodeRep ("", empty, "");
            }
-#line 2996 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 2996 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 111:
@@ -3001,7 +3001,7 @@ yyreduce:
                /* empty vector of the given datatype */
                (yyval.noderecfldrep) = new TaQLRecFldNodeRep ("", TaQLNode(), (yyvsp[0].val)->getString());
            }
-#line 3005 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 3005 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 112:
@@ -3010,7 +3010,7 @@ yyreduce:
                (yyval.nodelist) = new TaQLMultiNode();
 	       TaQLNode::theirNodesCreated.push_back ((yyval.nodelist));
            }
-#line 3014 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 3014 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 113:
@@ -3018,7 +3018,7 @@ yyreduce:
     {
                (yyval.nodelist) = (yyvsp[0].nodelist);
            }
-#line 3022 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 3022 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 114:
@@ -3027,7 +3027,7 @@ yyreduce:
                (yyval.nodelist) = (yyvsp[-2].nodelist);
 	       (yyval.nodelist)->add (*(yyvsp[0].node));
            }
-#line 3031 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 3031 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 115:
@@ -3037,7 +3037,7 @@ yyreduce:
 	       TaQLNode::theirNodesCreated.push_back ((yyval.nodelist));
 	       (yyval.nodelist)->add (*(yyvsp[0].node));
            }
-#line 3041 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 3041 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 116:
@@ -3046,7 +3046,7 @@ yyreduce:
 	       (yyval.node) = new TaQLNode();
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
 	   }
-#line 3050 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 3050 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 117:
@@ -3056,7 +3056,7 @@ yyreduce:
                     new TaQLGroupNodeRep (TaQLGroupNodeRep::Normal, *(yyvsp[0].nodelist)));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
 	   }
-#line 3060 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 3060 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 118:
@@ -3066,7 +3066,7 @@ yyreduce:
                     new TaQLGroupNodeRep (TaQLGroupNodeRep::Rollup, *(yyvsp[0].nodelist)));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
 	   }
-#line 3070 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 3070 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 119:
@@ -3075,7 +3075,7 @@ yyreduce:
 	       (yyval.node) = new TaQLNode();
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
 	   }
-#line 3079 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 3079 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 120:
@@ -3083,7 +3083,7 @@ yyreduce:
     {
                (yyval.node) = (yyvsp[0].node);
 	   }
-#line 3087 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 3087 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 121:
@@ -3092,7 +3092,7 @@ yyreduce:
 	       (yyval.node) = new TaQLNode();
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
 	   }
-#line 3096 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 3096 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 122:
@@ -3102,7 +3102,7 @@ yyreduce:
 	            new TaQLSortNodeRep (False, TaQLSortNodeRep::Ascending, *(yyvsp[0].nodelist)));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
 	   }
-#line 3106 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 3106 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 123:
@@ -3112,7 +3112,7 @@ yyreduce:
 	            new TaQLSortNodeRep (False, TaQLSortNodeRep::Ascending, *(yyvsp[0].nodelist)));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
 	   }
-#line 3116 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 3116 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 124:
@@ -3122,7 +3122,7 @@ yyreduce:
 	            new TaQLSortNodeRep (False, TaQLSortNodeRep::Descending, *(yyvsp[0].nodelist)));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
 	   }
-#line 3126 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 3126 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 125:
@@ -3132,7 +3132,7 @@ yyreduce:
 	            new TaQLSortNodeRep (True, TaQLSortNodeRep::Ascending, *(yyvsp[0].nodelist)));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
 	   }
-#line 3136 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 3136 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 126:
@@ -3142,7 +3142,7 @@ yyreduce:
 	            new TaQLSortNodeRep (True, TaQLSortNodeRep::Ascending, *(yyvsp[0].nodelist)));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
 	   }
-#line 3146 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 3146 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 127:
@@ -3152,7 +3152,7 @@ yyreduce:
 	            new TaQLSortNodeRep (True, TaQLSortNodeRep::Descending, *(yyvsp[0].nodelist)));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
 	   }
-#line 3156 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 3156 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 128:
@@ -3162,7 +3162,7 @@ yyreduce:
 	            new TaQLSortNodeRep (True, TaQLSortNodeRep::Ascending, *(yyvsp[0].nodelist)));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
 	   }
-#line 3166 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 3166 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 129:
@@ -3172,7 +3172,7 @@ yyreduce:
 	            new TaQLSortNodeRep (True, TaQLSortNodeRep::Descending, *(yyvsp[0].nodelist)));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
 	   }
-#line 3176 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 3176 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 130:
@@ -3181,7 +3181,7 @@ yyreduce:
 	       (yyval.node) = new TaQLNode();
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
 	   }
-#line 3185 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 3185 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 131:
@@ -3191,7 +3191,7 @@ yyreduce:
 	            new TaQLLimitOffNodeRep (*(yyvsp[0].node), 0));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
 	   }
-#line 3195 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 3195 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 132:
@@ -3201,7 +3201,7 @@ yyreduce:
 	            new TaQLLimitOffNodeRep (*(yyvsp[0].node), 0));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
 	   }
-#line 3205 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 3205 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 133:
@@ -3211,7 +3211,7 @@ yyreduce:
 	            new TaQLLimitOffNodeRep (0, *(yyvsp[0].node)));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
 	   }
-#line 3215 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 3215 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 134:
@@ -3221,7 +3221,7 @@ yyreduce:
 	            new TaQLLimitOffNodeRep (*(yyvsp[-2].node), *(yyvsp[0].node)));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
 	   }
-#line 3225 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 3225 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 135:
@@ -3231,7 +3231,7 @@ yyreduce:
 	            new TaQLLimitOffNodeRep (*(yyvsp[0].node), *(yyvsp[-2].node)));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
 	   }
-#line 3235 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 3235 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 136:
@@ -3241,7 +3241,7 @@ yyreduce:
                     new TaQLGivingNodeRep ((yyvsp[0].nodename)->getString(), TaQLMultiNode()));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
 	   }
-#line 3245 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 3245 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 137:
@@ -3251,7 +3251,7 @@ yyreduce:
                     new TaQLGivingNodeRep ((yyvsp[-2].nodename)->getString(), *(yyvsp[0].nodelist)));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
 	   }
-#line 3255 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 3255 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 138:
@@ -3261,7 +3261,7 @@ yyreduce:
                     new TaQLGivingNodeRep ("", *(yyvsp[0].nodelist)));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
 	   }
-#line 3265 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 3265 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 139:
@@ -3273,7 +3273,7 @@ yyreduce:
                (yyval.nodelist)->setPPFix ("[", "]");
                (yyval.nodelist)->add (new TaQLRecFldNodeRep ((yyvsp[0].val)->getString(), val, ""));
 	   }
-#line 3277 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 3277 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 140:
@@ -3281,7 +3281,7 @@ yyreduce:
     {
                (yyval.nodelist) = (yyvsp[-1].nodelist);
 	   }
-#line 3285 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 3285 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 141:
@@ -3290,7 +3290,7 @@ yyreduce:
 	       (yyval.node) = new TaQLNode();
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
 	   }
-#line 3294 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 3294 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 142:
@@ -3298,7 +3298,7 @@ yyreduce:
     {
                (yyval.node) = (yyvsp[0].node);
 	   }
-#line 3302 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 3302 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 143:
@@ -3308,7 +3308,7 @@ yyreduce:
                     new TaQLGivingNodeRep (*(yyvsp[-1].nodelist)));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
 	   }
-#line 3312 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 3312 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 144:
@@ -3316,7 +3316,7 @@ yyreduce:
     {
                (yyval.node) = (yyvsp[0].node);
 	   }
-#line 3320 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 3320 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 145:
@@ -3325,7 +3325,7 @@ yyreduce:
                (yyval.nodelist) = new TaQLMultiNode();
 	       TaQLNode::theirNodesCreated.push_back ((yyval.nodelist));
            }
-#line 3329 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 3329 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 146:
@@ -3333,7 +3333,7 @@ yyreduce:
     {
                (yyval.nodelist) = (yyvsp[0].nodelist);
            }
-#line 3337 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 3337 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 147:
@@ -3343,7 +3343,7 @@ yyreduce:
 	       TaQLNode::theirNodesCreated.push_back ((yyval.nodelist));
                (yyval.nodelist)->add (*(yyvsp[0].node));
 	   }
-#line 3347 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 3347 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 148:
@@ -3352,7 +3352,7 @@ yyreduce:
 	       (yyval.nodelist) = (yyvsp[-2].nodelist);
                (yyval.nodelist)->add (*(yyvsp[0].node));
 	   }
-#line 3356 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 3356 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 149:
@@ -3362,7 +3362,7 @@ yyreduce:
                     new TaQLColNodeRep (*(yyvsp[0].node), "", "", ""));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
            }
-#line 3366 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 3366 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 150:
@@ -3372,7 +3372,7 @@ yyreduce:
                     new TaQLColNodeRep (*(yyvsp[-2].node), (yyvsp[0].val)->getString(), "", ""));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
            }
-#line 3376 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 3376 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 151:
@@ -3383,7 +3383,7 @@ yyreduce:
                                         (yyvsp[-1].val)->getString(), ""));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
            }
-#line 3387 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 3387 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 152:
@@ -3394,7 +3394,7 @@ yyreduce:
                                         "", (yyvsp[0].val)->getString()));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
            }
-#line 3398 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 3398 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 153:
@@ -3405,7 +3405,7 @@ yyreduce:
                                         (yyvsp[-2].val)->getString(), (yyvsp[0].val)->getString()));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
            }
-#line 3409 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 3409 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 154:
@@ -3413,7 +3413,7 @@ yyreduce:
     {
                (yyval.node)= (yyvsp[0].node);
            }
-#line 3417 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 3417 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 155:
@@ -3423,7 +3423,7 @@ yyreduce:
                (yyval.node) = new TaQLNode (new TaQLColNodeRep (p, "", "", ""));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
            }
-#line 3427 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 3427 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 156:
@@ -3432,7 +3432,7 @@ yyreduce:
                (yyval.node) = new TaQLNode (new TaQLColNodeRep (*(yyvsp[0].valre), "", "", ""));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
            }
-#line 3436 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 3436 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 157:
@@ -3442,7 +3442,7 @@ yyreduce:
 	       TaQLNode::theirNodesCreated.push_back ((yyval.nodelist));
                (yyval.nodelist)->add (new TaQLKeyColNodeRep ((yyvsp[0].val)->getString()));
 	   }
-#line 3446 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 3446 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 158:
@@ -3453,7 +3453,7 @@ yyreduce:
                (yyval.nodelist)->add (new TaQLKeyColNodeRep ((yyvsp[-3].val)->getString(),
                                                (yyvsp[-1].val)->getString()));
 	   }
-#line 3457 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 3457 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 159:
@@ -3462,7 +3462,7 @@ yyreduce:
 	       (yyval.nodelist) = (yyvsp[-2].nodelist);
                (yyval.nodelist)->add (new TaQLKeyColNodeRep ((yyvsp[0].val)->getString()));
 	   }
-#line 3466 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 3466 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 160:
@@ -3472,7 +3472,7 @@ yyreduce:
                (yyval.nodelist)->add (new TaQLKeyColNodeRep ((yyvsp[-3].val)->getString(),
                                                (yyvsp[-1].val)->getString()));
 	   }
-#line 3476 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 3476 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 161:
@@ -3481,7 +3481,7 @@ yyreduce:
                (yyval.node) = new TaQLNode();
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
            }
-#line 3485 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 3485 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 162:
@@ -3489,7 +3489,7 @@ yyreduce:
     {
                (yyval.node) = (yyvsp[0].node);
 	   }
-#line 3493 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 3493 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 163:
@@ -3498,7 +3498,7 @@ yyreduce:
                (yyval.nodelist) = new TaQLMultiNode();
 	       TaQLNode::theirNodesCreated.push_back ((yyval.nodelist));
            }
-#line 3502 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 3502 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 164:
@@ -3506,7 +3506,7 @@ yyreduce:
     {
                (yyval.nodelist) = (yyvsp[0].nodelist);
            }
-#line 3510 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 3510 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 165:
@@ -3516,7 +3516,7 @@ yyreduce:
 	       TaQLNode::theirNodesCreated.push_back ((yyval.nodelist));
                (yyval.nodelist)->add (*(yyvsp[0].node));
 	   }
-#line 3520 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 3520 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 166:
@@ -3525,7 +3525,7 @@ yyreduce:
 	       (yyval.nodelist) = (yyvsp[-2].nodelist);
                (yyval.nodelist)->add (*(yyvsp[0].node));
 	   }
-#line 3529 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 3529 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 167:
@@ -3536,7 +3536,7 @@ yyreduce:
 		                           TaQLMultiNode()));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
 	   }
-#line 3540 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 3540 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 168:
@@ -3549,7 +3549,7 @@ yyreduce:
 		                           re));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
 	   }
-#line 3553 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 3553 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 169:
@@ -3560,7 +3560,7 @@ yyreduce:
 		                           *(yyvsp[-1].nodelist)));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
 	   }
-#line 3564 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 3564 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 170:
@@ -3570,7 +3570,7 @@ yyreduce:
 	       TaQLNode::theirNodesCreated.push_back ((yyval.nodelist));
                (yyval.nodelist)->add (*(yyvsp[0].node));
 	   }
-#line 3574 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 3574 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 171:
@@ -3579,7 +3579,7 @@ yyreduce:
 	       (yyval.nodelist) = (yyvsp[-2].nodelist);
                (yyval.nodelist)->add (*(yyvsp[0].node));
 	   }
-#line 3583 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 3583 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 172:
@@ -3590,7 +3590,7 @@ yyreduce:
                     new TaQLTableNodeRep(*(yyvsp[0].val), (yyvsp[0].val)->getString()));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
            }
-#line 3594 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 3594 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 173:
@@ -3600,7 +3600,7 @@ yyreduce:
 	            new TaQLTableNodeRep(*(yyvsp[0].node), ""));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
            }
-#line 3604 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 3604 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 174:
@@ -3611,7 +3611,7 @@ yyreduce:
 	            new TaQLTableNodeRep(*(yyvsp[-1].node), (yyvsp[0].val)->getString()));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
            }
-#line 3615 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 3615 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 175:
@@ -3621,7 +3621,7 @@ yyreduce:
 	            new TaQLTableNodeRep(*(yyvsp[-2].node), (yyvsp[0].val)->getString()));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
            }
-#line 3625 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 3625 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 176:
@@ -3631,7 +3631,7 @@ yyreduce:
 	            new TaQLTableNodeRep(*(yyvsp[0].node), (yyvsp[-2].val)->getString()));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
            }
-#line 3635 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 3635 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 177:
@@ -3639,7 +3639,7 @@ yyreduce:
     {
                (yyval.node) = (yyvsp[0].node);
            }
-#line 3643 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 3643 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 178:
@@ -3648,7 +3648,7 @@ yyreduce:
 	       (yyvsp[0].val)->setIsTableName();
                (yyval.node) = (yyvsp[0].val);
            }
-#line 3652 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 3652 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 179:
@@ -3658,7 +3658,7 @@ yyreduce:
 	       (yyvsp[0].nodeselect)->setFromExecute();
                (yyval.node) = (yyvsp[0].nodeselect);
            }
-#line 3662 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 3662 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 180:
@@ -3666,7 +3666,7 @@ yyreduce:
     {
 	       (yyval.node) = (yyvsp[0].nodename);
            }
-#line 3670 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 3670 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 181:
@@ -3676,7 +3676,7 @@ yyreduce:
                     new TaQLConcTabNodeRep((yyvsp[-1].nodename)->getString(), *(yyvsp[-3].nodelist), *(yyvsp[-2].nodelist)));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
            }
-#line 3680 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 3680 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 182:
@@ -3685,7 +3685,7 @@ yyreduce:
                 (yyval.nodelist) = new TaQLMultiNode();
                 TaQLNode::theirNodesCreated.push_back ((yyval.nodelist));
            }
-#line 3689 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 3689 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 183:
@@ -3693,7 +3693,7 @@ yyreduce:
     {
                 (yyval.nodelist) = (yyvsp[0].nodelist);
            }
-#line 3697 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 3697 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 184:
@@ -3704,7 +3704,7 @@ yyreduce:
 	       (yyvsp[0].val)->setIsTableName();
                (yyval.nodelist)->add (*(yyvsp[0].val));
 	   }
-#line 3708 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 3708 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 185:
@@ -3714,7 +3714,7 @@ yyreduce:
 	       (yyvsp[0].val)->setIsTableName();
                (yyval.nodelist)->add (*(yyvsp[0].val));
 	   }
-#line 3718 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 3718 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 186:
@@ -3723,7 +3723,7 @@ yyreduce:
                (yyval.nodename) = new TaQLConstNode(new TaQLConstNodeRep(String()));
                TaQLNode::theirNodesCreated.push_back ((yyval.nodename));
            }
-#line 3727 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 3727 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 187:
@@ -3731,7 +3731,7 @@ yyreduce:
     {
                (yyval.nodename) = (yyvsp[0].nodename);
            }
-#line 3735 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 3735 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 188:
@@ -3739,7 +3739,7 @@ yyreduce:
     {
                (yyval.nodename) = (yyvsp[0].nodename);
           }
-#line 3743 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 3743 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 189:
@@ -3748,7 +3748,7 @@ yyreduce:
 	       (yyvsp[0].val)->setIsTableName();
                (yyval.nodename) = (yyvsp[0].val);
            }
-#line 3752 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 3752 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 190:
@@ -3757,7 +3757,7 @@ yyreduce:
 	       (yyvsp[0].val)->setIsTableName();
                (yyval.nodename) = (yyvsp[0].val);
            }
-#line 3761 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 3761 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 191:
@@ -3766,7 +3766,7 @@ yyreduce:
 	       (yyvsp[0].val)->setIsTableName();
                (yyval.nodename) = (yyvsp[0].val);
            }
-#line 3770 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 3770 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 192:
@@ -3775,7 +3775,7 @@ yyreduce:
 	       (yyvsp[0].val)->setIsTableName();
                (yyval.nodename) = (yyvsp[0].val);
            }
-#line 3779 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 3779 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 193:
@@ -3783,7 +3783,7 @@ yyreduce:
     {
                (yyval.nodename) = (yyvsp[0].nodename);
            }
-#line 3787 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 3787 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 194:
@@ -3793,7 +3793,7 @@ yyreduce:
 	       TaQLNode::theirNodesCreated.push_back ((yyval.nodelist));
                (yyval.nodelist)->add (*(yyvsp[0].node));
 	   }
-#line 3797 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 3797 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 195:
@@ -3802,7 +3802,7 @@ yyreduce:
 	       (yyval.nodelist) = (yyvsp[-2].nodelist);
                (yyval.nodelist)->add (*(yyvsp[0].node));
            }
-#line 3806 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 3806 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 196:
@@ -3811,7 +3811,7 @@ yyreduce:
 	       (yyval.node) = new TaQLNode();
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
            }
-#line 3815 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 3815 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 197:
@@ -3819,7 +3819,7 @@ yyreduce:
     {
 	       (yyval.node) = (yyvsp[0].node);
 	   }
-#line 3823 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 3823 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 198:
@@ -3827,7 +3827,7 @@ yyreduce:
     {
 	       (yyval.node) = (yyvsp[0].node);
            }
-#line 3831 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 3831 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 199:
@@ -3837,7 +3837,7 @@ yyreduce:
 	            new TaQLBinaryNodeRep (TaQLBinaryNodeRep::B_OR, *(yyvsp[-2].node), *(yyvsp[0].node)));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
 	   }
-#line 3841 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 3841 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 200:
@@ -3845,7 +3845,7 @@ yyreduce:
     {
 	       (yyval.node) = (yyvsp[0].node);
            }
-#line 3849 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 3849 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 201:
@@ -3855,7 +3855,7 @@ yyreduce:
 	            new TaQLBinaryNodeRep (TaQLBinaryNodeRep::B_AND, *(yyvsp[-2].node), *(yyvsp[0].node)));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
 	   }
-#line 3859 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 3859 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 202:
@@ -3863,7 +3863,7 @@ yyreduce:
     {
 	       (yyval.node) = (yyvsp[0].node);
            }
-#line 3867 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 3867 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 203:
@@ -3873,7 +3873,7 @@ yyreduce:
 	            new TaQLBinaryNodeRep (TaQLBinaryNodeRep::B_EQ, *(yyvsp[-2].node), *(yyvsp[0].node)));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
 	   }
-#line 3877 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 3877 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 204:
@@ -3883,7 +3883,7 @@ yyreduce:
 	            new TaQLBinaryNodeRep (TaQLBinaryNodeRep::B_EQ, *(yyvsp[-2].node), *(yyvsp[0].node)));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
 	   }
-#line 3887 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 3887 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 205:
@@ -3893,7 +3893,7 @@ yyreduce:
 	            new TaQLBinaryNodeRep (TaQLBinaryNodeRep::B_GT, *(yyvsp[-2].node), *(yyvsp[0].node)));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
 	   }
-#line 3897 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 3897 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 206:
@@ -3903,7 +3903,7 @@ yyreduce:
 	            new TaQLBinaryNodeRep (TaQLBinaryNodeRep::B_GE, *(yyvsp[-2].node), *(yyvsp[0].node)));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
 	   }
-#line 3907 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 3907 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 207:
@@ -3913,7 +3913,7 @@ yyreduce:
 	            new TaQLBinaryNodeRep (TaQLBinaryNodeRep::B_LT, *(yyvsp[-2].node), *(yyvsp[0].node)));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
 	   }
-#line 3917 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 3917 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 208:
@@ -3923,7 +3923,7 @@ yyreduce:
 	            new TaQLBinaryNodeRep (TaQLBinaryNodeRep::B_LE, *(yyvsp[-2].node), *(yyvsp[0].node)));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
 	   }
-#line 3927 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 3927 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 209:
@@ -3933,7 +3933,7 @@ yyreduce:
 	            new TaQLBinaryNodeRep (TaQLBinaryNodeRep::B_NE, *(yyvsp[-2].node), *(yyvsp[0].node)));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
 	   }
-#line 3937 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 3937 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 210:
@@ -3946,7 +3946,7 @@ yyreduce:
                (yyval.node) = new TaQLNode (new TaQLFuncNodeRep("NEAR", set));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
 	   }
-#line 3950 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 3950 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 211:
@@ -3961,7 +3961,7 @@ yyreduce:
                     new TaQLUnaryNodeRep (TaQLUnaryNodeRep::U_NOT, ref));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
 	   }
-#line 3965 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 3965 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 212:
@@ -3970,7 +3970,7 @@ yyreduce:
 	       (yyval.node) = new TaQLNode(TaQLBinaryNodeRep::handleRegex (*(yyvsp[-1].node), *(yyvsp[0].valre)));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
 	   }
-#line 3974 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 3974 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 213:
@@ -3983,7 +3983,7 @@ yyreduce:
 	            new TaQLBinaryNodeRep (TaQLBinaryNodeRep::B_EQ, *(yyvsp[-2].node), ref));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
 	   }
-#line 3987 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 3987 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 214:
@@ -4002,7 +4002,7 @@ yyreduce:
 	            new TaQLBinaryNodeRep (TaQLBinaryNodeRep::B_EQ, tn1, ref));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
 	   }
-#line 4006 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 4006 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 215:
@@ -4015,7 +4015,7 @@ yyreduce:
 	            new TaQLBinaryNodeRep (TaQLBinaryNodeRep::B_NE, *(yyvsp[-3].node), ref));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
 	   }
-#line 4019 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 4019 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 216:
@@ -4034,7 +4034,7 @@ yyreduce:
 	            new TaQLBinaryNodeRep (TaQLBinaryNodeRep::B_NE, tn1, ref));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
 	   }
-#line 4038 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 4038 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 217:
@@ -4045,7 +4045,7 @@ yyreduce:
 	            new TaQLUnaryNodeRep (TaQLUnaryNodeRep::U_EXISTS, *(yyvsp[0].nodeselect)));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
 	    }
-#line 4049 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 4049 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 218:
@@ -4056,7 +4056,7 @@ yyreduce:
 	            new TaQLUnaryNodeRep (TaQLUnaryNodeRep::U_NOTEXISTS, *(yyvsp[0].nodeselect)));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
             }
-#line 4060 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 4060 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 219:
@@ -4066,7 +4066,7 @@ yyreduce:
 	            new TaQLBinaryNodeRep (TaQLBinaryNodeRep::B_IN, *(yyvsp[-2].node), *(yyvsp[0].node)));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
            }
-#line 4070 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 4070 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 220:
@@ -4078,7 +4078,7 @@ yyreduce:
                     new TaQLUnaryNodeRep (TaQLUnaryNodeRep::U_NOT, p));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
            }
-#line 4082 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 4082 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 221:
@@ -4088,7 +4088,7 @@ yyreduce:
 	            new TaQLBinaryNodeRep (TaQLBinaryNodeRep::B_IN, *(yyvsp[-2].node), *(yyvsp[0].nodelist)));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
            }
-#line 4092 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 4092 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 222:
@@ -4099,7 +4099,7 @@ yyreduce:
                     new TaQLUnaryNodeRep (TaQLUnaryNodeRep::U_NOT, p));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
            }
-#line 4103 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 4103 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 223:
@@ -4111,7 +4111,7 @@ yyreduce:
 	            new TaQLBinaryNodeRep (TaQLBinaryNodeRep::B_IN, *(yyvsp[-4].node), pr));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
            }
-#line 4115 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 4115 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 224:
@@ -4124,7 +4124,7 @@ yyreduce:
                     new TaQLUnaryNodeRep (TaQLUnaryNodeRep::U_NOT, p));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
            }
-#line 4128 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 4128 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 225:
@@ -4137,7 +4137,7 @@ yyreduce:
                     new TaQLFuncNodeRep ("anyCone", pr));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
            }
-#line 4141 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 4141 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 226:
@@ -4151,7 +4151,7 @@ yyreduce:
                     new TaQLUnaryNodeRep (TaQLUnaryNodeRep::U_NOT, p));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
            }
-#line 4155 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 4155 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 227:
@@ -4159,7 +4159,7 @@ yyreduce:
     {
 	       (yyval.node)= (yyvsp[0].node);
            }
-#line 4163 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 4163 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 228:
@@ -4169,7 +4169,7 @@ yyreduce:
 	            new TaQLBinaryNodeRep (TaQLBinaryNodeRep::B_PLUS, *(yyvsp[-2].node), *(yyvsp[0].node)));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
 	   }
-#line 4173 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 4173 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 229:
@@ -4179,7 +4179,7 @@ yyreduce:
 	            new TaQLBinaryNodeRep (TaQLBinaryNodeRep::B_MINUS, *(yyvsp[-2].node), *(yyvsp[0].node)));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
 	   }
-#line 4183 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 4183 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 230:
@@ -4189,7 +4189,7 @@ yyreduce:
 	            new TaQLBinaryNodeRep (TaQLBinaryNodeRep::B_TIMES, *(yyvsp[-2].node), *(yyvsp[0].node)));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
 	   }
-#line 4193 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 4193 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 231:
@@ -4199,7 +4199,7 @@ yyreduce:
 	            new TaQLBinaryNodeRep (TaQLBinaryNodeRep::B_DIVIDE, *(yyvsp[-2].node), *(yyvsp[0].node)));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
 	   }
-#line 4203 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 4203 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 232:
@@ -4209,7 +4209,7 @@ yyreduce:
 	            new TaQLBinaryNodeRep (TaQLBinaryNodeRep::B_DIVIDETRUNC, *(yyvsp[-2].node), *(yyvsp[0].node)));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
 	   }
-#line 4213 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 4213 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 233:
@@ -4219,7 +4219,7 @@ yyreduce:
 	            new TaQLBinaryNodeRep (TaQLBinaryNodeRep::B_MODULO, *(yyvsp[-2].node), *(yyvsp[0].node)));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
 	   }
-#line 4223 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 4223 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 234:
@@ -4229,7 +4229,7 @@ yyreduce:
 	            new TaQLBinaryNodeRep (TaQLBinaryNodeRep::B_BITAND, *(yyvsp[-2].node), *(yyvsp[0].node)));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
 	   }
-#line 4233 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 4233 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 235:
@@ -4239,7 +4239,7 @@ yyreduce:
 	            new TaQLBinaryNodeRep (TaQLBinaryNodeRep::B_BITXOR, *(yyvsp[-2].node), *(yyvsp[0].node)));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
 	   }
-#line 4243 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 4243 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 236:
@@ -4249,7 +4249,7 @@ yyreduce:
 	            new TaQLBinaryNodeRep (TaQLBinaryNodeRep::B_BITOR, *(yyvsp[-2].node), *(yyvsp[0].node)));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
 	   }
-#line 4253 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 4253 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 237:
@@ -4259,13 +4259,13 @@ yyreduce:
 	            new TaQLUnaryNodeRep (TaQLUnaryNodeRep::U_MINUS, *(yyvsp[0].node)));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
 	   }
-#line 4263 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 4263 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 238:
 #line 1520 "TaQL/TableGram.yy" /* yacc.c:1646  */
     { (yyval.node) = (yyvsp[0].node); }
-#line 4269 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 4269 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 239:
@@ -4275,7 +4275,7 @@ yyreduce:
 	            new TaQLUnaryNodeRep (TaQLUnaryNodeRep::U_BITNOT, *(yyvsp[0].node)));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
 	   }
-#line 4279 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 4279 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 240:
@@ -4285,7 +4285,7 @@ yyreduce:
 	            new TaQLUnaryNodeRep (TaQLUnaryNodeRep::U_NOT, *(yyvsp[0].node)));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
 	   }
-#line 4289 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 4289 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 241:
@@ -4295,13 +4295,13 @@ yyreduce:
 	            new TaQLBinaryNodeRep (TaQLBinaryNodeRep::B_POWER, *(yyvsp[-2].node), *(yyvsp[0].node)));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
 	   }
-#line 4299 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 4299 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 242:
 #line 1539 "TaQL/TableGram.yy" /* yacc.c:1646  */
     { (yyval.node) = (yyvsp[0].node); }
-#line 4305 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 4305 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 243:
@@ -4311,7 +4311,7 @@ yyreduce:
                     new TaQLUnitNodeRep ((yyvsp[0].nodename)->getString(), *(yyvsp[-1].node)));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
            }
-#line 4315 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 4315 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 244:
@@ -4319,7 +4319,7 @@ yyreduce:
     {
                (yyval.node) = (yyvsp[0].node);
            }
-#line 4323 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 4323 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 245:
@@ -4329,13 +4329,13 @@ yyreduce:
 	            new TaQLBinaryNodeRep (TaQLBinaryNodeRep::B_INDEX, *(yyvsp[-3].node), *(yyvsp[-1].nodelist)));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
 	   }
-#line 4333 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 4333 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 246:
 #line 1558 "TaQL/TableGram.yy" /* yacc.c:1646  */
     { (yyval.node) = (yyvsp[-1].node); }
-#line 4339 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 4339 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 247:
@@ -4345,7 +4345,7 @@ yyreduce:
                     new TaQLFuncNodeRep ((yyvsp[-3].nodename)->getString(), *(yyvsp[-1].nodelist)));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
 	   }
-#line 4349 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 4349 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 248:
@@ -4355,7 +4355,7 @@ yyreduce:
                     new TaQLFuncNodeRep ("COUNT", *(yyvsp[-1].nodelist)));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
 	   }
-#line 4359 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 4359 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 249:
@@ -4365,7 +4365,7 @@ yyreduce:
                     new TaQLFuncNodeRep ("COUNTALL"));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
 	   }
-#line 4369 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 4369 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 250:
@@ -4375,7 +4375,7 @@ yyreduce:
                     new TaQLKeyColNodeRep ((yyvsp[0].nodename)->getString()));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
 	   }
-#line 4379 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 4379 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 251:
@@ -4383,7 +4383,7 @@ yyreduce:
     {
 	       (yyval.node) = (yyvsp[0].val);
 	   }
-#line 4387 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 4387 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 252:
@@ -4391,7 +4391,7 @@ yyreduce:
     {
 	       (yyval.node) = (yyvsp[0].node);
 	   }
-#line 4395 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 4395 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 253:
@@ -4399,7 +4399,7 @@ yyreduce:
     {            /* simple name */
                (yyval.nodename) = (yyvsp[0].val);
            }
-#line 4403 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 4403 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 254:
@@ -4407,7 +4407,7 @@ yyreduce:
     {         /* name with . or :: */
                (yyval.nodename) = (yyvsp[0].val);
            }
-#line 4411 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 4411 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 255:
@@ -4415,7 +4415,7 @@ yyreduce:
     {
                (yyval.nodename) = (yyvsp[0].nodename);
            }
-#line 4419 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 4419 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 256:
@@ -4423,7 +4423,7 @@ yyreduce:
     {   /* compound unit (with special characters) */
                (yyval.nodename) = (yyvsp[0].val);
            }
-#line 4427 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 4427 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 257:
@@ -4431,7 +4431,7 @@ yyreduce:
     {
 	       (yyval.val) = (yyvsp[0].val);
 	   }
-#line 4435 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 4435 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 258:
@@ -4439,7 +4439,7 @@ yyreduce:
     {
 	       (yyval.val) = (yyvsp[0].val);
 	   }
-#line 4443 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 4443 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 259:
@@ -4448,7 +4448,7 @@ yyreduce:
                (yyvsp[-1].nodelist)->setIsSetOrArray();
                (yyval.node) = (yyvsp[-1].nodelist);
            }
-#line 4452 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 4452 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 260:
@@ -4457,7 +4457,7 @@ yyreduce:
                (yyvsp[-1].nodelist)->setIsSetOrArray();
                (yyval.node) = (yyvsp[-1].nodelist);
            }
-#line 4461 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 4461 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 261:
@@ -4465,7 +4465,7 @@ yyreduce:
     {
                (yyval.node) = (yyvsp[0].nodeselect);
            }
-#line 4469 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 4469 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 262:
@@ -4474,7 +4474,7 @@ yyreduce:
                (yyval.nodelist) = (yyvsp[0].nodelist);
 	       (yyval.nodelist)->setPPFix("", "");
            }
-#line 4478 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 4478 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 263:
@@ -4483,7 +4483,7 @@ yyreduce:
                (yyval.nodelist) = new TaQLMultiNode(False);       /* no elements */
 	       TaQLNode::theirNodesCreated.push_back ((yyval.nodelist));
            }
-#line 4487 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 4487 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 264:
@@ -4492,7 +4492,7 @@ yyreduce:
                (yyval.nodelist) = (yyvsp[-2].nodelist);
 	       (yyval.nodelist)->add (*(yyvsp[0].node));
 	   }
-#line 4496 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 4496 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 265:
@@ -4503,7 +4503,7 @@ yyreduce:
 	       (yyval.nodelist)->setPPFix ("[", "]");
 	       (yyval.nodelist)->add (*(yyvsp[0].node));
 	   }
-#line 4507 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 4507 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 266:
@@ -4511,7 +4511,7 @@ yyreduce:
     {
                (yyval.node) = (yyvsp[0].node);
 	   }
-#line 4515 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 4515 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 267:
@@ -4519,7 +4519,7 @@ yyreduce:
     {
                (yyval.node) = (yyvsp[0].node);
            }
-#line 4523 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 4523 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 268:
@@ -4529,7 +4529,7 @@ yyreduce:
 	       TaQLNode::theirNodesCreated.push_back ((yyval.nodelist));
 	       (yyval.nodelist)->add (*(yyvsp[0].node));
            }
-#line 4533 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 4533 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 269:
@@ -4537,7 +4537,7 @@ yyreduce:
     {
                (yyval.node) = (yyvsp[0].node);
            }
-#line 4541 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 4541 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 270:
@@ -4547,7 +4547,7 @@ yyreduce:
                     new TaQLRangeNodeRep (False, *(yyvsp[-3].node), *(yyvsp[-1].node), False));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
            }
-#line 4551 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 4551 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 271:
@@ -4557,7 +4557,7 @@ yyreduce:
                     new TaQLRangeNodeRep (False, *(yyvsp[-3].node), *(yyvsp[-1].node), True));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
            }
-#line 4561 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 4561 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 272:
@@ -4567,7 +4567,7 @@ yyreduce:
                     new TaQLRangeNodeRep (True, *(yyvsp[-3].node), *(yyvsp[-1].node), False));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
            }
-#line 4571 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 4571 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 273:
@@ -4577,7 +4577,7 @@ yyreduce:
                     new TaQLRangeNodeRep (True, *(yyvsp[-3].node), *(yyvsp[-1].node), True));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
            }
-#line 4581 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 4581 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 274:
@@ -4587,7 +4587,7 @@ yyreduce:
                     new TaQLRangeNodeRep (*(yyvsp[-1].node), False));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
           }
-#line 4591 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 4591 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 275:
@@ -4597,7 +4597,7 @@ yyreduce:
                     new TaQLRangeNodeRep (*(yyvsp[-1].node), False));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
           }
-#line 4601 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 4601 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 276:
@@ -4607,7 +4607,7 @@ yyreduce:
                     new TaQLRangeNodeRep (*(yyvsp[-1].node), True));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
            }
-#line 4611 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 4611 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 277:
@@ -4617,7 +4617,7 @@ yyreduce:
                     new TaQLRangeNodeRep (*(yyvsp[-1].node), True));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
            }
-#line 4621 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 4621 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 278:
@@ -4627,7 +4627,7 @@ yyreduce:
                     new TaQLRangeNodeRep (False, *(yyvsp[-2].node)));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
            }
-#line 4631 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 4631 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 279:
@@ -4637,7 +4637,7 @@ yyreduce:
                     new TaQLRangeNodeRep (False, *(yyvsp[-2].node)));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
            }
-#line 4641 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 4641 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 280:
@@ -4647,7 +4647,7 @@ yyreduce:
                     new TaQLRangeNodeRep (True, *(yyvsp[-2].node)));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
            }
-#line 4651 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 4651 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 281:
@@ -4657,7 +4657,7 @@ yyreduce:
                     new TaQLRangeNodeRep (True, *(yyvsp[-2].node)));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
            }
-#line 4661 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 4661 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 282:
@@ -4667,7 +4667,7 @@ yyreduce:
                     new TaQLRangeNodeRep (False, *(yyvsp[-2].node), *(yyvsp[0].node), False));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
            }
-#line 4671 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 4671 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 283:
@@ -4677,7 +4677,7 @@ yyreduce:
                     new TaQLRangeNodeRep (False, *(yyvsp[-2].node), *(yyvsp[0].node), True));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
            }
-#line 4681 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 4681 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 284:
@@ -4687,7 +4687,7 @@ yyreduce:
                     new TaQLRangeNodeRep (True, *(yyvsp[-2].node), *(yyvsp[0].node), False));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
            }
-#line 4691 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 4691 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 285:
@@ -4697,7 +4697,7 @@ yyreduce:
                     new TaQLRangeNodeRep (True, *(yyvsp[-2].node), *(yyvsp[0].node), True));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
            }
-#line 4701 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 4701 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 286:
@@ -4707,7 +4707,7 @@ yyreduce:
                     new TaQLRangeNodeRep (*(yyvsp[0].node), False));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
            }
-#line 4711 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 4711 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 287:
@@ -4717,7 +4717,7 @@ yyreduce:
                     new TaQLRangeNodeRep (*(yyvsp[0].node), True));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
            }
-#line 4721 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 4721 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 288:
@@ -4727,7 +4727,7 @@ yyreduce:
                     new TaQLRangeNodeRep (False, *(yyvsp[-1].node)));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
            }
-#line 4731 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 4731 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 289:
@@ -4737,7 +4737,7 @@ yyreduce:
                     new TaQLRangeNodeRep (True, *(yyvsp[-1].node)));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
            }
-#line 4741 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 4741 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 290:
@@ -4746,7 +4746,7 @@ yyreduce:
                (yyval.nodelist) = (yyvsp[-2].nodelist);
 	       (yyval.nodelist)->add (*(yyvsp[0].node));
 	   }
-#line 4750 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 4750 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 291:
@@ -4755,7 +4755,7 @@ yyreduce:
                (yyval.nodelist) = (yyvsp[-1].nodelist);
 	       (yyval.nodelist)->add (new TaQLIndexNodeRep(0, 0, 0));
 	   }
-#line 4759 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 4759 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 292:
@@ -4767,7 +4767,7 @@ yyreduce:
 	       (yyval.nodelist)->add (new TaQLIndexNodeRep(0, 0, 0));
 	       (yyval.nodelist)->add (new TaQLIndexNodeRep(0, 0, 0));
 	   }
-#line 4771 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 4771 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 293:
@@ -4779,7 +4779,7 @@ yyreduce:
 	       (yyval.nodelist)->add (new TaQLIndexNodeRep(0, 0, 0));
 	       (yyval.nodelist)->add (*(yyvsp[0].node));
 	   }
-#line 4783 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 4783 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 294:
@@ -4790,7 +4790,7 @@ yyreduce:
 	       (yyval.nodelist)->setPPFix ("[", "]");
 	       (yyval.nodelist)->add (*(yyvsp[0].node));
 	   }
-#line 4794 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 4794 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 295:
@@ -4800,7 +4800,7 @@ yyreduce:
                     new TaQLIndexNodeRep (*(yyvsp[0].node), 0, 0));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
            }
-#line 4804 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 4804 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 296:
@@ -4808,7 +4808,7 @@ yyreduce:
     {
                (yyval.node) = (yyvsp[0].node);
 	   }
-#line 4812 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 4812 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 297:
@@ -4818,7 +4818,7 @@ yyreduce:
                     new TaQLIndexNodeRep (*(yyvsp[0].node), 0, 0));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
            }
-#line 4822 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 4822 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 298:
@@ -4826,7 +4826,7 @@ yyreduce:
     {
                (yyval.node) = (yyvsp[0].node);
 	   }
-#line 4830 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 4830 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 299:
@@ -4834,7 +4834,7 @@ yyreduce:
     {
                (yyval.node) = (yyvsp[0].node);
            }
-#line 4838 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 4838 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 300:
@@ -4844,7 +4844,7 @@ yyreduce:
                     new TaQLIndexNodeRep (*(yyvsp[-1].node), 0, 0));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
            }
-#line 4848 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 4848 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 301:
@@ -4854,7 +4854,7 @@ yyreduce:
                     new TaQLIndexNodeRep (*(yyvsp[-2].node), 0, 0));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
            }
-#line 4858 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 4858 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 302:
@@ -4864,7 +4864,7 @@ yyreduce:
                     new TaQLIndexNodeRep (*(yyvsp[-3].node), 0, *(yyvsp[0].node)));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
            }
-#line 4868 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 4868 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 303:
@@ -4872,7 +4872,7 @@ yyreduce:
     {
                (yyval.node) = (yyvsp[0].node);
            }
-#line 4876 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 4876 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 304:
@@ -4882,7 +4882,7 @@ yyreduce:
                     (*(yyvsp[-1].node), TaQLConstNode(new TaQLConstNodeRep(Int64(Slicer::MimicSource))), 0));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
            }
-#line 4886 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 4886 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 305:
@@ -4892,7 +4892,7 @@ yyreduce:
                     (*(yyvsp[-2].node), TaQLConstNode(new TaQLConstNodeRep(Int64(Slicer::MimicSource))), 0));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
            }
-#line 4896 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 4896 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 306:
@@ -4902,7 +4902,7 @@ yyreduce:
                     (*(yyvsp[-3].node), TaQLConstNode(new TaQLConstNodeRep(Int64(Slicer::MimicSource))), *(yyvsp[0].node)));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
            }
-#line 4906 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 4906 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 307:
@@ -4912,7 +4912,7 @@ yyreduce:
                     new TaQLIndexNodeRep (*(yyvsp[-2].node), *(yyvsp[0].node), 0));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
            }
-#line 4916 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 4916 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 308:
@@ -4922,7 +4922,7 @@ yyreduce:
                     new TaQLIndexNodeRep (*(yyvsp[-3].node), *(yyvsp[-1].node), 0));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
            }
-#line 4926 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 4926 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 309:
@@ -4932,7 +4932,7 @@ yyreduce:
                     new TaQLIndexNodeRep (*(yyvsp[-4].node), *(yyvsp[-2].node), *(yyvsp[0].node)));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
            }
-#line 4936 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 4936 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 310:
@@ -4942,7 +4942,7 @@ yyreduce:
                     new TaQLIndexNodeRep (0, *(yyvsp[0].node), 0));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
            }
-#line 4946 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 4946 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 311:
@@ -4952,7 +4952,7 @@ yyreduce:
                     new TaQLIndexNodeRep (0, *(yyvsp[-1].node), 0));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
            }
-#line 4956 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 4956 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 312:
@@ -4962,7 +4962,7 @@ yyreduce:
                     new TaQLIndexNodeRep (0, *(yyvsp[-2].node), *(yyvsp[0].node)));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
            }
-#line 4966 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 4966 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 313:
@@ -4972,7 +4972,7 @@ yyreduce:
                     new TaQLIndexNodeRep (0, 0, *(yyvsp[0].node)));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
            }
-#line 4976 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 4976 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 314:
@@ -4981,7 +4981,7 @@ yyreduce:
                (yyval.nodelist) = (yyvsp[-2].nodelist);
                (yyval.nodelist)->add (*(yyvsp[0].node));
 	   }
-#line 4985 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 4985 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 315:
@@ -4991,7 +4991,7 @@ yyreduce:
 	       TaQLNode::theirNodesCreated.push_back ((yyval.nodelist));
                (yyval.nodelist)->add (*(yyvsp[0].node));
 	   }
-#line 4995 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 4995 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 316:
@@ -5001,7 +5001,7 @@ yyreduce:
                     new TaQLSortKeyNodeRep (TaQLSortKeyNodeRep::None, *(yyvsp[0].node)));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
            }
-#line 5005 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 5005 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 317:
@@ -5011,7 +5011,7 @@ yyreduce:
                     new TaQLSortKeyNodeRep (TaQLSortKeyNodeRep::Ascending, *(yyvsp[-1].node)));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
            }
-#line 5015 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 5015 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 318:
@@ -5021,7 +5021,7 @@ yyreduce:
                     new TaQLSortKeyNodeRep (TaQLSortKeyNodeRep::Descending, *(yyvsp[-1].node)));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
            }
-#line 5025 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 5025 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 319:
@@ -5031,7 +5031,7 @@ yyreduce:
 	       TaQLNode::theirNodesCreated.push_back ((yyval.nodelist));
                (yyval.nodelist)->add (*(yyvsp[0].node));
 	   }
-#line 5035 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 5035 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 320:
@@ -5040,7 +5040,7 @@ yyreduce:
 	       (yyval.nodelist) = (yyvsp[-2].nodelist);
                (yyval.nodelist)->add (*(yyvsp[0].node));
 	   }
-#line 5044 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 5044 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 321:
@@ -5050,7 +5050,7 @@ yyreduce:
                     new TaQLRecFldNodeRep ("", *(yyvsp[-1].nodelist), ""));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
 	   }
-#line 5054 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 5054 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 322:
@@ -5058,7 +5058,7 @@ yyreduce:
     {
                (yyval.nodelist)->add (*(yyvsp[0].node));
 	   }
-#line 5062 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 5062 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 323:
@@ -5069,7 +5069,7 @@ yyreduce:
 	       (yyval.nodelist)->setPPFix ("[", "]");
                (yyval.nodelist)->add (*(yyvsp[0].node));
 	   }
-#line 5073 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 5073 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 324:
@@ -5077,7 +5077,7 @@ yyreduce:
     {
                (yyval.node) = (yyvsp[0].node);
            }
-#line 5081 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 5081 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 325:
@@ -5085,7 +5085,7 @@ yyreduce:
     {
                (yyval.node) = (yyvsp[0].node);
            }
-#line 5089 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 5089 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 326:
@@ -5096,7 +5096,7 @@ yyreduce:
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
                delete (yyvsp[0].noderecfldrep);
            }
-#line 5100 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 5100 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 327:
@@ -5104,7 +5104,7 @@ yyreduce:
     {
 	       (yyval.noderecfldrep) = new TaQLRecFldNodeRep ("", *(yyvsp[-1].node), (yyvsp[0].val)->getString());
            }
-#line 5108 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 5108 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 328:
@@ -5115,7 +5115,7 @@ yyreduce:
 	       TaQLNode::theirNodesCreated.push_back ((yyval.node));
                delete (yyvsp[0].noderecfldrep);
            }
-#line 5119 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 5119 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 329:
@@ -5124,7 +5124,7 @@ yyreduce:
                (yyval.val) = new TaQLConstNode(new TaQLConstNodeRep(String()));
 	       TaQLNode::theirNodesCreated.push_back ((yyval.val));
            }
-#line 5128 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 5128 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
   case 330:
@@ -5132,11 +5132,11 @@ yyreduce:
     {
                (yyval.val) = (yyvsp[0].val);
            }
-#line 5136 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 5136 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
     break;
 
 
-#line 5140 "/home/peter/sw/casacore/BUILD/tables/TableGram.ycc" /* yacc.c:1646  */
+#line 5140 "<BUILDDIR>/tables/TableGram.ycc" /* yacc.c:1646  */
       default: break;
     }
   /* User semantic actions sometimes alter yychar, and that requires

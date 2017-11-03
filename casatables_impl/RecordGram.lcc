@@ -1,6 +1,6 @@
-#line 2 "/home/peter/sw/casacore/BUILD/tables/RecordGram.lcc"
+#line 2 "<BUILDDIR>/tables/RecordGram.lcc"
 
-#line 4 "/home/peter/sw/casacore/BUILD/tables/RecordGram.lcc"
+#line 4 "<BUILDDIR>/tables/RecordGram.lcc"
 
 #define  YY_INT_ALIGNED short int
 
@@ -907,7 +907,7 @@ char *RecordGramtext;
      with the interval syntax (and a starting slash is rather ambiguous).
 TIME      {DTIMEHM}|{TIMESL}|{TIMEU}|{POSDM}|{POSD}
 */
-#line 911 "/home/peter/sw/casacore/BUILD/tables/RecordGram.lcc"
+#line 911 "<BUILDDIR>/tables/RecordGram.lcc"
 
 #define INITIAL 0
 
@@ -1128,7 +1128,7 @@ YY_DECL
  /* This grammar is used for selection of records to be used in C++.
     It is the same as the WHERE part of TableGram.
  */
-#line 1132 "/home/peter/sw/casacore/BUILD/tables/RecordGram.lcc"
+#line 1132 "<BUILDDIR>/tables/RecordGram.lcc"
 
 	while ( /*CONSTCOND*/1 )		/* loops until end-of-file is reached */
 		{
@@ -1636,7 +1636,7 @@ YY_RULE_SETUP
 #line 327 "TaQL/RecordGram.ll"
 ECHO;
 	YY_BREAK
-#line 1640 "/home/peter/sw/casacore/BUILD/tables/RecordGram.lcc"
+#line 1640 "<BUILDDIR>/tables/RecordGram.lcc"
 
 	case YY_END_OF_BUFFER:
 		{

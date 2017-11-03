@@ -72,7 +72,7 @@
 
 using namespace casacore;
 
-#line 76 "/home/peter/sw/casacore/BUILD/tables/RecordGram.ycc" /* yacc.c:339  */
+#line 76 "<BUILDDIR>/tables/RecordGram.ycc" /* yacc.c:339  */
 
 # ifndef YY_NULLPTR
 #  if defined __cplusplus && 201103L <= __cplusplus
@@ -217,7 +217,7 @@ RecordGramVal* val;
 TableExprNodeSetElem* elem;
 TableExprNodeSet* settp;
 
-#line 221 "/home/peter/sw/casacore/BUILD/tables/RecordGram.ycc" /* yacc.c:355  */
+#line 221 "<BUILDDIR>/tables/RecordGram.ycc" /* yacc.c:355  */
 };
 
 typedef union YYSTYPE YYSTYPE;
@@ -238,7 +238,7 @@ namespace casacore { //# NAMESPACE CASACORE - BEGIN
 } //# NAMESPACE CASACORE - END
 int RecordGramlex (YYSTYPE*);
 
-#line 242 "/home/peter/sw/casacore/BUILD/tables/RecordGram.ycc" /* yacc.c:358  */
+#line 242 "<BUILDDIR>/tables/RecordGram.ycc" /* yacc.c:358  */
 
 #ifdef short
 # undef short
@@ -1537,7 +1537,7 @@ yyreduce:
                RecordGram::theirTaQLStyle.set ((yyvsp[0].val)->str);
                RecordGram::deleteToken ((yyvsp[0].val));
            }
-#line 1541 "/home/peter/sw/casacore/BUILD/tables/RecordGram.ycc" /* yacc.c:1646  */
+#line 1541 "<BUILDDIR>/tables/RecordGram.ycc" /* yacc.c:1646  */
     break;
 
   case 8:
@@ -1546,13 +1546,13 @@ yyreduce:
                RecordGram::theirTaQLStyle.set ((yyvsp[0].val)->str);
                RecordGram::deleteToken ((yyvsp[0].val));
            }
-#line 1550 "/home/peter/sw/casacore/BUILD/tables/RecordGram.ycc" /* yacc.c:1646  */
+#line 1550 "<BUILDDIR>/tables/RecordGram.ycc" /* yacc.c:1646  */
     break;
 
   case 9:
 #line 138 "TaQL/RecordGram.yy" /* yacc.c:1646  */
     { RecordGram::setNodePtr ((yyvsp[0].node)); }
-#line 1556 "/home/peter/sw/casacore/BUILD/tables/RecordGram.ycc" /* yacc.c:1646  */
+#line 1556 "<BUILDDIR>/tables/RecordGram.ycc" /* yacc.c:1646  */
     break;
 
   case 11:
@@ -1563,7 +1563,7 @@ yyreduce:
 	       RecordGram::deleteToken ((yyvsp[-2].node));
 	       RecordGram::deleteToken ((yyvsp[0].node));
 	   }
-#line 1567 "/home/peter/sw/casacore/BUILD/tables/RecordGram.ycc" /* yacc.c:1646  */
+#line 1567 "<BUILDDIR>/tables/RecordGram.ycc" /* yacc.c:1646  */
     break;
 
   case 13:
@@ -1574,7 +1574,7 @@ yyreduce:
 	       RecordGram::deleteToken ((yyvsp[-2].node));
 	       RecordGram::deleteToken ((yyvsp[0].node));
 	   }
-#line 1578 "/home/peter/sw/casacore/BUILD/tables/RecordGram.ycc" /* yacc.c:1646  */
+#line 1578 "<BUILDDIR>/tables/RecordGram.ycc" /* yacc.c:1646  */
     break;
 
   case 15:
@@ -1585,7 +1585,7 @@ yyreduce:
 	       RecordGram::deleteToken ((yyvsp[-2].node));
 	       RecordGram::deleteToken ((yyvsp[0].node));
 	   }
-#line 1589 "/home/peter/sw/casacore/BUILD/tables/RecordGram.ycc" /* yacc.c:1646  */
+#line 1589 "<BUILDDIR>/tables/RecordGram.ycc" /* yacc.c:1646  */
     break;
 
   case 16:
@@ -1596,7 +1596,7 @@ yyreduce:
 	       RecordGram::deleteToken ((yyvsp[-2].node));
 	       RecordGram::deleteToken ((yyvsp[0].node));
 	   }
-#line 1600 "/home/peter/sw/casacore/BUILD/tables/RecordGram.ycc" /* yacc.c:1646  */
+#line 1600 "<BUILDDIR>/tables/RecordGram.ycc" /* yacc.c:1646  */
     break;
 
   case 17:
@@ -1607,7 +1607,7 @@ yyreduce:
 	       RecordGram::deleteToken ((yyvsp[-2].node));
 	       RecordGram::deleteToken ((yyvsp[0].node));
 	   }
-#line 1611 "/home/peter/sw/casacore/BUILD/tables/RecordGram.ycc" /* yacc.c:1646  */
+#line 1611 "<BUILDDIR>/tables/RecordGram.ycc" /* yacc.c:1646  */
     break;
 
   case 18:
@@ -1618,7 +1618,7 @@ yyreduce:
 	       RecordGram::deleteToken ((yyvsp[-2].node));
 	       RecordGram::deleteToken ((yyvsp[0].node));
 	   }
-#line 1622 "/home/peter/sw/casacore/BUILD/tables/RecordGram.ycc" /* yacc.c:1646  */
+#line 1622 "<BUILDDIR>/tables/RecordGram.ycc" /* yacc.c:1646  */
     break;
 
   case 19:
@@ -1629,7 +1629,7 @@ yyreduce:
 	       RecordGram::deleteToken ((yyvsp[-2].node));
 	       RecordGram::deleteToken ((yyvsp[0].node));
 	   }
-#line 1633 "/home/peter/sw/casacore/BUILD/tables/RecordGram.ycc" /* yacc.c:1646  */
+#line 1633 "<BUILDDIR>/tables/RecordGram.ycc" /* yacc.c:1646  */
     break;
 
   case 20:
@@ -1640,7 +1640,7 @@ yyreduce:
 	       RecordGram::deleteToken ((yyvsp[-2].node));
 	       RecordGram::deleteToken ((yyvsp[0].node));
 	   }
-#line 1644 "/home/peter/sw/casacore/BUILD/tables/RecordGram.ycc" /* yacc.c:1646  */
+#line 1644 "<BUILDDIR>/tables/RecordGram.ycc" /* yacc.c:1646  */
     break;
 
   case 21:
@@ -1651,7 +1651,7 @@ yyreduce:
 	       RecordGram::deleteToken ((yyvsp[-1].node));
 	       RecordGram::deleteToken ((yyvsp[0].val));
 	   }
-#line 1655 "/home/peter/sw/casacore/BUILD/tables/RecordGram.ycc" /* yacc.c:1646  */
+#line 1655 "<BUILDDIR>/tables/RecordGram.ycc" /* yacc.c:1646  */
     break;
 
   case 22:
@@ -1662,7 +1662,7 @@ yyreduce:
 	       RecordGram::deleteToken ((yyvsp[-2].node));
 	       RecordGram::deleteToken ((yyvsp[0].node));
 	   }
-#line 1666 "/home/peter/sw/casacore/BUILD/tables/RecordGram.ycc" /* yacc.c:1646  */
+#line 1666 "<BUILDDIR>/tables/RecordGram.ycc" /* yacc.c:1646  */
     break;
 
   case 23:
@@ -1673,7 +1673,7 @@ yyreduce:
 	       RecordGram::deleteToken ((yyvsp[-3].node));
 	       RecordGram::deleteToken ((yyvsp[0].node));
 	   }
-#line 1677 "/home/peter/sw/casacore/BUILD/tables/RecordGram.ycc" /* yacc.c:1646  */
+#line 1677 "<BUILDDIR>/tables/RecordGram.ycc" /* yacc.c:1646  */
     break;
 
   case 24:
@@ -1684,7 +1684,7 @@ yyreduce:
                RecordGram::deleteToken ((yyvsp[-2].node));
                RecordGram::deleteToken ((yyvsp[0].node));
            }
-#line 1688 "/home/peter/sw/casacore/BUILD/tables/RecordGram.ycc" /* yacc.c:1646  */
+#line 1688 "<BUILDDIR>/tables/RecordGram.ycc" /* yacc.c:1646  */
     break;
 
   case 25:
@@ -1696,7 +1696,7 @@ yyreduce:
                RecordGram::deleteToken ((yyvsp[-3].node));
                RecordGram::deleteToken ((yyvsp[0].node));
            }
-#line 1700 "/home/peter/sw/casacore/BUILD/tables/RecordGram.ycc" /* yacc.c:1646  */
+#line 1700 "<BUILDDIR>/tables/RecordGram.ycc" /* yacc.c:1646  */
     break;
 
   case 26:
@@ -1707,7 +1707,7 @@ yyreduce:
                RecordGram::deleteToken ((yyvsp[-2].node));
                RecordGram::deleteToken ((yyvsp[0].node));
            }
-#line 1711 "/home/peter/sw/casacore/BUILD/tables/RecordGram.ycc" /* yacc.c:1646  */
+#line 1711 "<BUILDDIR>/tables/RecordGram.ycc" /* yacc.c:1646  */
     break;
 
   case 27:
@@ -1719,7 +1719,7 @@ yyreduce:
                RecordGram::deleteToken ((yyvsp[-3].node));
                RecordGram::deleteToken ((yyvsp[0].node));
            }
-#line 1723 "/home/peter/sw/casacore/BUILD/tables/RecordGram.ycc" /* yacc.c:1646  */
+#line 1723 "<BUILDDIR>/tables/RecordGram.ycc" /* yacc.c:1646  */
     break;
 
   case 28:
@@ -1733,7 +1733,7 @@ yyreduce:
                RecordGram::deleteToken ((yyvsp[-2].node));
 	       RecordGram::deleteToken ((yyvsp[0].node));
            }
-#line 1737 "/home/peter/sw/casacore/BUILD/tables/RecordGram.ycc" /* yacc.c:1646  */
+#line 1737 "<BUILDDIR>/tables/RecordGram.ycc" /* yacc.c:1646  */
     break;
 
   case 29:
@@ -1748,7 +1748,7 @@ yyreduce:
                RecordGram::deleteToken ((yyvsp[-2].node));
 	       RecordGram::deleteToken ((yyvsp[0].node));
            }
-#line 1752 "/home/peter/sw/casacore/BUILD/tables/RecordGram.ycc" /* yacc.c:1646  */
+#line 1752 "<BUILDDIR>/tables/RecordGram.ycc" /* yacc.c:1646  */
     break;
 
   case 30:
@@ -1759,7 +1759,7 @@ yyreduce:
                RecordGram::deleteToken ((yyvsp[-2].node));
                RecordGram::deleteToken ((yyvsp[0].node));
            }
-#line 1763 "/home/peter/sw/casacore/BUILD/tables/RecordGram.ycc" /* yacc.c:1646  */
+#line 1763 "<BUILDDIR>/tables/RecordGram.ycc" /* yacc.c:1646  */
     break;
 
   case 31:
@@ -1771,7 +1771,7 @@ yyreduce:
                RecordGram::deleteToken ((yyvsp[-3].node));
                RecordGram::deleteToken ((yyvsp[0].node));
            }
-#line 1775 "/home/peter/sw/casacore/BUILD/tables/RecordGram.ycc" /* yacc.c:1646  */
+#line 1775 "<BUILDDIR>/tables/RecordGram.ycc" /* yacc.c:1646  */
     break;
 
   case 33:
@@ -1782,7 +1782,7 @@ yyreduce:
 	       RecordGram::deleteToken ((yyvsp[-2].node));
 	       RecordGram::deleteToken ((yyvsp[0].node));
 	   }
-#line 1786 "/home/peter/sw/casacore/BUILD/tables/RecordGram.ycc" /* yacc.c:1646  */
+#line 1786 "<BUILDDIR>/tables/RecordGram.ycc" /* yacc.c:1646  */
     break;
 
   case 34:
@@ -1793,7 +1793,7 @@ yyreduce:
 	       RecordGram::deleteToken ((yyvsp[-2].node));
 	       RecordGram::deleteToken ((yyvsp[0].node));
 	   }
-#line 1797 "/home/peter/sw/casacore/BUILD/tables/RecordGram.ycc" /* yacc.c:1646  */
+#line 1797 "<BUILDDIR>/tables/RecordGram.ycc" /* yacc.c:1646  */
     break;
 
   case 35:
@@ -1804,7 +1804,7 @@ yyreduce:
 	       RecordGram::deleteToken ((yyvsp[-2].node));
 	       RecordGram::deleteToken ((yyvsp[0].node));
 	   }
-#line 1808 "/home/peter/sw/casacore/BUILD/tables/RecordGram.ycc" /* yacc.c:1646  */
+#line 1808 "<BUILDDIR>/tables/RecordGram.ycc" /* yacc.c:1646  */
     break;
 
   case 36:
@@ -1815,7 +1815,7 @@ yyreduce:
 	       RecordGram::deleteToken ((yyvsp[-2].node));
 	       RecordGram::deleteToken ((yyvsp[0].node));
 	   }
-#line 1819 "/home/peter/sw/casacore/BUILD/tables/RecordGram.ycc" /* yacc.c:1646  */
+#line 1819 "<BUILDDIR>/tables/RecordGram.ycc" /* yacc.c:1646  */
     break;
 
   case 37:
@@ -1826,7 +1826,7 @@ yyreduce:
 	       RecordGram::deleteToken ((yyvsp[-2].node));
 	       RecordGram::deleteToken ((yyvsp[0].node));
 	   }
-#line 1830 "/home/peter/sw/casacore/BUILD/tables/RecordGram.ycc" /* yacc.c:1646  */
+#line 1830 "<BUILDDIR>/tables/RecordGram.ycc" /* yacc.c:1646  */
     break;
 
   case 38:
@@ -1837,7 +1837,7 @@ yyreduce:
 	       RecordGram::deleteToken ((yyvsp[-2].node));
 	       RecordGram::deleteToken ((yyvsp[0].node));
 	   }
-#line 1841 "/home/peter/sw/casacore/BUILD/tables/RecordGram.ycc" /* yacc.c:1646  */
+#line 1841 "<BUILDDIR>/tables/RecordGram.ycc" /* yacc.c:1646  */
     break;
 
   case 39:
@@ -1848,7 +1848,7 @@ yyreduce:
 	       RecordGram::deleteToken ((yyvsp[-2].node));
 	       RecordGram::deleteToken ((yyvsp[0].node));
 	   }
-#line 1852 "/home/peter/sw/casacore/BUILD/tables/RecordGram.ycc" /* yacc.c:1646  */
+#line 1852 "<BUILDDIR>/tables/RecordGram.ycc" /* yacc.c:1646  */
     break;
 
   case 40:
@@ -1859,7 +1859,7 @@ yyreduce:
 	       RecordGram::deleteToken ((yyvsp[-2].node));
 	       RecordGram::deleteToken ((yyvsp[0].node));
 	   }
-#line 1863 "/home/peter/sw/casacore/BUILD/tables/RecordGram.ycc" /* yacc.c:1646  */
+#line 1863 "<BUILDDIR>/tables/RecordGram.ycc" /* yacc.c:1646  */
     break;
 
   case 41:
@@ -1870,7 +1870,7 @@ yyreduce:
 	       RecordGram::deleteToken ((yyvsp[-2].node));
 	       RecordGram::deleteToken ((yyvsp[0].node));
 	   }
-#line 1874 "/home/peter/sw/casacore/BUILD/tables/RecordGram.ycc" /* yacc.c:1646  */
+#line 1874 "<BUILDDIR>/tables/RecordGram.ycc" /* yacc.c:1646  */
     break;
 
   case 42:
@@ -1880,13 +1880,13 @@ yyreduce:
                RecordGram::addToken ((yyval.node));
 	       RecordGram::deleteToken ((yyvsp[0].node));
 	   }
-#line 1884 "/home/peter/sw/casacore/BUILD/tables/RecordGram.ycc" /* yacc.c:1646  */
+#line 1884 "<BUILDDIR>/tables/RecordGram.ycc" /* yacc.c:1646  */
     break;
 
   case 43:
 #line 335 "TaQL/RecordGram.yy" /* yacc.c:1646  */
     { (yyval.node) = (yyvsp[0].node); }
-#line 1890 "/home/peter/sw/casacore/BUILD/tables/RecordGram.ycc" /* yacc.c:1646  */
+#line 1890 "<BUILDDIR>/tables/RecordGram.ycc" /* yacc.c:1646  */
     break;
 
   case 44:
@@ -1896,7 +1896,7 @@ yyreduce:
                RecordGram::addToken ((yyval.node));
 	       RecordGram::deleteToken ((yyvsp[0].node));
 	   }
-#line 1900 "/home/peter/sw/casacore/BUILD/tables/RecordGram.ycc" /* yacc.c:1646  */
+#line 1900 "<BUILDDIR>/tables/RecordGram.ycc" /* yacc.c:1646  */
     break;
 
   case 45:
@@ -1906,7 +1906,7 @@ yyreduce:
                RecordGram::addToken ((yyval.node));
 	       RecordGram::deleteToken ((yyvsp[0].node));
 	   }
-#line 1910 "/home/peter/sw/casacore/BUILD/tables/RecordGram.ycc" /* yacc.c:1646  */
+#line 1910 "<BUILDDIR>/tables/RecordGram.ycc" /* yacc.c:1646  */
     break;
 
   case 46:
@@ -1917,7 +1917,7 @@ yyreduce:
 	       RecordGram::deleteToken ((yyvsp[-2].node));
 	       RecordGram::deleteToken ((yyvsp[0].node));
 	   }
-#line 1921 "/home/peter/sw/casacore/BUILD/tables/RecordGram.ycc" /* yacc.c:1646  */
+#line 1921 "<BUILDDIR>/tables/RecordGram.ycc" /* yacc.c:1646  */
     break;
 
   case 48:
@@ -1929,13 +1929,13 @@ yyreduce:
 	       RecordGram::deleteToken ((yyvsp[-3].node));
 	       RecordGram::deleteToken ((yyvsp[-1].settp));
 	   }
-#line 1933 "/home/peter/sw/casacore/BUILD/tables/RecordGram.ycc" /* yacc.c:1646  */
+#line 1933 "<BUILDDIR>/tables/RecordGram.ycc" /* yacc.c:1646  */
     break;
 
   case 49:
 #line 365 "TaQL/RecordGram.yy" /* yacc.c:1646  */
     { (yyval.node) = (yyvsp[0].node); }
-#line 1939 "/home/peter/sw/casacore/BUILD/tables/RecordGram.ycc" /* yacc.c:1646  */
+#line 1939 "<BUILDDIR>/tables/RecordGram.ycc" /* yacc.c:1646  */
     break;
 
   case 50:
@@ -1946,13 +1946,13 @@ yyreduce:
 	       RecordGram::deleteToken ((yyvsp[-1].node));
 	       RecordGram::deleteToken ((yyvsp[0].val));
            }
-#line 1950 "/home/peter/sw/casacore/BUILD/tables/RecordGram.ycc" /* yacc.c:1646  */
+#line 1950 "<BUILDDIR>/tables/RecordGram.ycc" /* yacc.c:1646  */
     break;
 
   case 51:
 #line 375 "TaQL/RecordGram.yy" /* yacc.c:1646  */
     { (yyval.node) = (yyvsp[-1].node); }
-#line 1956 "/home/peter/sw/casacore/BUILD/tables/RecordGram.ycc" /* yacc.c:1646  */
+#line 1956 "<BUILDDIR>/tables/RecordGram.ycc" /* yacc.c:1646  */
     break;
 
   case 52:
@@ -1963,7 +1963,7 @@ yyreduce:
 	       RecordGram::deleteToken ((yyvsp[-3].val));
 	       RecordGram::deleteToken ((yyvsp[-1].settp));
 	   }
-#line 1967 "/home/peter/sw/casacore/BUILD/tables/RecordGram.ycc" /* yacc.c:1646  */
+#line 1967 "<BUILDDIR>/tables/RecordGram.ycc" /* yacc.c:1646  */
     break;
 
   case 53:
@@ -1974,7 +1974,7 @@ yyreduce:
                RecordGram::deleteToken ((yyvsp[-3].val));
                RecordGram::deleteToken ((yyvsp[-1].settp));
 	   }
-#line 1978 "/home/peter/sw/casacore/BUILD/tables/RecordGram.ycc" /* yacc.c:1646  */
+#line 1978 "<BUILDDIR>/tables/RecordGram.ycc" /* yacc.c:1646  */
     break;
 
   case 54:
@@ -1984,7 +1984,7 @@ yyreduce:
                RecordGram::addToken ((yyval.node));
 	       RecordGram::deleteToken ((yyvsp[0].val));
 	   }
-#line 1988 "/home/peter/sw/casacore/BUILD/tables/RecordGram.ycc" /* yacc.c:1646  */
+#line 1988 "<BUILDDIR>/tables/RecordGram.ycc" /* yacc.c:1646  */
     break;
 
   case 55:
@@ -1994,7 +1994,7 @@ yyreduce:
                RecordGram::addToken ((yyval.node));
 	       RecordGram::deleteToken ((yyvsp[0].val));
 	   }
-#line 1998 "/home/peter/sw/casacore/BUILD/tables/RecordGram.ycc" /* yacc.c:1646  */
+#line 1998 "<BUILDDIR>/tables/RecordGram.ycc" /* yacc.c:1646  */
     break;
 
   case 56:
@@ -2004,7 +2004,7 @@ yyreduce:
                RecordGram::addToken ((yyval.node));
 	       RecordGram::deleteToken ((yyvsp[0].val));
 	   }
-#line 2008 "/home/peter/sw/casacore/BUILD/tables/RecordGram.ycc" /* yacc.c:1646  */
+#line 2008 "<BUILDDIR>/tables/RecordGram.ycc" /* yacc.c:1646  */
     break;
 
   case 57:
@@ -2014,7 +2014,7 @@ yyreduce:
                RecordGram::addToken ((yyval.node));
 	       RecordGram::deleteToken ((yyvsp[0].val));
 	   }
-#line 2018 "/home/peter/sw/casacore/BUILD/tables/RecordGram.ycc" /* yacc.c:1646  */
+#line 2018 "<BUILDDIR>/tables/RecordGram.ycc" /* yacc.c:1646  */
     break;
 
   case 58:
@@ -2022,25 +2022,25 @@ yyreduce:
     {
 	       (yyval.node) = (yyvsp[0].node);
 	   }
-#line 2026 "/home/peter/sw/casacore/BUILD/tables/RecordGram.ycc" /* yacc.c:1646  */
+#line 2026 "<BUILDDIR>/tables/RecordGram.ycc" /* yacc.c:1646  */
     break;
 
   case 59:
 #line 414 "TaQL/RecordGram.yy" /* yacc.c:1646  */
     { (yyval.val) = (yyvsp[0].val); }
-#line 2032 "/home/peter/sw/casacore/BUILD/tables/RecordGram.ycc" /* yacc.c:1646  */
+#line 2032 "<BUILDDIR>/tables/RecordGram.ycc" /* yacc.c:1646  */
     break;
 
   case 60:
 #line 416 "TaQL/RecordGram.yy" /* yacc.c:1646  */
     { (yyval.val) = (yyvsp[0].val); }
-#line 2038 "/home/peter/sw/casacore/BUILD/tables/RecordGram.ycc" /* yacc.c:1646  */
+#line 2038 "<BUILDDIR>/tables/RecordGram.ycc" /* yacc.c:1646  */
     break;
 
   case 61:
 #line 418 "TaQL/RecordGram.yy" /* yacc.c:1646  */
     { (yyval.val) = (yyvsp[0].val); }
-#line 2044 "/home/peter/sw/casacore/BUILD/tables/RecordGram.ycc" /* yacc.c:1646  */
+#line 2044 "<BUILDDIR>/tables/RecordGram.ycc" /* yacc.c:1646  */
     break;
 
   case 62:
@@ -2050,7 +2050,7 @@ yyreduce:
                RecordGram::addToken ((yyval.node));
                RecordGram::deleteToken ((yyvsp[-1].settp));
            }
-#line 2054 "/home/peter/sw/casacore/BUILD/tables/RecordGram.ycc" /* yacc.c:1646  */
+#line 2054 "<BUILDDIR>/tables/RecordGram.ycc" /* yacc.c:1646  */
     break;
 
   case 63:
@@ -2060,13 +2060,13 @@ yyreduce:
                RecordGram::addToken ((yyval.node));
                RecordGram::deleteToken ((yyvsp[-1].settp));
            }
-#line 2064 "/home/peter/sw/casacore/BUILD/tables/RecordGram.ycc" /* yacc.c:1646  */
+#line 2064 "<BUILDDIR>/tables/RecordGram.ycc" /* yacc.c:1646  */
     break;
 
   case 64:
 #line 434 "TaQL/RecordGram.yy" /* yacc.c:1646  */
     { (yyval.settp) = (yyvsp[0].settp); }
-#line 2070 "/home/peter/sw/casacore/BUILD/tables/RecordGram.ycc" /* yacc.c:1646  */
+#line 2070 "<BUILDDIR>/tables/RecordGram.ycc" /* yacc.c:1646  */
     break;
 
   case 65:
@@ -2075,7 +2075,7 @@ yyreduce:
                (yyval.settp) = new TableExprNodeSet;         /* no elements */
                RecordGram::addToken ((yyval.settp));
            }
-#line 2079 "/home/peter/sw/casacore/BUILD/tables/RecordGram.ycc" /* yacc.c:1646  */
+#line 2079 "<BUILDDIR>/tables/RecordGram.ycc" /* yacc.c:1646  */
     break;
 
   case 66:
@@ -2085,7 +2085,7 @@ yyreduce:
 	       (yyval.settp)->add (*(yyvsp[0].elem));
 	       RecordGram::deleteToken ((yyvsp[0].elem));
 	   }
-#line 2089 "/home/peter/sw/casacore/BUILD/tables/RecordGram.ycc" /* yacc.c:1646  */
+#line 2089 "<BUILDDIR>/tables/RecordGram.ycc" /* yacc.c:1646  */
     break;
 
   case 67:
@@ -2096,7 +2096,7 @@ yyreduce:
 	       (yyval.settp)->add (*(yyvsp[0].elem));
 	       RecordGram::deleteToken ((yyvsp[0].elem));
 	   }
-#line 2100 "/home/peter/sw/casacore/BUILD/tables/RecordGram.ycc" /* yacc.c:1646  */
+#line 2100 "<BUILDDIR>/tables/RecordGram.ycc" /* yacc.c:1646  */
     break;
 
   case 68:
@@ -2106,7 +2106,7 @@ yyreduce:
                RecordGram::addToken ((yyval.elem));
 	       RecordGram::deleteToken ((yyvsp[0].node));
 	   }
-#line 2110 "/home/peter/sw/casacore/BUILD/tables/RecordGram.ycc" /* yacc.c:1646  */
+#line 2110 "<BUILDDIR>/tables/RecordGram.ycc" /* yacc.c:1646  */
     break;
 
   case 69:
@@ -2114,7 +2114,7 @@ yyreduce:
     {
                (yyval.elem) = (yyvsp[0].elem);
            }
-#line 2118 "/home/peter/sw/casacore/BUILD/tables/RecordGram.ycc" /* yacc.c:1646  */
+#line 2118 "<BUILDDIR>/tables/RecordGram.ycc" /* yacc.c:1646  */
     break;
 
   case 70:
@@ -2126,7 +2126,7 @@ yyreduce:
                (yyval.node) = new TableExprNode (set.setOrArray());
                RecordGram::addToken ((yyval.node));
            }
-#line 2130 "/home/peter/sw/casacore/BUILD/tables/RecordGram.ycc" /* yacc.c:1646  */
+#line 2130 "<BUILDDIR>/tables/RecordGram.ycc" /* yacc.c:1646  */
     break;
 
   case 71:
@@ -2134,7 +2134,7 @@ yyreduce:
     {
                (yyval.elem) = (yyvsp[0].elem);
            }
-#line 2138 "/home/peter/sw/casacore/BUILD/tables/RecordGram.ycc" /* yacc.c:1646  */
+#line 2138 "<BUILDDIR>/tables/RecordGram.ycc" /* yacc.c:1646  */
     break;
 
   case 72:
@@ -2145,7 +2145,7 @@ yyreduce:
 	       RecordGram::deleteToken ((yyvsp[-3].node));
 	       RecordGram::deleteToken ((yyvsp[-1].node));
            }
-#line 2149 "/home/peter/sw/casacore/BUILD/tables/RecordGram.ycc" /* yacc.c:1646  */
+#line 2149 "<BUILDDIR>/tables/RecordGram.ycc" /* yacc.c:1646  */
     break;
 
   case 73:
@@ -2156,7 +2156,7 @@ yyreduce:
 	       RecordGram::deleteToken ((yyvsp[-3].node));
 	       RecordGram::deleteToken ((yyvsp[-1].node));
            }
-#line 2160 "/home/peter/sw/casacore/BUILD/tables/RecordGram.ycc" /* yacc.c:1646  */
+#line 2160 "<BUILDDIR>/tables/RecordGram.ycc" /* yacc.c:1646  */
     break;
 
   case 74:
@@ -2167,7 +2167,7 @@ yyreduce:
 	       RecordGram::deleteToken ((yyvsp[-3].node));
 	       RecordGram::deleteToken ((yyvsp[-1].node));
            }
-#line 2171 "/home/peter/sw/casacore/BUILD/tables/RecordGram.ycc" /* yacc.c:1646  */
+#line 2171 "<BUILDDIR>/tables/RecordGram.ycc" /* yacc.c:1646  */
     break;
 
   case 75:
@@ -2178,7 +2178,7 @@ yyreduce:
 	       RecordGram::deleteToken ((yyvsp[-3].node));
 	       RecordGram::deleteToken ((yyvsp[-1].node));
            }
-#line 2182 "/home/peter/sw/casacore/BUILD/tables/RecordGram.ycc" /* yacc.c:1646  */
+#line 2182 "<BUILDDIR>/tables/RecordGram.ycc" /* yacc.c:1646  */
     break;
 
   case 76:
@@ -2188,7 +2188,7 @@ yyreduce:
                RecordGram::addToken ((yyval.elem));
                RecordGram::deleteToken ((yyvsp[-1].node));
           }
-#line 2192 "/home/peter/sw/casacore/BUILD/tables/RecordGram.ycc" /* yacc.c:1646  */
+#line 2192 "<BUILDDIR>/tables/RecordGram.ycc" /* yacc.c:1646  */
     break;
 
   case 77:
@@ -2198,7 +2198,7 @@ yyreduce:
                RecordGram::addToken ((yyval.elem));
 	       RecordGram::deleteToken ((yyvsp[-1].node));
           }
-#line 2202 "/home/peter/sw/casacore/BUILD/tables/RecordGram.ycc" /* yacc.c:1646  */
+#line 2202 "<BUILDDIR>/tables/RecordGram.ycc" /* yacc.c:1646  */
     break;
 
   case 78:
@@ -2208,7 +2208,7 @@ yyreduce:
                RecordGram::addToken ((yyval.elem));
 	       RecordGram::deleteToken ((yyvsp[-1].node));
            }
-#line 2212 "/home/peter/sw/casacore/BUILD/tables/RecordGram.ycc" /* yacc.c:1646  */
+#line 2212 "<BUILDDIR>/tables/RecordGram.ycc" /* yacc.c:1646  */
     break;
 
   case 79:
@@ -2218,7 +2218,7 @@ yyreduce:
                RecordGram::addToken ((yyval.elem));
 	       RecordGram::deleteToken ((yyvsp[-1].node));
            }
-#line 2222 "/home/peter/sw/casacore/BUILD/tables/RecordGram.ycc" /* yacc.c:1646  */
+#line 2222 "<BUILDDIR>/tables/RecordGram.ycc" /* yacc.c:1646  */
     break;
 
   case 80:
@@ -2228,7 +2228,7 @@ yyreduce:
                RecordGram::addToken ((yyval.elem));
 	       RecordGram::deleteToken ((yyvsp[-2].node));
            }
-#line 2232 "/home/peter/sw/casacore/BUILD/tables/RecordGram.ycc" /* yacc.c:1646  */
+#line 2232 "<BUILDDIR>/tables/RecordGram.ycc" /* yacc.c:1646  */
     break;
 
   case 81:
@@ -2238,7 +2238,7 @@ yyreduce:
                RecordGram::addToken ((yyval.elem));
 	       RecordGram::deleteToken ((yyvsp[-2].node));
            }
-#line 2242 "/home/peter/sw/casacore/BUILD/tables/RecordGram.ycc" /* yacc.c:1646  */
+#line 2242 "<BUILDDIR>/tables/RecordGram.ycc" /* yacc.c:1646  */
     break;
 
   case 82:
@@ -2248,7 +2248,7 @@ yyreduce:
                RecordGram::addToken ((yyval.elem));
 	       RecordGram::deleteToken ((yyvsp[-2].node));
            }
-#line 2252 "/home/peter/sw/casacore/BUILD/tables/RecordGram.ycc" /* yacc.c:1646  */
+#line 2252 "<BUILDDIR>/tables/RecordGram.ycc" /* yacc.c:1646  */
     break;
 
   case 83:
@@ -2258,7 +2258,7 @@ yyreduce:
                RecordGram::addToken ((yyval.elem));
 	       RecordGram::deleteToken ((yyvsp[-2].node));
            }
-#line 2262 "/home/peter/sw/casacore/BUILD/tables/RecordGram.ycc" /* yacc.c:1646  */
+#line 2262 "<BUILDDIR>/tables/RecordGram.ycc" /* yacc.c:1646  */
     break;
 
   case 84:
@@ -2269,7 +2269,7 @@ yyreduce:
 	       RecordGram::deleteToken ((yyvsp[-2].node));
 	       RecordGram::deleteToken ((yyvsp[0].node));
            }
-#line 2273 "/home/peter/sw/casacore/BUILD/tables/RecordGram.ycc" /* yacc.c:1646  */
+#line 2273 "<BUILDDIR>/tables/RecordGram.ycc" /* yacc.c:1646  */
     break;
 
   case 85:
@@ -2280,7 +2280,7 @@ yyreduce:
 	       RecordGram::deleteToken ((yyvsp[-2].node));
 	       RecordGram::deleteToken ((yyvsp[0].node));
            }
-#line 2284 "/home/peter/sw/casacore/BUILD/tables/RecordGram.ycc" /* yacc.c:1646  */
+#line 2284 "<BUILDDIR>/tables/RecordGram.ycc" /* yacc.c:1646  */
     break;
 
   case 86:
@@ -2291,7 +2291,7 @@ yyreduce:
 	       RecordGram::deleteToken ((yyvsp[-2].node));
 	       RecordGram::deleteToken ((yyvsp[0].node));
            }
-#line 2295 "/home/peter/sw/casacore/BUILD/tables/RecordGram.ycc" /* yacc.c:1646  */
+#line 2295 "<BUILDDIR>/tables/RecordGram.ycc" /* yacc.c:1646  */
     break;
 
   case 87:
@@ -2302,7 +2302,7 @@ yyreduce:
 	       RecordGram::deleteToken ((yyvsp[-2].node));
 	       RecordGram::deleteToken ((yyvsp[0].node));
            }
-#line 2306 "/home/peter/sw/casacore/BUILD/tables/RecordGram.ycc" /* yacc.c:1646  */
+#line 2306 "<BUILDDIR>/tables/RecordGram.ycc" /* yacc.c:1646  */
     break;
 
   case 88:
@@ -2312,7 +2312,7 @@ yyreduce:
                RecordGram::addToken ((yyval.elem));
 	       RecordGram::deleteToken ((yyvsp[0].node));
            }
-#line 2316 "/home/peter/sw/casacore/BUILD/tables/RecordGram.ycc" /* yacc.c:1646  */
+#line 2316 "<BUILDDIR>/tables/RecordGram.ycc" /* yacc.c:1646  */
     break;
 
   case 89:
@@ -2322,7 +2322,7 @@ yyreduce:
                RecordGram::addToken ((yyval.elem));
 	       RecordGram::deleteToken ((yyvsp[0].node));
            }
-#line 2326 "/home/peter/sw/casacore/BUILD/tables/RecordGram.ycc" /* yacc.c:1646  */
+#line 2326 "<BUILDDIR>/tables/RecordGram.ycc" /* yacc.c:1646  */
     break;
 
   case 90:
@@ -2332,7 +2332,7 @@ yyreduce:
                RecordGram::addToken ((yyval.elem));
 	       RecordGram::deleteToken ((yyvsp[-1].node));
            }
-#line 2336 "/home/peter/sw/casacore/BUILD/tables/RecordGram.ycc" /* yacc.c:1646  */
+#line 2336 "<BUILDDIR>/tables/RecordGram.ycc" /* yacc.c:1646  */
     break;
 
   case 91:
@@ -2342,7 +2342,7 @@ yyreduce:
                RecordGram::addToken ((yyval.elem));
 	       RecordGram::deleteToken ((yyvsp[-1].node));
            }
-#line 2346 "/home/peter/sw/casacore/BUILD/tables/RecordGram.ycc" /* yacc.c:1646  */
+#line 2346 "<BUILDDIR>/tables/RecordGram.ycc" /* yacc.c:1646  */
     break;
 
   case 92:
@@ -2352,7 +2352,7 @@ yyreduce:
 	       (yyval.settp)->add (*(yyvsp[0].elem));
 	       RecordGram::deleteToken ((yyvsp[0].elem));
 	   }
-#line 2356 "/home/peter/sw/casacore/BUILD/tables/RecordGram.ycc" /* yacc.c:1646  */
+#line 2356 "<BUILDDIR>/tables/RecordGram.ycc" /* yacc.c:1646  */
     break;
 
   case 93:
@@ -2361,7 +2361,7 @@ yyreduce:
                (yyval.settp) = (yyvsp[-1].settp);
 	       (yyval.settp)->add (TableExprNodeSetElem (0, 0, 0));
 	   }
-#line 2365 "/home/peter/sw/casacore/BUILD/tables/RecordGram.ycc" /* yacc.c:1646  */
+#line 2365 "<BUILDDIR>/tables/RecordGram.ycc" /* yacc.c:1646  */
     break;
 
   case 94:
@@ -2372,7 +2372,7 @@ yyreduce:
 	       (yyval.settp)->add (TableExprNodeSetElem (0, 0, 0));
 	       (yyval.settp)->add (TableExprNodeSetElem (0, 0, 0));
 	   }
-#line 2376 "/home/peter/sw/casacore/BUILD/tables/RecordGram.ycc" /* yacc.c:1646  */
+#line 2376 "<BUILDDIR>/tables/RecordGram.ycc" /* yacc.c:1646  */
     break;
 
   case 95:
@@ -2384,7 +2384,7 @@ yyreduce:
 	       (yyval.settp)->add (*(yyvsp[0].elem));
 	       RecordGram::deleteToken ((yyvsp[0].elem));
 	   }
-#line 2388 "/home/peter/sw/casacore/BUILD/tables/RecordGram.ycc" /* yacc.c:1646  */
+#line 2388 "<BUILDDIR>/tables/RecordGram.ycc" /* yacc.c:1646  */
     break;
 
   case 96:
@@ -2395,7 +2395,7 @@ yyreduce:
 	       (yyval.settp)->add (*(yyvsp[0].elem));
 	       RecordGram::deleteToken ((yyvsp[0].elem));
 	   }
-#line 2399 "/home/peter/sw/casacore/BUILD/tables/RecordGram.ycc" /* yacc.c:1646  */
+#line 2399 "<BUILDDIR>/tables/RecordGram.ycc" /* yacc.c:1646  */
     break;
 
   case 97:
@@ -2405,7 +2405,7 @@ yyreduce:
                RecordGram::addToken ((yyval.elem));
 	       RecordGram::deleteToken ((yyvsp[0].node));
            }
-#line 2409 "/home/peter/sw/casacore/BUILD/tables/RecordGram.ycc" /* yacc.c:1646  */
+#line 2409 "<BUILDDIR>/tables/RecordGram.ycc" /* yacc.c:1646  */
     break;
 
   case 98:
@@ -2413,7 +2413,7 @@ yyreduce:
     {
                (yyval.elem) = (yyvsp[0].elem);
 	   }
-#line 2417 "/home/peter/sw/casacore/BUILD/tables/RecordGram.ycc" /* yacc.c:1646  */
+#line 2417 "<BUILDDIR>/tables/RecordGram.ycc" /* yacc.c:1646  */
     break;
 
   case 99:
@@ -2424,7 +2424,7 @@ yyreduce:
 	       RecordGram::deleteToken ((yyvsp[-2].node));
 	       RecordGram::deleteToken ((yyvsp[0].node));
             }
-#line 2428 "/home/peter/sw/casacore/BUILD/tables/RecordGram.ycc" /* yacc.c:1646  */
+#line 2428 "<BUILDDIR>/tables/RecordGram.ycc" /* yacc.c:1646  */
     break;
 
   case 100:
@@ -2436,7 +2436,7 @@ yyreduce:
 	       RecordGram::deleteToken ((yyvsp[-2].node));
 	       RecordGram::deleteToken ((yyvsp[0].node));
             }
-#line 2440 "/home/peter/sw/casacore/BUILD/tables/RecordGram.ycc" /* yacc.c:1646  */
+#line 2440 "<BUILDDIR>/tables/RecordGram.ycc" /* yacc.c:1646  */
     break;
 
   case 101:
@@ -2447,7 +2447,7 @@ yyreduce:
                RecordGram::addToken ((yyval.elem));
 	       RecordGram::deleteToken ((yyvsp[-1].node));
             }
-#line 2451 "/home/peter/sw/casacore/BUILD/tables/RecordGram.ycc" /* yacc.c:1646  */
+#line 2451 "<BUILDDIR>/tables/RecordGram.ycc" /* yacc.c:1646  */
     break;
 
   case 102:
@@ -2458,7 +2458,7 @@ yyreduce:
 	       RecordGram::deleteToken ((yyvsp[-3].node));
 	       RecordGram::deleteToken ((yyvsp[0].node));
             }
-#line 2462 "/home/peter/sw/casacore/BUILD/tables/RecordGram.ycc" /* yacc.c:1646  */
+#line 2462 "<BUILDDIR>/tables/RecordGram.ycc" /* yacc.c:1646  */
     break;
 
   case 103:
@@ -2468,7 +2468,7 @@ yyreduce:
                RecordGram::addToken ((yyval.elem));
 	       RecordGram::deleteToken ((yyvsp[0].node));
             }
-#line 2472 "/home/peter/sw/casacore/BUILD/tables/RecordGram.ycc" /* yacc.c:1646  */
+#line 2472 "<BUILDDIR>/tables/RecordGram.ycc" /* yacc.c:1646  */
     break;
 
   case 104:
@@ -2479,7 +2479,7 @@ yyreduce:
 	       RecordGram::deleteToken ((yyvsp[-2].node));
 	       RecordGram::deleteToken ((yyvsp[0].node));
             }
-#line 2483 "/home/peter/sw/casacore/BUILD/tables/RecordGram.ycc" /* yacc.c:1646  */
+#line 2483 "<BUILDDIR>/tables/RecordGram.ycc" /* yacc.c:1646  */
     break;
 
   case 105:
@@ -2489,11 +2489,11 @@ yyreduce:
                RecordGram::addToken ((yyval.elem));
 	       RecordGram::deleteToken ((yyvsp[0].node));
             }
-#line 2493 "/home/peter/sw/casacore/BUILD/tables/RecordGram.ycc" /* yacc.c:1646  */
+#line 2493 "<BUILDDIR>/tables/RecordGram.ycc" /* yacc.c:1646  */
     break;
 
 
-#line 2497 "/home/peter/sw/casacore/BUILD/tables/RecordGram.ycc" /* yacc.c:1646  */
+#line 2497 "<BUILDDIR>/tables/RecordGram.ycc" /* yacc.c:1646  */
       default: break;
     }
   /* User semantic actions sometimes alter yychar, and that requires
