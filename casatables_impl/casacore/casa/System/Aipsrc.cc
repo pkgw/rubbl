@@ -63,11 +63,7 @@ Bool Aipsrc::matchKeyword(uInt &where,  const String &keyword,
 Bool Aipsrc::find(String &value,	
 		  const String &keyword,
 		  uInt start) {
-  uInt keyInMap;
-  if (matchKeyword(keyInMap, keyword, start)) {
-    value = keywordValue[keyInMap];
-    return True;
-  }
+  // rubbl customization: never actually use any config files
   return False; 
 }
 
