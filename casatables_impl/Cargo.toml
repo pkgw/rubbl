@@ -1,0 +1,7 @@
+[package]
+name = "rubbl_casatables_impl"
+version = "0.1.0"
+authors = ["Peter Williams <peter@newton.cx>"]
+
+[build-dependencies]
+gcc = { version = "^0.3", features = ["parallel"] }
