@@ -75,4 +75,23 @@ extern "C" {
     {
         return table.nrow();
     }
+
+    int
+    table_deep_copy_no_rows(const GlueTable &table, const GlueString &dest_path, ExcInfo &exc)
+    {
+        try {
+            table.deepCopy(
+                dest_path,
+                GlueTable::NewNoReplace,
+                casacore::True, // "valueCopy"
+                GlueTable::LocalEndian,
+                casacore::True // "noRows"
+            );
+        } catch (...) {
+            handle_exception(exc);
+            return 1;
+        }
+
+        return 0;
+    }
 }

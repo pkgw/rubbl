@@ -91,7 +91,18 @@ impl Table {
     pub fn n_rows(&self) -> usize {
         unsafe { glue::table_n_rows(self.handle) as usize }
     }
+
+    pub fn deep_copy_no_rows(&mut self, dest_path: &str) -> Result<(),::std::io::Error> {
+        let cdest_path = glue::GlueString::from_rust(dest_path);
+
+        if unsafe { glue::table_deep_copy_no_rows(self.handle, &cdest_path, &mut self.exc_info) != 0 } {
+            self.exc_info.as_err()
+        } else {
+            Ok(())
+        }
+    }
 }
+
 
 impl Drop for Table {
     fn drop(&mut self) {
@@ -101,59 +112,6 @@ impl Drop for Table {
     }
 }
 
-
-/*
-use bindings::root::casacore;
-
-// Tables
-
-pub use casacore::Table_TableOption as TableOpenMode;
-pub use casacore::TSMOption as TsmConfig;
-pub use casacore::TSMOption_Option as TsmMode;
-
-impl TsmConfig {
-    pub fn default() -> Self {
-        unsafe { Self::new(TsmMode::Default, 65536, 32) }
-    }
-}
-
-pub use casacore::TableDesc;
-
-impl TableDesc {
-    pub fn n_cols(&self) -> usize {
-        unsafe { self.ncolumn() as usize }
-    }
-
-    /// Panics if `col_name` cannot be converted to a C string.
-    pub fn has_column(&self, col_name: &str) -> bool {
-        let cname = casacore::String::from_rust(col_name);
-        unsafe { self.isColumn(&cname) }
-    }
-}
-
-pub struct Table {
-    handle: casacore::Table,
-}
-
-impl Table {
-    pub fn open(name: &str, mode: TableOpenMode, storage: &TsmConfig) -> Self {
-        let cname = casacore::String::from_rust(name);
-
-        Table {
-            handle: unsafe { casacore::Table::openTable(&cname, mode, storage) },
-        }
-    }
-
-    pub fn n_rows(&self) -> usize {
-        unsafe { self.handle.nrow() as usize }
-    }
-
-    // TODO: understand difference between this and "actualTableDesc"
-    pub fn desc(&self) -> &TableDesc {
-        unsafe { &*self.handle.tableDesc() }
-    }
-}
- */
 
 #[cfg(test)]
 mod tests {

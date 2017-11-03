@@ -7,6 +7,7 @@ version = "0.1.0"
 authors = ["Peter Williams <peter@newton.cx>"]
 
 [dependencies]
+clap = "^2.26"
 rubbl_casatables_impl = { version = "0.1.0", path = "../casatables_impl" }
 
 [build-dependencies]
