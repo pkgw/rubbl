@@ -22,6 +22,7 @@ use std::fs::File;
 use std::io;
 use std::io::prelude::*;
 
+use mask::MaskDecoder;
 use super::{DataSet, MiriadMappedType, Type};
 
 
@@ -59,38 +60,19 @@ impl UvVariable {
 pub struct UvVariableReference(u8);
 
 
-/// A struct that holds state for reading visibility data out of a MIRIAD uv
-/// dataset.
+/// A struct that holds state for decoding the MIRIAD UV data format.
 #[derive(Debug)]
-pub struct Reader {
-    obstype: ObsType,
+pub struct Decoder {
     eff_vislen: u64,
-    ncorr: u64,
-    //nwcorr: i64,
     vars: Vec<UvVariable>,
     vars_by_name: HashMap<String, u8>,
     stream: AligningReader<io::BufReader<File>>,
 }
 
 
-impl Reader {
+impl Decoder {
     pub fn create(ds: &mut DataSet) -> Result<Self> {
-        let ot_str: String = ds.get("obstype").require_found()?.read_scalar()?;
-
-        let obstype = if ot_str.starts_with("auto") {
-            ObsType::Auto
-        } else if ot_str.starts_with("cross") {
-            ObsType::Cross
-        } else if ot_str.starts_with("mixed") {
-            ObsType::MixedAutoCross
-        } else {
-            return err_msg!("unexpected \"obstype\" value {}", ot_str);
-        };
-
         let vislen = ds.get("vislen").require_found()?.read_scalar::<i64>()?;
-        let ncorr = ds.get("ncorr").require_found()?.read_scalar::<i64>()?;
-        //let nwcorr = ds.get("nwcorr").require_found()?.read_scalar()?;
-
         let mut vars = Vec::new();
         let mut vars_by_name = HashMap::new();
         let mut var_num = 0u8;
@@ -125,25 +107,12 @@ impl Reader {
 
         let stream = ds.get("visdata").require_found()?.into_byte_stream()?;
 
-        Ok(Reader {
-            obstype: obstype,
+        Ok(Decoder {
             eff_vislen: vislen as u64 - 4, // this is always too big
-            ncorr: ncorr as u64,
-            //nwcorr: nwcorr,
             vars: vars,
             vars_by_name: vars_by_name,
             stream: stream,
         })
-    }
-
-
-    pub fn obs_type(&self) -> ObsType {
-        self.obstype
-    }
-
-
-    pub fn num_correlations(&self) -> u64 {
-        self.ncorr as u64
     }
 
 
@@ -235,5 +204,58 @@ impl Reader {
         }
 
         T::decode_buf_into_vec(&var.data, buf);
+    }
+}
+
+
+/// A struct that adapts the MIRIAD uv format into our VisStream interface.
+#[derive(Debug)]
+pub struct Reader {
+    obstype: ObsType,
+    ncorr: u64,
+    nwcorr: u64,
+    decoder: Decoder,
+    flags: Option<MaskDecoder<AligningReader<io::BufReader<File>>>>,
+    wflags: Option<MaskDecoder<AligningReader<io::BufReader<File>>>>,
+}
+
+
+impl Reader {
+    pub fn create(ds: &mut DataSet) -> Result<Self> {
+        let ot_str: String = ds.get("obstype").require_found()?.read_scalar()?;
+
+        let obstype = if ot_str.starts_with("auto") {
+            ObsType::Auto
+        } else if ot_str.starts_with("cross") {
+            ObsType::Cross
+        } else if ot_str.starts_with("mixed") {
+            ObsType::MixedAutoCross
+        } else {
+            return err_msg!("unexpected \"obstype\" value {}", ot_str);
+        };
+
+        let ncorr = ds.get("ncorr").require_found()?.read_scalar::<i64>()?;
+        let nwcorr = ds.get("nwcorr").require_found()?.read_scalar::<i64>()?;
+
+        let decoder = Decoder::create(ds)?;
+
+        let flags = match ds.get("flags")? {
+            Some(iii) => Some(MaskDecoder::new(iii.into_byte_stream()?)),
+            None => None,
+        };
+
+        let wflags = match ds.get("wflags")? {
+            Some(iii) => Some(MaskDecoder::new(iii.into_byte_stream()?)),
+            None => None,
+        };
+
+        Ok(Reader {
+            obstype: obstype,
+            ncorr: ncorr as u64,
+            nwcorr: nwcorr as u64,
+            decoder: decoder,
+            flags: flags,
+            wflags: wflags,
+        })
     }
 }

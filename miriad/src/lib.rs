@@ -10,6 +10,7 @@ Access to MIRIAD-format data sets.
 extern crate byteorder;
 extern crate openat;
 #[macro_use] extern crate rubbl_core;
+extern crate rubbl_visdata;
 
 use byteorder::{BigEndian, ByteOrder, ReadBytesExt};
 use rubbl_core::Complex;
@@ -609,8 +610,8 @@ impl DataSet {
     }
 
 
-    pub fn open_uv(&mut self) -> Result<visdata::Reader> {
-        visdata::Reader::create(self)
+    pub fn open_uv(&mut self) -> Result<visdata::Decoder> {
+        visdata::Decoder::create(self)
     }
 }
 
