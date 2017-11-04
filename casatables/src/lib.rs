@@ -65,6 +65,15 @@ impl glue::ExcInfo {
 }
 
 
+// Data types
+
+impl glue::GlueDataType {
+    fn size(&self) -> i32 {
+        unsafe { glue::data_type_get_element_size(*self) as i32 }
+    }
+}
+
+
 // Tables
 
 pub struct Table {

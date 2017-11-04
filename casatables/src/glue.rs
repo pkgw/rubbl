@@ -112,6 +112,10 @@ extern "C" {
     pub fn string_deinit(str: *mut GlueString);
 }
 extern "C" {
+    pub fn data_type_get_element_size(ty: GlueDataType)
+     -> ::std::os::raw::c_int;
+}
+extern "C" {
     pub fn table_alloc_and_open(path: *const GlueString, exc: *mut ExcInfo)
      -> *mut GlueTable;
 }

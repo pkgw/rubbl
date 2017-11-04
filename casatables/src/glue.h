@@ -71,6 +71,8 @@ extern "C" {
     void string_init(GlueString &str, const void *data, const unsigned long n_bytes);
     void string_deinit(GlueString &str);
 
+    int data_type_get_element_size(const GlueDataType ty);
+
     GlueTable *table_alloc_and_open(const GlueString &path, ExcInfo &exc);
     void table_close_and_free(GlueTable *table, ExcInfo &exc);
     unsigned long table_n_rows(const GlueTable &table);

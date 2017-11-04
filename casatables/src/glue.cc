@@ -48,6 +48,49 @@ extern "C" {
         std::string().swap(str);
     }
 
+    // Data Types
+
+    int
+    data_type_get_element_size(const GlueDataType ty)
+    {
+        switch (ty) {
+        case casa::TpBool: return sizeof(casa::Bool);
+        case casa::TpChar: return sizeof(casa::Char);
+        case casa::TpUChar: return sizeof(casa::uChar);
+        case casa::TpShort: return sizeof(casa::Short);
+        case casa::TpUShort: return sizeof(casa::uShort);
+        case casa::TpInt: return sizeof(casa::Int);
+        case casa::TpUInt: return sizeof(casa::uInt);
+        case casa::TpFloat: return sizeof(float);
+        case casa::TpDouble: return sizeof(double);
+        case casa::TpComplex: return sizeof(casa::Complex);
+        case casa::TpDComplex: return sizeof(casa::DComplex);
+        case casa::TpString: return -1;
+        case casa::TpTable: return -1;
+        case casa::TpArrayBool: return sizeof(casa::Bool);
+        case casa::TpArrayChar: return sizeof(casa::Char);
+        case casa::TpArrayUChar: return sizeof(casa::uChar);
+        case casa::TpArrayShort: return sizeof(casa::Short);
+        case casa::TpArrayUShort: return sizeof(casa::uShort);
+        case casa::TpArrayInt: return sizeof(casa::Int);
+        case casa::TpArrayUInt: return sizeof(casa::uInt);
+        case casa::TpArrayFloat: return sizeof(float);
+        case casa::TpArrayDouble: return sizeof(double);
+        case casa::TpArrayComplex: return sizeof(casa::Complex);
+        case casa::TpArrayDComplex: return sizeof(casa::DComplex);
+        case casa::TpArrayString: return -1;
+        case casa::TpRecord: return -1;
+        case casa::TpOther: return -1;
+        case casa::TpQuantity: return -1;
+        case casa::TpArrayQuantity: return -1;
+        case casa::TpInt64: return sizeof(casa::Int64);
+        case casa::TpArrayInt64: return sizeof(casa::Int64);
+        case casa::TpNumberOfTypes: return -1; // shut up compiler warning
+        }
+
+        return -1;
+    }
+
     // Tables
 
     GlueTable *
