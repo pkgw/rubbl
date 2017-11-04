@@ -1,7 +1,10 @@
 // Copyright 2017 Peter Williams <peter@newton.cx> and collaborators
 // Licensed under the MIT License.
 
+extern crate rubbl_core;
 extern crate rubbl_casatables_impl;
+
+use rubbl_core::Complex;
 
 mod glue;
 
@@ -70,6 +73,87 @@ impl glue::ExcInfo {
 impl glue::GlueDataType {
     fn size(&self) -> i32 {
         unsafe { glue::data_type_get_element_size(*self) as i32 }
+    }
+}
+
+
+trait CasaDataType: Sized {
+    const DATA_TYPE: glue::GlueDataType;
+
+    #[cfg(test)]
+    fn test_casa_data_size() {
+        assert_eq!(std::mem::size_of::<Self>() as i32, Self::DATA_TYPE.size());
+    }
+}
+
+
+impl CasaDataType for bool {
+    const DATA_TYPE: glue::GlueDataType = glue::GlueDataType::TpBool;
+}
+
+impl CasaDataType for i8 {
+    const DATA_TYPE: glue::GlueDataType = glue::GlueDataType::TpChar;
+}
+
+impl CasaDataType for u8 {
+    const DATA_TYPE: glue::GlueDataType = glue::GlueDataType::TpUChar;
+}
+
+impl CasaDataType for i16 {
+    const DATA_TYPE: glue::GlueDataType = glue::GlueDataType::TpShort;
+}
+
+impl CasaDataType for u16 {
+    const DATA_TYPE: glue::GlueDataType = glue::GlueDataType::TpUShort;
+}
+
+impl CasaDataType for i32 {
+    const DATA_TYPE: glue::GlueDataType = glue::GlueDataType::TpInt;
+}
+
+impl CasaDataType for u32 {
+    const DATA_TYPE: glue::GlueDataType = glue::GlueDataType::TpUInt;
+}
+
+impl CasaDataType for i64 {
+    const DATA_TYPE: glue::GlueDataType = glue::GlueDataType::TpInt64;
+}
+
+impl CasaDataType for f32 {
+    const DATA_TYPE: glue::GlueDataType = glue::GlueDataType::TpFloat;
+}
+
+impl CasaDataType for f64 {
+    const DATA_TYPE: glue::GlueDataType = glue::GlueDataType::TpDouble;
+}
+
+impl CasaDataType for Complex<f32> {
+    const DATA_TYPE: glue::GlueDataType = glue::GlueDataType::TpComplex;
+}
+
+impl CasaDataType for Complex<f64> {
+    const DATA_TYPE: glue::GlueDataType = glue::GlueDataType::TpDComplex;
+}
+
+
+#[cfg(test)]
+mod data_type_tests {
+    use super::*;
+
+    #[test]
+    fn sizes() {
+        bool::test_casa_data_size();
+        i8::test_casa_data_size();
+        u8::test_casa_data_size();
+        i16::test_casa_data_size();
+        u16::test_casa_data_size();
+        i32::test_casa_data_size();
+        u32::test_casa_data_size();
+        i64::test_casa_data_size();
+        f32::test_casa_data_size();
+        f64::test_casa_data_size();
+        Complex::<f32>::test_casa_data_size();
+        Complex::<f64>::test_casa_data_size();
     }
 }
 
