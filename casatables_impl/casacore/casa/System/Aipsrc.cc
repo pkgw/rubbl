@@ -64,6 +64,10 @@ Bool Aipsrc::find(String &value,
 		  const String &keyword,
 		  uInt start) {
   // rubbl customization: never actually use any config files
+  value = value;
+  if (keyword != keyword)
+      start = 0;
+  start = start;
   return False; 
 }
 

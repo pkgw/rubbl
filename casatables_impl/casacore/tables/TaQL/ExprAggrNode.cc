@@ -98,6 +98,7 @@ namespace casacore { //# NAMESPACE CASACORE - BEGIN
     case gminsFUNC:
     case gmaxsFUNC:
       resVT = VTArray;
+      /* falls through */
     case gminFUNC:
     case gmaxFUNC:
       checkNumOfArg (1, 1, nodes);
@@ -106,6 +107,7 @@ namespace casacore { //# NAMESPACE CASACORE - BEGIN
     case gproductsFUNC:
     case gsumsqrsFUNC:
       resVT = VTArray;
+      /* falls through */
     case gsumFUNC:
     case gproductFUNC:
     case gsumsqrFUNC:
@@ -113,6 +115,7 @@ namespace casacore { //# NAMESPACE CASACORE - BEGIN
       return checkDT (dtypeOper, NTNumeric, NTNumeric, nodes);
     case gmeansFUNC:
       resVT = VTArray;
+      /* falls through */
     case gmeanFUNC:
       checkNumOfArg (1, 1, nodes);
       return checkDT (dtypeOper, NTNumeric, NTDouCom, nodes);
@@ -120,6 +123,7 @@ namespace casacore { //# NAMESPACE CASACORE - BEGIN
     case gstddevsFUNC:
     case grmssFUNC:
       resVT = VTArray;
+      /* falls through */
     case gvarianceFUNC:
     case gstddevFUNC:
     case grmsFUNC:
@@ -137,6 +141,7 @@ namespace casacore { //# NAMESPACE CASACORE - BEGIN
     case ganysFUNC:
     case gallsFUNC:
       resVT = VTArray;
+      /* falls through */
     case ganyFUNC:
     case gallFUNC:
       checkNumOfArg (1, 1, nodes);
@@ -144,6 +149,7 @@ namespace casacore { //# NAMESPACE CASACORE - BEGIN
     case gntruesFUNC:
     case gnfalsesFUNC:
       resVT = VTArray;
+      /* falls through */
     case gntrueFUNC:
     case gnfalseFUNC:
       checkNumOfArg (1, 1, nodes);

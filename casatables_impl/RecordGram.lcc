@@ -2374,7 +2374,7 @@ YY_BUFFER_STATE RecordGram_scan_bytes  (yyconst char * yybytes, int  _yybytes_le
 	if ( ! buf )
 		YY_FATAL_ERROR( "out of dynamic memory in RecordGram_scan_bytes()" );
 
-	for ( i = 0; i < _yybytes_len; ++i )
+	for ( i = 0; i < (yy_size_t) _yybytes_len; ++i )
 		buf[i] = yybytes[i];
 
 	buf[_yybytes_len] = buf[_yybytes_len+1] = YY_END_OF_BUFFER_CHAR;

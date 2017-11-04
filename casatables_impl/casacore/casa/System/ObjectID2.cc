@@ -39,13 +39,13 @@ uInt hashFunc(const ObjectID &key)
     uInt result = 0;
     char c;
     c = (char) key.sequence();
-    result = result || c;
+    result = result | c;
     c = (char) key.pid();
-    result = result || (c<<8);
+    result = result | (c<<8);
     c = (char)key.creationTime();
-    result = result || (c<<16);
+    result = result | (c<<16);
     c = (char)key.hostName()[0];
-    result = result || (c<<24);
+    result = result | (c<<24);
     return result;
 }
 

@@ -1484,6 +1484,7 @@ TableExprNodeRep::NodeDataType TableExprFuncNode::checkOperands
 	    break;
         case resizeFUNC:
             optarg = 1;
+	    /* falls through */
 	case arrayFUNC:
         case transposeFUNC:
         case diagonalFUNC:
@@ -1634,6 +1635,7 @@ TableExprNodeRep::NodeDataType TableExprFuncNode::checkOperands
     case weekdayFUNC:
     case weekFUNC:
         dtout = NTInt;
+	/* falls through */
     case mjdFUNC:
     case timeFUNC:
 	if (checkNumOfArg (0, 1, nodes) == 1) {

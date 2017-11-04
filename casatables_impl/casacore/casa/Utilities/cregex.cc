@@ -550,6 +550,7 @@ a2_re_compile_pattern (char *pattern, int size,
 	  if ((obscure_syntax & RE_BK_PLUS_QM)
 	      || (obscure_syntax & RE_LIMITED_OPS))
 	    goto normal_char;
+	  /* falls through */
 	handle_plus:
 	case '*':
 	  /* If there is no previous pattern, char not special. */
@@ -1413,6 +1414,7 @@ a2_re_compile_fastmap (struct re_pattern_buffer *bufp)
 	case duplicate:
 	  bufp->can_be_null = 1;
 	  fastmap[int('\n')] = 1;
+	  /* falls through */
 	case anychar:
 	  for (j = 0; j < (1 << BYTEWIDTH); j++)
 	    if (j != '\n')
@@ -2059,6 +2061,7 @@ real_a2_re_match_2 (struct re_pattern_buffer *pbufp,
                 {
                   case jump_n:
 		    is_a_jump_n = 1;
+		    /* falls through */
                   case finalize_jump:
 		  case maybe_finalize_jump:
 		  case jump:
@@ -2258,6 +2261,7 @@ real_a2_re_match_2 (struct re_pattern_buffer *pbufp,
 	      p[-1] = (unsigned char) jump;	
 	      goto nofinalize;
 	    }
+	  /* falls through */
         /* Note fall through.  */
 
 	/* The end of a stupid repeat has a finalize_jump back to the
@@ -2269,6 +2273,7 @@ real_a2_re_match_2 (struct re_pattern_buffer *pbufp,
            put on by the on_failure_jump.  */
         case finalize_jump:
           POP_FAILURE_POINT ();
+	  /* falls through */
         /* Note fall through.  */
         
 	/* Jump without taking off any failure points.  */

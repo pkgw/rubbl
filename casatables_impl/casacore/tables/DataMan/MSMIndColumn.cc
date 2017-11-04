@@ -272,9 +272,6 @@ MSMIndColumn::Data::Data (const IPosition& shape, int dtype)
 
 MSMIndColumn::Data::~Data()
 {
-  if (data_p != 0) {
-    throw DataManInternalError("MSMIndColumn::dtor: data array not deleted");
-  }
 }
 
 void MSMIndColumn::Data::clear (int dtype)

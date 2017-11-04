@@ -358,6 +358,7 @@ void TableExprFuncNodeArray::tryToConst()
 	break;
     case TableExprFuncNode::arrfractilesFUNC:
         axarg = 2;
+	/* falls through */
     case TableExprFuncNode::arrsumsFUNC:
     case TableExprFuncNode::arrproductsFUNC:
     case TableExprFuncNode::arrsumsqrsFUNC:
@@ -1696,6 +1697,7 @@ MArray<Double> TableExprFuncNodeArray::getArrayDouble (const TableExprId& id)
           return MArray<Double> (result, mask);
         }  // fall through if either array has size 2
       }
+      /* falls through */
     case TableExprFuncNode::angdistxFUNC:
       {
         MArray<Double> a1 = operands()[0]->getArrayDouble(id);
