@@ -38,7 +38,24 @@ extern "C" {
     void
     string_init(GlueString &str, const void *data, const unsigned long n_bytes)
     {
-        str.assign((const char *) data, n_bytes);
+        // Empirically, n_bytes = 0 can make us segfault without special
+        // handling. std.assign() seems to barf with zero size inputs, but
+        // other functions assume that the struct is reasonably initialized,
+        // which isn't guaranteed to be the case for us. The code below
+        // achieves the n_bytes = 0 outcome without crashing.
+        if (n_bytes != 0)
+            str.assign((const char *) data, n_bytes);
+        else {
+            str.assign(" ", 1);
+            str = std::string();
+        }
+    }
+
+    void
+    string_get_buf(const GlueString &str, void const **data_ptr, unsigned long *n_bytes_ptr)
+    {
+        (*data_ptr) = str.data();
+        (*n_bytes_ptr) = str.length();
     }
 
     void
@@ -117,13 +134,32 @@ extern "C" {
     unsigned long
     table_n_rows(const GlueTable &table)
     {
+        // I *think* we can safely say that this code should never trigger an exception.
         return table.nrow();
     }
 
     unsigned long
     table_n_columns(const GlueTable &table)
     {
+        // I *think* we can safely say that this code should never trigger an exception.
         return table.actualTableDesc().columnDescSet().ncolumn();
+    }
+
+    // We assume the caller has allocated col_names of sufficient size.
+    int
+    table_get_column_names(const GlueTable &table, GlueString *col_names, ExcInfo &exc)
+    {
+        try {
+            casa::Vector<casa::String> cnames = table.actualTableDesc().columnNames();
+
+            for (size_t i = 0; i < cnames.size(); i++)
+                col_names[i] = cnames[i];
+        } catch (...) {
+            handle_exception(exc);
+            return 1;
+        }
+
+        return 0;
     }
 
     int

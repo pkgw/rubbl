@@ -44,6 +44,18 @@ impl glue::GlueString {
             cs
         }
     }
+
+    fn to_rust(&self) -> String {
+        let mut ptr: *const ::std::os::raw::c_void = 0 as _;
+        let mut n_bytes: u64 = 0;
+
+        let buf = unsafe {
+            glue::string_get_buf(self, &mut ptr, &mut n_bytes);
+            ::std::slice::from_raw_parts(ptr as *const u8, n_bytes as usize)
+        };
+
+        String::from_utf8_lossy(buf).into_owned()
+    }
 }
 
 impl Drop for glue::GlueString {
@@ -79,7 +91,7 @@ impl glue::GlueDataType {
     ///
     /// Returns -1 for types that do not have fixed sizes, which includes
     /// strings. `TpX` and `TpArrayX` both return the same value.
-    fn element_size(&self) -> i32 {
+    pub fn element_size(&self) -> i32 {
         unsafe { glue::data_type_get_element_size(*self) as i32 }
     }
 }
@@ -196,6 +208,31 @@ impl Table {
 
     pub fn n_columns(&self) -> usize {
         unsafe { glue::table_n_columns(self.handle) as usize }
+    }
+
+    pub fn column_names(&mut self) -> Result<Vec<String>> {
+        let n_cols = self.n_columns();
+        let mut cnames: Vec<glue::GlueString> = Vec::with_capacity(n_cols);
+
+        for _ in 0..n_cols {
+            cnames.push(glue::GlueString::from_rust(""));
+        }
+
+        let rv = unsafe {
+            glue::table_get_column_names(
+                self.handle,
+                cnames.as_mut_ptr(),
+                &mut self.exc_info
+            )
+        };
+
+        if rv != 0 {
+            return self.exc_info.as_err();
+        }
+
+        unsafe { cnames.set_len(n_cols); }
+
+        Ok(cnames.iter().map(|cstr| cstr.to_rust()).collect())
     }
 
     pub fn deep_copy_no_rows(&mut self, dest_path: &str) -> Result<()> {

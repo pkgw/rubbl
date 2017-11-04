@@ -109,6 +109,11 @@ extern "C" {
                        n_bytes: ::std::os::raw::c_ulong);
 }
 extern "C" {
+    pub fn string_get_buf(str: *const GlueString,
+                          data_ptr: *mut *const ::std::os::raw::c_void,
+                          n_bytes_ptr: *mut ::std::os::raw::c_ulong);
+}
+extern "C" {
     pub fn string_deinit(str: *mut GlueString);
 }
 extern "C" {
@@ -128,6 +133,11 @@ extern "C" {
 extern "C" {
     pub fn table_n_columns(table: *const GlueTable)
      -> ::std::os::raw::c_ulong;
+}
+extern "C" {
+    pub fn table_get_column_names(table: *const GlueTable,
+                                  col_names: *mut GlueString,
+                                  exc: *mut ExcInfo) -> ::std::os::raw::c_int;
 }
 extern "C" {
     pub fn table_deep_copy_no_rows(table: *const GlueTable,
