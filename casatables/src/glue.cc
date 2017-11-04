@@ -120,6 +120,12 @@ extern "C" {
         return table.nrow();
     }
 
+    unsigned long
+    table_n_columns(const GlueTable &table)
+    {
+        return table.actualTableDesc().columnDescSet().ncolumn();
+    }
+
     int
     table_deep_copy_no_rows(const GlueTable &table, const GlueString &dest_path, ExcInfo &exc)
     {

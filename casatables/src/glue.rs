@@ -126,6 +126,10 @@ extern "C" {
     pub fn table_n_rows(table: *const GlueTable) -> ::std::os::raw::c_ulong;
 }
 extern "C" {
+    pub fn table_n_columns(table: *const GlueTable)
+     -> ::std::os::raw::c_ulong;
+}
+extern "C" {
     pub fn table_deep_copy_no_rows(table: *const GlueTable,
                                    dest_path: *const GlueString,
                                    exc: *mut ExcInfo)

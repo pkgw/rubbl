@@ -76,6 +76,7 @@ extern "C" {
     GlueTable *table_alloc_and_open(const GlueString &path, ExcInfo &exc);
     void table_close_and_free(GlueTable *table, ExcInfo &exc);
     unsigned long table_n_rows(const GlueTable &table);
+    unsigned long table_n_columns(const GlueTable &table);
     int table_deep_copy_no_rows(const GlueTable &table, const GlueString &dest_path, ExcInfo &exc);
     int table_get_column_info(const GlueTable &table, const GlueString &col_name,
                               unsigned long *n_rows, GlueDataType *data_type,

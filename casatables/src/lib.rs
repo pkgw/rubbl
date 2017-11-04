@@ -194,6 +194,10 @@ impl Table {
         unsafe { glue::table_n_rows(self.handle) as usize }
     }
 
+    pub fn n_columns(&self) -> usize {
+        unsafe { glue::table_n_columns(self.handle) as usize }
+    }
+
     pub fn deep_copy_no_rows(&mut self, dest_path: &str) -> Result<()> {
         let cdest_path = glue::GlueString::from_rust(dest_path);
 
