@@ -1,10 +1,14 @@
 // Copyright 2017 Peter Williams <peter@newton.cx> and collaborators
 // Licensed under the MIT License.
 
+#[macro_use] extern crate error_chain;
 extern crate rubbl_core;
 extern crate rubbl_casatables_impl;
 
 use rubbl_core::Complex;
+
+#[macro_use] pub mod errors; // most come first to provide macros for other modules
+use errors::{Error, ErrorKind, Result};
 
 mod glue;
 
@@ -51,7 +55,7 @@ impl Drop for glue::GlueString {
 // Exceptions
 
 impl glue::ExcInfo {
-    fn as_error(&self) -> ::std::io::Error {
+    fn as_error(&self) -> Error {
         let c_str = unsafe { ::std::ffi::CStr::from_ptr(self.message.as_ptr()) };
 
         let msg = match c_str.to_str() {
@@ -59,10 +63,10 @@ impl glue::ExcInfo {
             Err(_) => "[un-translatable C++ exception]",
         };
 
-        ::std::io::Error::new(::std::io::ErrorKind::Other, msg)
+        ErrorKind::CasacoreException(msg.to_owned()).into()
     }
 
-    fn as_err<T>(&self) -> Result<T,::std::io::Error> {
+    fn as_err<T>(&self) -> Result<T> {
         Err(self.as_error())
     }
 }
@@ -166,7 +170,7 @@ pub struct Table {
 }
 
 impl Table {
-    pub fn open(name: &str) -> Result<Self,::std::io::Error> {
+    pub fn open(name: &str) -> Result<Self> {
         let cname = glue::GlueString::from_rust(name);
         let mut exc_info = unsafe { ::std::mem::zeroed::<glue::ExcInfo>() };
 
@@ -185,7 +189,7 @@ impl Table {
         unsafe { glue::table_n_rows(self.handle) as usize }
     }
 
-    pub fn deep_copy_no_rows(&mut self, dest_path: &str) -> Result<(),::std::io::Error> {
+    pub fn deep_copy_no_rows(&mut self, dest_path: &str) -> Result<()> {
         let cdest_path = glue::GlueString::from_rust(dest_path);
 
         if unsafe { glue::table_deep_copy_no_rows(self.handle, &cdest_path, &mut self.exc_info) != 0 } {

@@ -241,6 +241,7 @@ name = "rubbl_casatables"
 version = "0.1.0"
 dependencies = [
  "clap 2.26.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "error-chain 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "gcc 0.3.54 (registry+https://github.com/rust-lang/crates.io-index)",
  "rubbl_casatables_impl 0.1.0",
  "rubbl_core 0.1.0",

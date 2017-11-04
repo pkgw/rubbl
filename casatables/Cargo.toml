@@ -8,6 +8,7 @@ authors = ["Peter Williams <peter@newton.cx>"]
 
 [dependencies]
 clap = "^2.26"
+error-chain = "^0.11"
 rubbl_casatables_impl = { version = "0.1.0", path = "../casatables_impl" }
 rubbl_core = { version = "0.1.0", path = "../core" }
 
