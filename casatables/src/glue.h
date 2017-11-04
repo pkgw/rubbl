@@ -19,6 +19,42 @@
  */
 
 #ifndef CASA_TYPES_ALREADY_DECLARED
+
+// copied from casa/Utilities/DataType.h:
+typedef enum _GlueDataType {
+    TpBool,
+    TpChar,
+    TpUChar,
+    TpShort,
+    TpUShort,
+    TpInt,
+    TpUInt,
+    TpFloat,
+    TpDouble,
+    TpComplex,
+    TpDComplex,
+    TpString,
+    TpTable,
+    TpArrayBool,
+    TpArrayChar,
+    TpArrayUChar,
+    TpArrayShort,
+    TpArrayUShort,
+    TpArrayInt,
+    TpArrayUInt,
+    TpArrayFloat,
+    TpArrayDouble,
+    TpArrayComplex,
+    TpArrayDComplex,
+    TpArrayString,
+    TpRecord,
+    TpOther,
+    TpQuantity,
+    TpArrayQuantity,
+    TpInt64,
+    TpArrayInt64,
+} GlueDataType;
+
 /**
  * <div rustbindgen nocopy></div>
  */
@@ -39,4 +75,8 @@ extern "C" {
     void table_close_and_free(GlueTable *table, ExcInfo &exc);
     unsigned long table_n_rows(const GlueTable &table);
     int table_deep_copy_no_rows(const GlueTable &table, const GlueString &dest_path, ExcInfo &exc);
+    int table_get_column_info(const GlueTable &table, const GlueString &col_name,
+                              unsigned long *n_rows, GlueDataType *data_type,
+                              int *is_scalar, int *is_fixed_shape, unsigned int *n_dim,
+                              unsigned long dims[8], ExcInfo &exc);
 }

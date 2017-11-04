@@ -7,6 +7,7 @@
 #define CASA_TYPES_ALREADY_DECLARED
 #define GlueString casacore::String
 #define GlueTable casacore::Table
+#define GlueDataType casacore::DataType
 
 #include "glue.h"
 
@@ -87,6 +88,36 @@ extern "C" {
                 GlueTable::LocalEndian,
                 casacore::True // "noRows"
             );
+        } catch (...) {
+            handle_exception(exc);
+            return 1;
+        }
+
+        return 0;
+    }
+
+    int
+    table_get_column_info(const GlueTable &table, const GlueString &col_name,
+                          unsigned long *n_rows, GlueDataType *data_type,
+                          int *is_scalar, int *is_fixed_shape, unsigned int *n_dim,
+                          unsigned long dims[8], ExcInfo &exc)
+    {
+        try {
+            casa::TableColumn col(table, col_name);
+            const casa::ColumnDesc &desc = col.columnDesc();
+            const casa::IPosition &shape = desc.shape();
+
+            if (shape.size() > 8)
+                throw std::runtime_error("cannot handle columns with data of dimensionality greater than 8");
+
+            *n_rows = table.nrow();
+            *data_type = desc.dataType();
+            *is_scalar = (int) desc.isScalar();
+            *is_fixed_shape = (int) desc.isFixedShape();
+            *n_dim = (unsigned int) desc.ndim();
+
+            for (unsigned int i = 0; i < *n_dim; i++)
+                dims[i] = (unsigned long) shape[i];
         } catch (...) {
             handle_exception(exc);
             return 1;
