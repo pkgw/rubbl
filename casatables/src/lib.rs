@@ -75,7 +75,11 @@ impl glue::ExcInfo {
 // Data types
 
 impl glue::GlueDataType {
-    fn size(&self) -> i32 {
+    /// Return the number of bytes per element of this data type.
+    ///
+    /// Returns -1 for types that do not have fixed sizes, which includes
+    /// strings. `TpX` and `TpArrayX` both return the same value.
+    fn element_size(&self) -> i32 {
         unsafe { glue::data_type_get_element_size(*self) as i32 }
     }
 }
@@ -86,7 +90,7 @@ trait CasaDataType: Sized {
 
     #[cfg(test)]
     fn test_casa_data_size() {
-        assert_eq!(std::mem::size_of::<Self>() as i32, Self::DATA_TYPE.size());
+        assert_eq!(std::mem::size_of::<Self>() as i32, Self::DATA_TYPE.element_size());
     }
 }
 
