@@ -142,3 +142,10 @@ extern "C" {
                                  dims: *mut ::std::os::raw::c_ulong,
                                  exc: *mut ExcInfo) -> ::std::os::raw::c_int;
 }
+extern "C" {
+    pub fn table_get_scalar_column_data(table: *const GlueTable,
+                                        col_name: *const GlueString,
+                                        data: *mut ::std::os::raw::c_void,
+                                        exc: *mut ExcInfo)
+     -> ::std::os::raw::c_int;
+}

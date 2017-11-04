@@ -168,4 +168,49 @@ extern "C" {
 
         return 0;
     }
+
+    // This function assumes that the caller has already vetted the types and
+    // has figured how big `data` needs to be.
+    int
+    table_get_scalar_column_data(const GlueTable &table, const GlueString &col_name,
+                                 void *data, ExcInfo &exc)
+    {
+        try {
+            const casa::ColumnDesc &desc = casa::TableColumn(table, col_name).columnDesc();
+            casa::IPosition shape(1, table.nrow());
+
+            switch (desc.dataType()) {
+
+#define CASE(DTYPE, CPPTYPE) \
+            case GlueDataType::DTYPE: { \
+                casa::ScalarColumn<CPPTYPE> col(table, col_name); \
+                casa::Vector<CPPTYPE> vec(shape, (CPPTYPE *) data, casa::StorageInitPolicy::SHARE); \
+                col.getColumn(vec); \
+                break; \
+            }
+
+            CASE(TpBool, casa::Bool)
+            CASE(TpChar, casa::Char)
+            CASE(TpUChar, casa::uChar)
+            CASE(TpShort, casa::Short)
+            CASE(TpUShort, casa::uShort)
+            CASE(TpInt, casa::Int)
+            CASE(TpUInt, casa::uInt)
+            CASE(TpFloat, float)
+            CASE(TpDouble, double)
+            CASE(TpComplex, casa::Complex)
+            CASE(TpDComplex, casa::DComplex)
+
+#undef CASE
+
+            default:
+                throw std::runtime_error("unhandled scalar column data type");
+            }
+        } catch (...) {
+            handle_exception(exc);
+            return 1;
+        }
+
+        return 0;
+    }
 }

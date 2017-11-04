@@ -15,6 +15,7 @@ engine. (Which the author of this module also wrote.)
 
 use rubbl_core;
 
+use glue;
 
 error_chain! {
     types {
@@ -27,8 +28,18 @@ error_chain! {
 
     errors {
         CasacoreException(msg: String) {
-            description("an error from inside the \"casacore\" codebase")
-                display("{}", msg)
+            description("an error from inside the \"casacore\" codebase"),
+            display("{}", msg),
+        }
+
+        NotScalarColumn {
+            description("the column is not made out of scalar values"),
+            display("the column is not made out of scalar values"),
+        }
+
+        UnexpectedCasaType(casa_type: glue::GlueDataType) {
+            description("the CASA data have an unexpected type"),
+            display("the CASA data have an unexpected type ({:?})", casa_type),
         }
     }
 }

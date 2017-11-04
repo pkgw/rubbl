@@ -81,4 +81,6 @@ extern "C" {
                               unsigned long *n_rows, GlueDataType *data_type,
                               int *is_scalar, int *is_fixed_shape, unsigned int *n_dim,
                               unsigned long dims[8], ExcInfo &exc);
+    int table_get_scalar_column_data(const GlueTable &table, const GlueString &col_name,
+                                     void *data, ExcInfo &exc);
 }

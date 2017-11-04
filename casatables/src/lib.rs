@@ -85,7 +85,8 @@ impl glue::GlueDataType {
 }
 
 
-trait CasaDataType: Sized {
+/// A type that can be translated into a CASA table data type.
+pub trait CasaDataType: Sized {
     const DATA_TYPE: glue::GlueDataType;
 
     #[cfg(test)]
@@ -201,6 +202,61 @@ impl Table {
         } else {
             Ok(())
         }
+    }
+
+    pub fn get_col_as_vec<T: CasaDataType>(&mut self, col_name: &str) -> Result<Vec<T>> {
+        let ccol_name = glue::GlueString::from_rust(col_name);
+        let mut n_rows = 0;
+        let mut data_type = glue::GlueDataType::TpOther;
+        let mut is_scalar = 0;
+        let mut is_fixed_shape = 0;
+        let mut n_dim = 0;
+        let mut dims = [0; 8];
+
+        let rv = unsafe {
+            glue::table_get_column_info(
+                self.handle,
+                &ccol_name,
+                &mut n_rows,
+                &mut data_type,
+                &mut is_scalar,
+                &mut is_fixed_shape,
+                &mut n_dim,
+                dims.as_mut_ptr(),
+                &mut self.exc_info
+            )
+        };
+
+        if rv != 0 {
+            return self.exc_info.as_err();
+        }
+
+        if is_scalar == 0 || is_fixed_shape == 0 || n_dim != 0 {
+            return Err(ErrorKind::NotScalarColumn.into());
+        }
+
+        if data_type != T::DATA_TYPE {
+            return Err(ErrorKind::UnexpectedCasaType(data_type).into());
+        }
+
+        let mut result = Vec::with_capacity(n_rows as usize);
+
+        let rv = unsafe {
+            glue::table_get_scalar_column_data(
+                self.handle,
+                &ccol_name,
+                result.as_mut_ptr() as _,
+                &mut self.exc_info
+            )
+        };
+
+        if rv != 0 {
+            return self.exc_info.as_err();
+        }
+
+        unsafe { result.set_len(n_rows as usize); }
+
+        Ok(result)
     }
 }
 
