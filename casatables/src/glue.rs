@@ -152,7 +152,7 @@ extern "C" {
                                  data_type: *mut GlueDataType,
                                  is_scalar: *mut ::std::os::raw::c_int,
                                  is_fixed_shape: *mut ::std::os::raw::c_int,
-                                 n_dim: *mut ::std::os::raw::c_uint,
+                                 n_dim: *mut ::std::os::raw::c_int,
                                  dims: *mut ::std::os::raw::c_ulong,
                                  exc: *mut ExcInfo) -> ::std::os::raw::c_int;
 }

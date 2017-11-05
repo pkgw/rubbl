@@ -82,7 +82,7 @@ extern "C" {
     int table_deep_copy_no_rows(const GlueTable &table, const GlueString &dest_path, ExcInfo &exc);
     int table_get_column_info(const GlueTable &table, const GlueString &col_name,
                               unsigned long *n_rows, GlueDataType *data_type,
-                              int *is_scalar, int *is_fixed_shape, unsigned int *n_dim,
+                              int *is_scalar, int *is_fixed_shape, int *n_dim,
                               unsigned long dims[8], ExcInfo &exc);
     int table_get_scalar_column_data(const GlueTable &table, const GlueString &col_name,
                                      void *data, ExcInfo &exc);

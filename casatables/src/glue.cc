@@ -184,7 +184,7 @@ extern "C" {
     int
     table_get_column_info(const GlueTable &table, const GlueString &col_name,
                           unsigned long *n_rows, GlueDataType *data_type,
-                          int *is_scalar, int *is_fixed_shape, unsigned int *n_dim,
+                          int *is_scalar, int *is_fixed_shape, int *n_dim,
                           unsigned long dims[8], ExcInfo &exc)
     {
         try {
@@ -199,9 +199,9 @@ extern "C" {
             *data_type = desc.dataType();
             *is_scalar = (int) desc.isScalar();
             *is_fixed_shape = (int) desc.isFixedShape();
-            *n_dim = (unsigned int) desc.ndim();
+            *n_dim = (int) desc.ndim();
 
-            for (unsigned int i = 0; i < *n_dim; i++)
+            for (int i = 0; i < *n_dim; i++) // note: for empty cols, n_dim = -1; this is OK
                 dims[i] = (unsigned long) shape[i];
         } catch (...) {
             handle_exception(exc);

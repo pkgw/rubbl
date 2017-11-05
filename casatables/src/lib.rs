@@ -6,6 +6,7 @@ extern crate rubbl_core;
 extern crate rubbl_casatables_impl;
 
 use rubbl_core::Complex;
+use std::path::Path;
 
 #[macro_use] pub mod errors; // most come first to provide macros for other modules
 use errors::{Error, ErrorKind, Result};
@@ -187,11 +188,15 @@ pub struct Table {
 }
 
 impl Table {
-    pub fn open(name: &str) -> Result<Self> {
-        let cname = glue::GlueString::from_rust(name);
+    pub fn open<P: AsRef<Path>>(path: P) -> Result<Self> {
+        let spath = match path.as_ref().to_str() {
+            Some(s) => s,
+            None => return Err("table paths must be representable as UTF-8 strings".into()),
+        };
+        let cpath = glue::GlueString::from_rust(spath);
         let mut exc_info = unsafe { ::std::mem::zeroed::<glue::ExcInfo>() };
 
-        let handle = unsafe { glue::table_alloc_and_open(&cname, &mut exc_info) };
+        let handle = unsafe { glue::table_alloc_and_open(&cpath, &mut exc_info) };
         if handle.is_null() {
             return exc_info.as_err();
         }
@@ -235,14 +240,52 @@ impl Table {
         Ok(cnames.iter().map(|cstr| cstr.to_rust()).collect())
     }
 
-    pub fn deep_copy_no_rows(&mut self, dest_path: &str) -> Result<()> {
-        let cdest_path = glue::GlueString::from_rust(dest_path);
+    pub fn get_col_desc(&mut self, col_name: &str) -> Result<ColumnDescription> {
+        let ccol_name = glue::GlueString::from_rust(col_name);
+        let mut n_rows = 0;
+        let mut data_type = glue::GlueDataType::TpOther;
+        let mut is_scalar = 0;
+        let mut is_fixed_shape = 0;
+        let mut n_dim = 0;
+        let mut dims = [0; 8];
 
-        if unsafe { glue::table_deep_copy_no_rows(self.handle, &cdest_path, &mut self.exc_info) != 0 } {
-            self.exc_info.as_err()
-        } else {
-            Ok(())
+        let rv = unsafe {
+            glue::table_get_column_info(
+                self.handle,
+                &ccol_name,
+                &mut n_rows,
+                &mut data_type,
+                &mut is_scalar,
+                &mut is_fixed_shape,
+                &mut n_dim,
+                dims.as_mut_ptr(),
+                &mut self.exc_info
+            )
+        };
+
+        if rv != 0 {
+            return self.exc_info.as_err();
         }
+
+        let shape = if is_fixed_shape == 0 || n_dim < 0 {
+            None
+        } else {
+            let mut v = Vec::new();
+
+            for d in &dims[..n_dim as usize] {
+                v.push(*d as u32);
+            }
+
+            Some(v)
+        };
+
+        Ok(ColumnDescription {
+            name: col_name.to_owned(),
+            data_type: data_type,
+            is_scalar: is_scalar != 0,
+            is_fixed_shape: is_fixed_shape != 0,
+            shape: shape,
+        })
     }
 
     pub fn get_col_as_vec<T: CasaDataType>(&mut self, col_name: &str) -> Result<Vec<T>> {
@@ -299,6 +342,16 @@ impl Table {
 
         Ok(result)
     }
+
+    pub fn deep_copy_no_rows(&mut self, dest_path: &str) -> Result<()> {
+        let cdest_path = glue::GlueString::from_rust(dest_path);
+
+        if unsafe { glue::table_deep_copy_no_rows(self.handle, &cdest_path, &mut self.exc_info) != 0 } {
+            self.exc_info.as_err()
+        } else {
+            Ok(())
+        }
+    }
 }
 
 
@@ -307,6 +360,37 @@ impl Drop for Table {
         // FIXME: not sure if this function can actually produce useful
         // exceptions anyway, but we can't do anything if it does!
         unsafe { glue::table_close_and_free(self.handle, &mut self.exc_info) }
+    }
+}
+
+
+pub struct ColumnDescription {
+    name: String,
+    data_type: glue::GlueDataType,
+    is_scalar: bool,
+    is_fixed_shape: bool,
+    shape: Option<Vec<u32>>,
+}
+
+impl ColumnDescription {
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    pub fn data_type(&self) -> glue::GlueDataType {
+        self.data_type
+    }
+
+    pub fn is_scalar(&self) -> bool {
+        self.is_scalar
+    }
+
+    pub fn is_fixed_shape(&self) -> bool {
+        self.is_fixed_shape
+    }
+
+    pub fn shape(&self) -> Option<&[u32]> {
+        self.shape.as_ref().map(|v| &v[..])
     }
 }
 
