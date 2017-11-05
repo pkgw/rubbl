@@ -2,7 +2,7 @@
 // Licensed under the MIT License.
 
 /*!
-This module implements the error types used by the blobman crate.
+This module implements the core error types used by Rubbl crates.
 
 It provides a generic, chainable error type using the infrastructure provided
 by the very nice [error-chain](https://docs.rs/error-chain) crate.
@@ -37,7 +37,21 @@ error_chain! {
 /// includes explanatory text formatted using the `format!` macro. Example:
 ///
 /// ```rust
-/// ctry!(write!(myfile, "hello"); "couldn\'t write to {}", myfile_path);
+/// // At top of crate:
+/// #[macro_use] extern crate rubbl_core;
+///
+/// // Elsewhere:
+/// use std::io::{Result, Write, stdout};
+///
+/// fn write_or_complain() -> Result<()> {
+///     let dest = "standard output";
+///     ctry!(write!(stdout(), "hello"); "couldn\'t write to {}", dest);
+///     Ok(())
+/// }
+/// # 
+/// # fn main() {
+/// # write_or_complain().unwrap();
+/// # }
 /// ```
 ///
 /// Note that the operation to be attempted and the arguments to `format!` are
