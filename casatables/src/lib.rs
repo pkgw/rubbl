@@ -6,6 +6,7 @@ extern crate rubbl_core;
 extern crate rubbl_casatables_impl;
 
 use rubbl_core::Complex;
+use std::fmt::Display;
 use std::path::Path;
 
 #[macro_use] pub mod errors; // most come first to provide macros for other modules
@@ -99,7 +100,7 @@ impl glue::GlueDataType {
 
 
 /// A type that can be translated into a CASA table data type.
-pub trait CasaDataType: Sized {
+pub trait CasaDataType: Clone + Display + PartialEq + Sized {
     const DATA_TYPE: glue::GlueDataType;
 
     #[cfg(test)]
@@ -155,6 +156,10 @@ impl CasaDataType for Complex<f32> {
 
 impl CasaDataType for Complex<f64> {
     const DATA_TYPE: glue::GlueDataType = glue::GlueDataType::TpDComplex;
+}
+
+impl CasaDataType for String {
+    const DATA_TYPE: glue::GlueDataType = glue::GlueDataType::TpString;
 }
 
 
