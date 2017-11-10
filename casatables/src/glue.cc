@@ -256,4 +256,85 @@ extern "C" {
 
         return 0;
     }
+
+    int
+    table_get_cell_info(const GlueTable &table, const GlueString &col_name,
+                        unsigned long row_number, GlueDataType *data_type,
+                        int *n_dim, unsigned long dims[8], ExcInfo &exc)
+    {
+        try {
+            casa::TableColumn col(table, col_name);
+            const casa::ColumnDesc &desc = col.columnDesc();
+
+            *data_type = desc.dataType();
+
+            if (desc.isScalar())
+                *n_dim = 0;
+            else {
+                *n_dim = (int) col.ndim(row_number);
+
+                if (*n_dim > 8)
+                    throw std::runtime_error("cannot handle cells with data of dimensionality greater than 8");
+
+                const casa::IPosition shape = col.shape(row_number);
+
+                for (int i = 0; i < *n_dim; i++)
+                    dims[i] = (unsigned long) shape[i];
+            }
+        } catch (...) {
+            handle_exception(exc);
+            return 1;
+        }
+
+        return 0;
+    }
+
+    // This function assumes that the caller has already vetted the types and
+    // has figured how big `data` needs to be.
+    int
+    table_get_cell(const GlueTable &table, const GlueString &col_name,
+                   const unsigned long row_number, void *data, ExcInfo &exc)
+    {
+        try {
+            casa::TableColumn col(table, col_name);
+            const casa::ColumnDesc &desc = col.columnDesc();
+            casa::IPosition shape;
+
+            if (!desc.isScalar())
+                shape = col.shape(row_number);
+
+            switch (desc.dataType()) {
+
+#define SCALAR_CASE(DTYPE, CPPTYPE) \
+            case GlueDataType::DTYPE: { \
+                casa::ScalarColumn<CPPTYPE> col(table, col_name); \
+                *((CPPTYPE *) data) = col.get(row_number); \
+                break; \
+            }
+
+            SCALAR_CASE(TpBool, casa::Bool)
+            SCALAR_CASE(TpChar, casa::Char)
+            SCALAR_CASE(TpUChar, casa::uChar)
+            SCALAR_CASE(TpShort, casa::Short)
+            SCALAR_CASE(TpUShort, casa::uShort)
+            SCALAR_CASE(TpInt, casa::Int)
+            SCALAR_CASE(TpUInt, casa::uInt)
+            SCALAR_CASE(TpFloat, float)
+            SCALAR_CASE(TpDouble, double)
+            SCALAR_CASE(TpComplex, casa::Complex)
+            SCALAR_CASE(TpDComplex, casa::DComplex)
+            SCALAR_CASE(TpString, casa::String)
+
+#undef CASE
+
+            default:
+                throw std::runtime_error("unhandled cell data type");
+            }
+        } catch (...) {
+            handle_exception(exc);
+            return 1;
+        }
+
+        return 0;
+    }
 }

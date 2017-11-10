@@ -39,21 +39,25 @@ mod glue;
 /// trick off of StackExchange.
 
 impl glue::GlueString {
+    unsafe fn new_invalid() -> Self {
+        std::mem::zeroed::<Self>()
+    }
+
     fn from_rust(s: &str) -> Self {
         unsafe {
-            let mut cs = ::std::mem::zeroed::<glue::GlueString>();
+            let mut cs = std::mem::zeroed::<glue::GlueString>();
             glue::string_init(&mut cs, s.as_ptr() as _, s.len() as u64);
             cs
         }
     }
 
     fn to_rust(&self) -> String {
-        let mut ptr: *const ::std::os::raw::c_void = 0 as _;
+        let mut ptr: *const std::os::raw::c_void = 0 as _;
         let mut n_bytes: u64 = 0;
 
         let buf = unsafe {
             glue::string_get_buf(self, &mut ptr, &mut n_bytes);
-            ::std::slice::from_raw_parts(ptr as *const u8, n_bytes as usize)
+            std::slice::from_raw_parts(ptr as *const u8, n_bytes as usize)
         };
 
         String::from_utf8_lossy(buf).into_owned()
@@ -70,7 +74,7 @@ impl Drop for glue::GlueString {
 
 impl glue::ExcInfo {
     fn as_error(&self) -> Error {
-        let c_str = unsafe { ::std::ffi::CStr::from_ptr(self.message.as_ptr()) };
+        let c_str = unsafe { std::ffi::CStr::from_ptr(self.message.as_ptr()) };
 
         let msg = match c_str.to_str() {
             Ok(s) => s,
@@ -112,55 +116,111 @@ pub trait CasaDataType: Clone + Display + PartialEq + Sized {
     fn casatables_string_pass_through(_s: String) -> Self {
         unreachable!();
     }
+
+    #[doc(hidden)]
+    fn casatables_alloc(shape: &[u64]) -> Self;
+
+    #[doc(hidden)]
+    fn casatables_as_mut_buf(&mut self) -> *mut () {
+        self as *mut Self as _
+    }
 }
 
 
 impl CasaDataType for bool {
     const DATA_TYPE: glue::GlueDataType = glue::GlueDataType::TpBool;
+
+    fn casatables_alloc(shape: &[u64]) -> Self {
+        false
+    }
 }
 
 impl CasaDataType for i8 {
     const DATA_TYPE: glue::GlueDataType = glue::GlueDataType::TpChar;
+
+    fn casatables_alloc(shape: &[u64]) -> Self {
+        0
+    }
 }
 
 impl CasaDataType for u8 {
     const DATA_TYPE: glue::GlueDataType = glue::GlueDataType::TpUChar;
+
+    fn casatables_alloc(shape: &[u64]) -> Self {
+        0
+    }
 }
 
 impl CasaDataType for i16 {
     const DATA_TYPE: glue::GlueDataType = glue::GlueDataType::TpShort;
+
+    fn casatables_alloc(shape: &[u64]) -> Self {
+        0
+    }
 }
 
 impl CasaDataType for u16 {
     const DATA_TYPE: glue::GlueDataType = glue::GlueDataType::TpUShort;
+
+    fn casatables_alloc(shape: &[u64]) -> Self {
+        0
+    }
 }
 
 impl CasaDataType for i32 {
     const DATA_TYPE: glue::GlueDataType = glue::GlueDataType::TpInt;
+
+    fn casatables_alloc(shape: &[u64]) -> Self {
+        0
+    }
 }
 
 impl CasaDataType for u32 {
     const DATA_TYPE: glue::GlueDataType = glue::GlueDataType::TpUInt;
+
+    fn casatables_alloc(shape: &[u64]) -> Self {
+        0
+    }
 }
 
 impl CasaDataType for i64 {
     const DATA_TYPE: glue::GlueDataType = glue::GlueDataType::TpInt64;
+
+    fn casatables_alloc(shape: &[u64]) -> Self {
+        0
+    }
 }
 
 impl CasaDataType for f32 {
     const DATA_TYPE: glue::GlueDataType = glue::GlueDataType::TpFloat;
+
+    fn casatables_alloc(shape: &[u64]) -> Self {
+        0.
+    }
 }
 
 impl CasaDataType for f64 {
     const DATA_TYPE: glue::GlueDataType = glue::GlueDataType::TpDouble;
+
+    fn casatables_alloc(shape: &[u64]) -> Self {
+        0.
+    }
 }
 
 impl CasaDataType for Complex<f32> {
     const DATA_TYPE: glue::GlueDataType = glue::GlueDataType::TpComplex;
+
+    fn casatables_alloc(shape: &[u64]) -> Self {
+        Complex::new(0., 0.)
+    }
 }
 
 impl CasaDataType for Complex<f64> {
     const DATA_TYPE: glue::GlueDataType = glue::GlueDataType::TpDComplex;
+
+    fn casatables_alloc(shape: &[u64]) -> Self {
+        Complex::new(0., 0.)
+    }
 }
 
 impl CasaDataType for String {
@@ -168,6 +228,14 @@ impl CasaDataType for String {
 
     fn casatables_string_pass_through(s: String) -> Self {
         s
+    }
+
+    fn casatables_alloc(shape: &[u64]) -> Self {
+        "".to_owned()
+    }
+
+    fn casatables_as_mut_buf(&mut self) -> *mut () {
+        panic!("disallowed for string values")
     }
 }
 
@@ -208,7 +276,7 @@ impl Table {
             None => return Err("table paths must be representable as UTF-8 strings".into()),
         };
         let cpath = glue::GlueString::from_rust(spath);
-        let mut exc_info = unsafe { ::std::mem::zeroed::<glue::ExcInfo>() };
+        let mut exc_info = unsafe { std::mem::zeroed::<glue::ExcInfo>() };
 
         let handle = unsafe { glue::table_alloc_and_open(&cpath, &mut exc_info) };
         if handle.is_null() {
@@ -221,8 +289,8 @@ impl Table {
         })
     }
 
-    pub fn n_rows(&self) -> usize {
-        unsafe { glue::table_n_rows(self.handle) as usize }
+    pub fn n_rows(&self) -> u64 {
+        unsafe { glue::table_n_rows(self.handle) as u64 }
     }
 
     pub fn n_columns(&self) -> usize {
@@ -287,7 +355,7 @@ impl Table {
             let mut v = Vec::new();
 
             for d in &dims[..n_dim as usize] {
-                v.push(*d as u32);
+                v.push(*d as u64);
             }
 
             Some(v)
@@ -383,6 +451,78 @@ impl Table {
         Ok(result)
     }
 
+    pub fn get_cell<T: CasaDataType>(&mut self, col_name: &str, row: u64) -> Result<T> {
+        let ccol_name = glue::GlueString::from_rust(col_name);
+        let mut data_type = glue::GlueDataType::TpOther;
+        let mut n_dim = 0;
+        let mut dims = [0; 8];
+
+        let rv = unsafe {
+            glue::table_get_cell_info(
+                self.handle,
+                &ccol_name,
+                row,
+                &mut data_type,
+                &mut n_dim,
+                dims.as_mut_ptr(),
+                &mut self.exc_info
+            )
+        };
+
+        if rv != 0 {
+            return self.exc_info.as_err();
+        }
+
+        if data_type != T::DATA_TYPE {
+            return Err(ErrorKind::UnexpectedCasaType(data_type).into());
+        }
+
+        let result = if data_type != glue::GlueDataType::TpString {
+            let mut result = T::casatables_alloc(&dims[..n_dim as usize]);
+
+            let rv = unsafe {
+                glue::table_get_cell(
+                    self.handle,
+                    &ccol_name,
+                    row,
+                    result.casatables_as_mut_buf() as _,
+                    &mut self.exc_info
+                )
+            };
+
+            if rv != 0 {
+                return self.exc_info.as_err();
+            }
+
+            result
+        } else {
+            // We are not given ownership of the String object that is
+            // returned, so we must std::mem::forget() it.
+            let mut glue_string = unsafe { glue::GlueString::new_invalid() };
+
+            let rv = unsafe {
+                glue::table_get_cell(
+                    self.handle,
+                    &ccol_name,
+                    row,
+                    &mut glue_string as *mut glue::GlueString as _,
+                    &mut self.exc_info
+                )
+            };
+
+            if rv != 0 {
+                return self.exc_info.as_err();
+            }
+
+            let result = T::casatables_string_pass_through(glue_string.to_rust());
+            std::mem::forget(glue_string);
+            result
+        };
+
+        Ok(result)
+    }
+
+
     pub fn deep_copy_no_rows(&mut self, dest_path: &str) -> Result<()> {
         let cdest_path = glue::GlueString::from_rust(dest_path);
 
@@ -409,7 +549,7 @@ pub struct ColumnDescription {
     data_type: glue::GlueDataType,
     is_scalar: bool,
     is_fixed_shape: bool,
-    shape: Option<Vec<u32>>,
+    shape: Option<Vec<u64>>,
 }
 
 impl ColumnDescription {
@@ -429,7 +569,7 @@ impl ColumnDescription {
         self.is_fixed_shape
     }
 
-    pub fn shape(&self) -> Option<&[u32]> {
+    pub fn shape(&self) -> Option<&[u64]> {
         self.shape.as_ref().map(|v| &v[..])
     }
 }
@@ -442,7 +582,7 @@ mod tests {
     #[test]
     fn check_string_size() {
         let cpp_size = unsafe { glue::string_check_size() } as usize;
-        let rust_size = ::std::mem::size_of::<glue::GlueString>();
+        let rust_size = std::mem::size_of::<glue::GlueString>();
         assert_eq!(cpp_size, rust_size);
     }
 }
