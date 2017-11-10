@@ -112,6 +112,7 @@ pub trait CasaDataType: Clone + Display + PartialEq + Sized {
         assert_eq!(std::mem::size_of::<Self>() as i32, Self::DATA_TYPE.element_size());
     }
 
+    /// A hack that lets us properly special-case strings as scalar types.
     #[doc(hidden)]
     fn casatables_string_pass_through(_s: String) -> Self {
         unreachable!();
@@ -127,12 +128,22 @@ pub trait CasaDataType: Clone + Display + PartialEq + Sized {
 }
 
 
+/// A type that maps to one of CASA's scalar data types.
+pub trait CasaScalarData: CasaDataType {
+    const VECTOR_TYPE: glue::GlueDataType;
+}
+
+
 impl CasaDataType for bool {
     const DATA_TYPE: glue::GlueDataType = glue::GlueDataType::TpBool;
 
     fn casatables_alloc(shape: &[u64]) -> Self {
         false
     }
+}
+
+impl CasaScalarData for bool {
+    const VECTOR_TYPE: glue::GlueDataType = glue::GlueDataType::TpArrayBool;
 }
 
 impl CasaDataType for i8 {
@@ -143,12 +154,20 @@ impl CasaDataType for i8 {
     }
 }
 
+impl CasaScalarData for i8 {
+    const VECTOR_TYPE: glue::GlueDataType = glue::GlueDataType::TpArrayChar;
+}
+
 impl CasaDataType for u8 {
     const DATA_TYPE: glue::GlueDataType = glue::GlueDataType::TpUChar;
 
     fn casatables_alloc(shape: &[u64]) -> Self {
         0
     }
+}
+
+impl CasaScalarData for u8 {
+    const VECTOR_TYPE: glue::GlueDataType = glue::GlueDataType::TpArrayUChar;
 }
 
 impl CasaDataType for i16 {
@@ -159,12 +178,20 @@ impl CasaDataType for i16 {
     }
 }
 
+impl CasaScalarData for i16 {
+    const VECTOR_TYPE: glue::GlueDataType = glue::GlueDataType::TpArrayShort;
+}
+
 impl CasaDataType for u16 {
     const DATA_TYPE: glue::GlueDataType = glue::GlueDataType::TpUShort;
 
     fn casatables_alloc(shape: &[u64]) -> Self {
         0
     }
+}
+
+impl CasaScalarData for u16 {
+    const VECTOR_TYPE: glue::GlueDataType = glue::GlueDataType::TpArrayUShort;
 }
 
 impl CasaDataType for i32 {
@@ -175,12 +202,20 @@ impl CasaDataType for i32 {
     }
 }
 
+impl CasaScalarData for i32 {
+    const VECTOR_TYPE: glue::GlueDataType = glue::GlueDataType::TpArrayInt;
+}
+
 impl CasaDataType for u32 {
     const DATA_TYPE: glue::GlueDataType = glue::GlueDataType::TpUInt;
 
     fn casatables_alloc(shape: &[u64]) -> Self {
         0
     }
+}
+
+impl CasaScalarData for u32 {
+    const VECTOR_TYPE: glue::GlueDataType = glue::GlueDataType::TpArrayUInt;
 }
 
 impl CasaDataType for i64 {
@@ -191,12 +226,20 @@ impl CasaDataType for i64 {
     }
 }
 
+impl CasaScalarData for i64 {
+    const VECTOR_TYPE: glue::GlueDataType = glue::GlueDataType::TpArrayInt64;
+}
+
 impl CasaDataType for f32 {
     const DATA_TYPE: glue::GlueDataType = glue::GlueDataType::TpFloat;
 
     fn casatables_alloc(shape: &[u64]) -> Self {
         0.
     }
+}
+
+impl CasaScalarData for f32 {
+    const VECTOR_TYPE: glue::GlueDataType = glue::GlueDataType::TpArrayFloat;
 }
 
 impl CasaDataType for f64 {
@@ -207,6 +250,10 @@ impl CasaDataType for f64 {
     }
 }
 
+impl CasaScalarData for f64 {
+    const VECTOR_TYPE: glue::GlueDataType = glue::GlueDataType::TpArrayDouble;
+}
+
 impl CasaDataType for Complex<f32> {
     const DATA_TYPE: glue::GlueDataType = glue::GlueDataType::TpComplex;
 
@@ -215,12 +262,20 @@ impl CasaDataType for Complex<f32> {
     }
 }
 
+impl CasaScalarData for Complex<f32> {
+    const VECTOR_TYPE: glue::GlueDataType = glue::GlueDataType::TpArrayComplex;
+}
+
 impl CasaDataType for Complex<f64> {
     const DATA_TYPE: glue::GlueDataType = glue::GlueDataType::TpDComplex;
 
     fn casatables_alloc(shape: &[u64]) -> Self {
         Complex::new(0., 0.)
     }
+}
+
+impl CasaScalarData for Complex<f64> {
+    const VECTOR_TYPE: glue::GlueDataType = glue::GlueDataType::TpArrayDComplex;
 }
 
 impl CasaDataType for String {
@@ -237,6 +292,10 @@ impl CasaDataType for String {
     fn casatables_as_mut_buf(&mut self) -> *mut () {
         panic!("disallowed for string values")
     }
+}
+
+impl CasaScalarData for String {
+    const VECTOR_TYPE: glue::GlueDataType = glue::GlueDataType::TpArrayString;
 }
 
 
@@ -370,7 +429,7 @@ impl Table {
         })
     }
 
-    pub fn get_col_as_vec<T: CasaDataType>(&mut self, col_name: &str) -> Result<Vec<T>> {
+    pub fn get_col_as_vec<T: CasaScalarData>(&mut self, col_name: &str) -> Result<Vec<T>> {
         let ccol_name = glue::GlueString::from_rust(col_name);
         let mut n_rows = 0;
         let mut data_type = glue::GlueDataType::TpOther;
@@ -518,6 +577,83 @@ impl Table {
             std::mem::forget(glue_string);
             result
         };
+
+        Ok(result)
+    }
+
+    /// This function discards shape information but won't accept scalars.
+    pub fn get_cell_as_vec<T: CasaScalarData>(&mut self, col_name: &str, row: u64) -> Result<Vec<T>> {
+        let ccol_name = glue::GlueString::from_rust(col_name);
+        let mut data_type = glue::GlueDataType::TpOther;
+        let mut n_dim = 0;
+        let mut dims = [0; 8];
+
+        let rv = unsafe {
+            glue::table_get_cell_info(
+                self.handle,
+                &ccol_name,
+                row,
+                &mut data_type,
+                &mut n_dim,
+                dims.as_mut_ptr(),
+                &mut self.exc_info
+            )
+        };
+
+        if rv != 0 {
+            return self.exc_info.as_err();
+        }
+
+        if data_type != T::DATA_TYPE {
+            return Err(ErrorKind::UnexpectedCasaType(data_type).into());
+        }
+
+        let n_items = dims[..n_dim as usize].iter().fold(1usize, |p, n| p * (*n as usize));
+
+        let mut result = Vec::<T>::with_capacity(n_items);
+
+        if data_type != glue::GlueDataType::TpString {
+            let rv = unsafe {
+                glue::table_get_cell(
+                    self.handle,
+                    &ccol_name,
+                    row,
+                    result.as_mut_ptr() as _,
+                    &mut self.exc_info
+                )
+            };
+
+            if rv != 0 {
+                return self.exc_info.as_err();
+            }
+
+            unsafe { result.set_len(n_items as usize); }
+        } else {
+            // We are not given ownership of the String objects that are
+            // returned, so we must std::mem::forget() them.
+            let mut glue_strings = Vec::<glue::GlueString>::with_capacity(n_items as usize);
+
+            let rv = unsafe {
+                glue::table_get_cell(
+                    self.handle,
+                    &ccol_name,
+                    row,
+                    glue_strings.as_mut_ptr() as _,
+                    &mut self.exc_info
+                )
+            };
+
+            if rv != 0 {
+                return self.exc_info.as_err();
+            }
+
+            unsafe { glue_strings.set_len(n_items as usize); }
+
+            for cstr in glue_strings.into_iter() {
+                result.push(T::casatables_string_pass_through(cstr.to_rust()));
+                std::mem::forget(cstr);
+            }
+        }
 
         Ok(result)
     }

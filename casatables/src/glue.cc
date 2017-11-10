@@ -303,12 +303,20 @@ extern "C" {
             if (!desc.isScalar())
                 shape = col.shape(row_number);
 
-            switch (desc.dataType()) {
+            switch (desc.trueDataType()) {
 
 #define SCALAR_CASE(DTYPE, CPPTYPE) \
             case GlueDataType::DTYPE: { \
                 casa::ScalarColumn<CPPTYPE> col(table, col_name); \
                 *((CPPTYPE *) data) = col.get(row_number); \
+                break; \
+            }
+
+#define VECTOR_CASE(DTYPE, CPPTYPE) \
+            case GlueDataType::DTYPE: { \
+                casa::ArrayColumn<CPPTYPE> col(table, col_name); \
+                casa::Array<CPPTYPE> array(shape, (CPPTYPE *) data, casa::StorageInitPolicy::SHARE); \
+                col.get(row_number, array, casa::False); \
                 break; \
             }
 
@@ -325,7 +333,21 @@ extern "C" {
             SCALAR_CASE(TpDComplex, casa::DComplex)
             SCALAR_CASE(TpString, casa::String)
 
-#undef CASE
+            VECTOR_CASE(TpArrayBool, casa::Bool)
+            VECTOR_CASE(TpArrayChar, casa::Char)
+            VECTOR_CASE(TpArrayUChar, casa::uChar)
+            VECTOR_CASE(TpArrayShort, casa::Short)
+            VECTOR_CASE(TpArrayUShort, casa::uShort)
+            VECTOR_CASE(TpArrayInt, casa::Int)
+            VECTOR_CASE(TpArrayUInt, casa::uInt)
+            VECTOR_CASE(TpArrayFloat, float)
+            VECTOR_CASE(TpArrayDouble, double)
+            VECTOR_CASE(TpArrayComplex, casa::Complex)
+            VECTOR_CASE(TpArrayDComplex, casa::DComplex)
+            VECTOR_CASE(TpArrayString, casa::String)
+
+#undef SCALAR_CASE
+#undef VECTOR_CASE
 
             default:
                 throw std::runtime_error("unhandled cell data type");
