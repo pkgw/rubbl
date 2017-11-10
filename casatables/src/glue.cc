@@ -242,6 +242,7 @@ extern "C" {
             CASE(TpDouble, double)
             CASE(TpComplex, casa::Complex)
             CASE(TpDComplex, casa::DComplex)
+            CASE(TpString, casa::String)
 
 #undef CASE
 

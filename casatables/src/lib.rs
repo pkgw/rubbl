@@ -107,6 +107,11 @@ pub trait CasaDataType: Clone + Display + PartialEq + Sized {
     fn test_casa_data_size() {
         assert_eq!(std::mem::size_of::<Self>() as i32, Self::DATA_TYPE.element_size());
     }
+
+    #[doc(hidden)]
+    fn casatables_string_pass_through(_s: String) -> Self {
+        unreachable!();
+    }
 }
 
 
@@ -160,6 +165,10 @@ impl CasaDataType for Complex<f64> {
 
 impl CasaDataType for String {
     const DATA_TYPE: glue::GlueDataType = glue::GlueDataType::TpString;
+
+    fn casatables_string_pass_through(s: String) -> Self {
+        s
+    }
 }
 
 
@@ -328,22 +337,48 @@ impl Table {
             return Err(ErrorKind::UnexpectedCasaType(data_type).into());
         }
 
-        let mut result = Vec::with_capacity(n_rows as usize);
+        let mut result = Vec::<T>::with_capacity(n_rows as usize);
 
-        let rv = unsafe {
-            glue::table_get_scalar_column_data(
-                self.handle,
-                &ccol_name,
-                result.as_mut_ptr() as _,
-                &mut self.exc_info
-            )
+        if data_type != glue::GlueDataType::TpString {
+            let rv = unsafe {
+                glue::table_get_scalar_column_data(
+                    self.handle,
+                    &ccol_name,
+                    result.as_mut_ptr() as _,
+                    &mut self.exc_info
+                )
+            };
+
+            if rv != 0 {
+                return self.exc_info.as_err();
+            }
+
+            unsafe { result.set_len(n_rows as usize); }
+        } else {
+            // We are not given ownership of the String objects that are
+            // returned, so we must std::mem::forget() them.
+            let mut glue_strings = Vec::<glue::GlueString>::with_capacity(n_rows as usize);
+
+            let rv = unsafe {
+                glue::table_get_scalar_column_data(
+                    self.handle,
+                    &ccol_name,
+                    glue_strings.as_mut_ptr() as _,
+                    &mut self.exc_info
+                )
+            };
+
+            if rv != 0 {
+                return self.exc_info.as_err();
+            }
+
+            unsafe { glue_strings.set_len(n_rows as usize); }
+
+            for cstr in glue_strings.into_iter() {
+                result.push(T::casatables_string_pass_through(cstr.to_rust()));
+                std::mem::forget(cstr);
+            }
         };
-
-        if rv != 0 {
-            return self.exc_info.as_err();
-        }
-
-        unsafe { result.set_len(n_rows as usize); }
 
         Ok(result)
     }
