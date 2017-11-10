@@ -17,8 +17,10 @@ engine. (Which the author of this module also wrote.)
 #[macro_use] pub mod termcolor;
 
 use clap;
+use error_chain::ChainedError;
 use std::cmp;
 use std::fmt::Arguments;
+use std::result::Result as StdResult;
 
 use errors::{Error, Result};
 
@@ -236,8 +238,9 @@ impl<'a, 'b> ClapNotificationArgsExt for clap::App<'a, 'b> {
 
 
 /// Run a function with colorized reporting of errors.
-pub fn run_with_notifications<'a, F>(matches: clap::ArgMatches<'a>, inner: F) -> i32
-    where F: FnOnce(clap::ArgMatches<'a>, &mut NotificationBackend) -> Result<i32>
+pub fn run_with_notifications<'a, E, F>(matches: clap::ArgMatches<'a>, inner: F) -> i32
+    where E: ChainedError,
+          F: FnOnce(clap::ArgMatches<'a>, &mut NotificationBackend) -> StdResult<i32, E>
 {
     let chatter = match matches.value_of("chatter_level").unwrap() {
         "default" => ChatterLevel::Normal,

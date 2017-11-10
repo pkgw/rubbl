@@ -13,6 +13,7 @@ engine. (Which the author of this module also wrote.)
 // TODO: make this module a feature that can be disabled if the user doesn't want to
 // link with termcolor
 
+use error_chain::ChainedError;
 use std::fmt::Arguments;
 use std::io::Write;
 use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
@@ -128,7 +129,7 @@ impl TermcolorNotificationBackend {
     ///
     /// This function prints out the error, the sub-errors that caused it, and
     /// its associated backtrace if available, with colorization.
-    pub fn bare_error(&mut self, err: &Error) {
+    pub fn bare_error<E: ChainedError>(&mut self, err: &E) {
         let mut prefix = "error:";
 
         for item in err.iter() {
