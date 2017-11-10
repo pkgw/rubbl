@@ -11,6 +11,7 @@ extend those provided in rubbl_core.
 */
 
 use rubbl_core;
+use std::num::ParseIntError;
 
 use glue;
 
@@ -38,5 +39,21 @@ error_chain! {
             description("the CASA data have an unexpected type"),
             display("the CASA data have an unexpected type ({:?})", casa_type),
         }
+    }
+}
+
+
+impl From<rubbl_core::errors::ErrorKind> for Error {
+    fn from(kind: rubbl_core::errors::ErrorKind) -> Error {
+        let tmp: rubbl_core::errors::Error = kind.into();
+        Error::from(tmp)
+    }
+}
+
+
+impl From<ParseIntError> for Error {
+    fn from(err: ParseIntError) -> Error {
+        let tmp: rubbl_core::errors::Error = err.into();
+        Error::from(tmp)
     }
 }
