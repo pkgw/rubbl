@@ -187,3 +187,8 @@ extern "C" {
                           data: *mut ::std::os::raw::c_void,
                           exc: *mut ExcInfo) -> ::std::os::raw::c_int;
 }
+extern "C" {
+    pub fn table_add_rows(table: *mut GlueTable,
+                          n_rows: ::std::os::raw::c_ulong, exc: *mut ExcInfo)
+     -> ::std::os::raw::c_int;
+}

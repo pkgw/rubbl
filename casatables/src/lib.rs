@@ -675,6 +675,14 @@ impl Table {
         Ok(result)
     }
 
+    pub fn add_rows(&mut self, n_rows: usize) -> Result<()> {
+        if unsafe { glue::table_add_rows(self.handle, n_rows as u64, &mut self.exc_info) != 0 } {
+            self.exc_info.as_err()
+        } else {
+            Ok(())
+        }
+    }
+
 
     pub fn deep_copy_no_rows(&mut self, dest_path: &str) -> Result<()> {
         let cdest_path = glue::GlueString::from_rust(dest_path);

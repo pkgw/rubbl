@@ -366,4 +366,17 @@ extern "C" {
 
         return 0;
     }
+
+    int
+    table_add_rows(GlueTable &table, const unsigned long n_rows, ExcInfo &exc)
+    {
+        try {
+            table.addRow(n_rows);
+        } catch (...) {
+            handle_exception(exc);
+            return 1;
+        }
+
+        return 0;
+    }
 }

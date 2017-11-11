@@ -97,4 +97,5 @@ extern "C" {
                             int *n_dim, unsigned long dims[8], ExcInfo &exc);
     int table_get_cell(const GlueTable &table, const GlueString &col_name,
                        const unsigned long row_number, void *data, ExcInfo &exc);
+    int table_add_rows(GlueTable &table, const unsigned long n_rows, ExcInfo &exc);
 }
