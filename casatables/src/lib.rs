@@ -6,7 +6,6 @@ extern crate rubbl_core;
 extern crate rubbl_casatables_impl;
 
 use rubbl_core::Complex;
-use std::fmt::Display;
 use std::path::Path;
 
 #[macro_use] pub mod errors; // most come first to provide macros for other modules
@@ -39,10 +38,6 @@ use errors::{Error, ErrorKind, Result};
 /// trick off of StackExchange.
 
 impl glue::GlueString {
-    unsafe fn new_invalid() -> Self {
-        std::mem::zeroed::<Self>()
-    }
-
     fn from_rust(s: &str) -> Self {
         unsafe {
             let mut cs = std::mem::zeroed::<glue::GlueString>();
@@ -104,7 +99,7 @@ impl glue::GlueDataType {
 
 
 /// A type that can be translated into a CASA table data type.
-pub trait CasaDataType: Clone + Display + PartialEq + Sized {
+pub trait CasaDataType: Clone + PartialEq + Sized {
     const DATA_TYPE: glue::GlueDataType;
 
     #[cfg(test)]
@@ -122,6 +117,11 @@ pub trait CasaDataType: Clone + Display + PartialEq + Sized {
     fn casatables_alloc(shape: &[u64]) -> Self;
 
     #[doc(hidden)]
+    fn casatables_as_buf(&self) -> *const () {
+        self as *const Self as _
+    }
+
+    #[doc(hidden)]
     fn casatables_as_mut_buf(&mut self) -> *mut () {
         self as *mut Self as _
     }
@@ -137,7 +137,7 @@ pub trait CasaScalarData: CasaDataType {
 impl CasaDataType for bool {
     const DATA_TYPE: glue::GlueDataType = glue::GlueDataType::TpBool;
 
-    fn casatables_alloc(shape: &[u64]) -> Self {
+    fn casatables_alloc(_shape: &[u64]) -> Self {
         false
     }
 }
@@ -149,7 +149,7 @@ impl CasaScalarData for bool {
 impl CasaDataType for i8 {
     const DATA_TYPE: glue::GlueDataType = glue::GlueDataType::TpChar;
 
-    fn casatables_alloc(shape: &[u64]) -> Self {
+    fn casatables_alloc(_shape: &[u64]) -> Self {
         0
     }
 }
@@ -161,7 +161,7 @@ impl CasaScalarData for i8 {
 impl CasaDataType for u8 {
     const DATA_TYPE: glue::GlueDataType = glue::GlueDataType::TpUChar;
 
-    fn casatables_alloc(shape: &[u64]) -> Self {
+    fn casatables_alloc(_shape: &[u64]) -> Self {
         0
     }
 }
@@ -173,7 +173,7 @@ impl CasaScalarData for u8 {
 impl CasaDataType for i16 {
     const DATA_TYPE: glue::GlueDataType = glue::GlueDataType::TpShort;
 
-    fn casatables_alloc(shape: &[u64]) -> Self {
+    fn casatables_alloc(_shape: &[u64]) -> Self {
         0
     }
 }
@@ -185,7 +185,7 @@ impl CasaScalarData for i16 {
 impl CasaDataType for u16 {
     const DATA_TYPE: glue::GlueDataType = glue::GlueDataType::TpUShort;
 
-    fn casatables_alloc(shape: &[u64]) -> Self {
+    fn casatables_alloc(_shape: &[u64]) -> Self {
         0
     }
 }
@@ -197,7 +197,7 @@ impl CasaScalarData for u16 {
 impl CasaDataType for i32 {
     const DATA_TYPE: glue::GlueDataType = glue::GlueDataType::TpInt;
 
-    fn casatables_alloc(shape: &[u64]) -> Self {
+    fn casatables_alloc(_shape: &[u64]) -> Self {
         0
     }
 }
@@ -209,7 +209,7 @@ impl CasaScalarData for i32 {
 impl CasaDataType for u32 {
     const DATA_TYPE: glue::GlueDataType = glue::GlueDataType::TpUInt;
 
-    fn casatables_alloc(shape: &[u64]) -> Self {
+    fn casatables_alloc(_shape: &[u64]) -> Self {
         0
     }
 }
@@ -221,7 +221,7 @@ impl CasaScalarData for u32 {
 impl CasaDataType for i64 {
     const DATA_TYPE: glue::GlueDataType = glue::GlueDataType::TpInt64;
 
-    fn casatables_alloc(shape: &[u64]) -> Self {
+    fn casatables_alloc(_shape: &[u64]) -> Self {
         0
     }
 }
@@ -233,7 +233,7 @@ impl CasaScalarData for i64 {
 impl CasaDataType for f32 {
     const DATA_TYPE: glue::GlueDataType = glue::GlueDataType::TpFloat;
 
-    fn casatables_alloc(shape: &[u64]) -> Self {
+    fn casatables_alloc(_shape: &[u64]) -> Self {
         0.
     }
 }
@@ -245,7 +245,7 @@ impl CasaScalarData for f32 {
 impl CasaDataType for f64 {
     const DATA_TYPE: glue::GlueDataType = glue::GlueDataType::TpDouble;
 
-    fn casatables_alloc(shape: &[u64]) -> Self {
+    fn casatables_alloc(_shape: &[u64]) -> Self {
         0.
     }
 }
@@ -257,7 +257,7 @@ impl CasaScalarData for f64 {
 impl CasaDataType for Complex<f32> {
     const DATA_TYPE: glue::GlueDataType = glue::GlueDataType::TpComplex;
 
-    fn casatables_alloc(shape: &[u64]) -> Self {
+    fn casatables_alloc(_shape: &[u64]) -> Self {
         Complex::new(0., 0.)
     }
 }
@@ -269,7 +269,7 @@ impl CasaScalarData for Complex<f32> {
 impl CasaDataType for Complex<f64> {
     const DATA_TYPE: glue::GlueDataType = glue::GlueDataType::TpDComplex;
 
-    fn casatables_alloc(shape: &[u64]) -> Self {
+    fn casatables_alloc(_shape: &[u64]) -> Self {
         Complex::new(0., 0.)
     }
 }
@@ -499,7 +499,7 @@ impl Table {
             // have to initialize our string structures.
             let mut glue_strings = Vec::<glue::GlueString>::with_capacity(n_rows as usize);
 
-            for i in 0..n_rows as usize {
+            for _ in 0..n_rows as usize {
                 glue_strings.push(glue::GlueString::from_rust(""));
             }
 
@@ -648,7 +648,7 @@ impl Table {
             // returned, so we must std::mem::forget() them.
             let mut glue_strings = Vec::<glue::GlueString>::with_capacity(n_items as usize);
 
-            for i in 0..n_items as usize {
+            for _ in 0..n_items as usize {
                 glue_strings.push(glue::GlueString::from_rust(""));
             }
 
