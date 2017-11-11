@@ -113,6 +113,24 @@ pub trait CasaDataType: Clone + PartialEq + Sized {
         unreachable!();
     }
 
+    /// A hack that lets us properly special-case strings as scalar types.
+    #[doc(hidden)]
+    fn casatables_string_pass_through_out(_s: Self) -> String {
+        unreachable!();
+    }
+
+    /// A hack that lets us properly special-case string vectors
+    #[doc(hidden)]
+    fn casatables_stringvec_pass_through_out(_s: Self) -> Vec<glue::GlueString> {
+        unreachable!();
+    }
+
+    /// Defaut behavior: fill the dest with a zero shape, i.e. report that we're a scalar.
+    #[doc(hidden)]
+    fn casatables_put_shape(&self, shape_dest: &mut Vec<u64>) {
+        shape_dest.truncate(0);
+    }
+
     #[doc(hidden)]
     fn casatables_alloc(shape: &[u64]) -> Self;
 
@@ -285,8 +303,16 @@ impl CasaDataType for String {
         s
     }
 
-    fn casatables_alloc(shape: &[u64]) -> Self {
+    fn casatables_string_pass_through_out(s: Self) -> String {
+        s
+    }
+
+    fn casatables_alloc(_shape: &[u64]) -> Self {
         "".to_owned()
+    }
+
+    fn casatables_as_buf(&self) -> *const () {
+        panic!("disallowed for string values")
     }
 
     fn casatables_as_mut_buf(&mut self) -> *mut () {
@@ -296,6 +322,56 @@ impl CasaDataType for String {
 
 impl CasaScalarData for String {
     const VECTOR_TYPE: glue::GlueDataType = glue::GlueDataType::TpArrayString;
+}
+
+
+impl CasaDataType for Vec<f64> {
+    const DATA_TYPE: glue::GlueDataType = glue::GlueDataType::TpArrayDouble;
+
+    fn casatables_alloc(shape: &[u64]) -> Self {
+        if shape.len() != 1 {
+            panic!("Vecs must be mapped to 1-dimensional arrays only");
+        }
+
+        Vec::with_capacity(shape[0] as usize)
+    }
+
+    fn casatables_put_shape(&self, shape_dest: &mut Vec<u64>) {
+        shape_dest.truncate(0);
+        shape_dest.push(self.len() as u64);
+    }
+
+    fn casatables_as_buf(&self) -> *const () {
+        self.as_ptr() as _
+    }
+
+    fn casatables_as_mut_buf(&mut self) -> *mut () {
+        self.as_mut_ptr() as _
+    }
+}
+
+impl CasaDataType for Vec<String> {
+    const DATA_TYPE: glue::GlueDataType = glue::GlueDataType::TpArrayString;
+
+    fn casatables_alloc(shape: &[u64]) -> Self {
+        if shape.len() != 1 {
+            panic!("Vecs must be mapped to 1-dimensional arrays only");
+        }
+
+        Vec::with_capacity(shape[0] as usize)
+    }
+
+    fn casatables_stringvec_pass_through_out(svec: Self) -> Vec<glue::GlueString> {
+        svec.iter().map(|s| glue::GlueString::from_rust(s)).collect()
+    }
+
+    fn casatables_as_buf(&self) -> *const () {
+        self.as_ptr() as _
+    }
+
+    fn casatables_as_mut_buf(&mut self) -> *mut () {
+        self.as_mut_ptr() as _
+    }
 }
 
 
@@ -674,6 +750,74 @@ impl Table {
 
         Ok(result)
     }
+
+    pub fn put_cell<T: CasaDataType>(&mut self, col_name: &str, row: u64, value: T) -> Result<()> {
+        let ccol_name = glue::GlueString::from_rust(col_name);
+        let mut shape = Vec::new();
+
+        value.casatables_put_shape(&mut shape);
+
+        if T::DATA_TYPE == glue::GlueDataType::TpString {
+            let as_string = T::casatables_string_pass_through_out(value);
+            let glue_string = glue::GlueString::from_rust(&as_string);
+
+            let rv = unsafe {
+                glue::table_put_cell(
+                    self.handle,
+                    &ccol_name,
+                    row,
+                    T::DATA_TYPE,
+                    shape.len() as u64,
+                    shape.as_ptr(),
+                    &glue_string as *const glue::GlueString as _,
+                    &mut self.exc_info
+                )
+            };
+
+            if rv != 0 {
+                return self.exc_info.as_err();
+            }
+        } else if T::DATA_TYPE == glue::GlueDataType::TpArrayString {
+            let glue_strings = T::casatables_stringvec_pass_through_out(value);
+
+            let rv = unsafe {
+                glue::table_put_cell(
+                    self.handle,
+                    &ccol_name,
+                    row,
+                    T::DATA_TYPE,
+                    shape.len() as u64,
+                    shape.as_ptr(),
+                    glue_strings.as_ptr() as _,
+                    &mut self.exc_info
+                )
+            };
+
+            if rv != 0 {
+                return self.exc_info.as_err();
+            }
+        } else {
+            let rv = unsafe {
+                glue::table_put_cell(
+                    self.handle,
+                    &ccol_name,
+                    row,
+                    T::DATA_TYPE,
+                    shape.len() as u64,
+                    shape.as_ptr(),
+                    value.casatables_as_buf() as _,
+                    &mut self.exc_info
+                )
+            };
+
+            if rv != 0 {
+                return self.exc_info.as_err();
+            }
+        }
+
+        Ok(())
+    }
+
 
     pub fn add_rows(&mut self, n_rows: usize) -> Result<()> {
         if unsafe { glue::table_add_rows(self.handle, n_rows as u64, &mut self.exc_info) != 0 } {

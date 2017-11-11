@@ -188,6 +188,15 @@ extern "C" {
                           exc: *mut ExcInfo) -> ::std::os::raw::c_int;
 }
 extern "C" {
+    pub fn table_put_cell(table: *mut GlueTable, col_name: *const GlueString,
+                          row_number: ::std::os::raw::c_ulong,
+                          data_type: GlueDataType,
+                          n_dims: ::std::os::raw::c_ulong,
+                          dims: *const ::std::os::raw::c_ulong,
+                          data: *mut ::std::os::raw::c_void,
+                          exc: *mut ExcInfo) -> ::std::os::raw::c_int;
+}
+extern "C" {
     pub fn table_add_rows(table: *mut GlueTable,
                           n_rows: ::std::os::raw::c_ulong, exc: *mut ExcInfo)
      -> ::std::os::raw::c_int;

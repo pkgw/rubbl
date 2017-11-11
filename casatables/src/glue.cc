@@ -368,6 +368,73 @@ extern "C" {
     }
 
     int
+    table_put_cell(GlueTable &table, const GlueString &col_name,
+                   const unsigned long row_number, const GlueDataType data_type,
+                   const unsigned long n_dims, const unsigned long *dims,
+                   void *data, ExcInfo &exc)
+    {
+        try {
+            switch (data_type) {
+
+#define SCALAR_CASE(DTYPE, CPPTYPE) \
+            case GlueDataType::DTYPE: { \
+                casa::ScalarColumn<CPPTYPE> col(table, col_name); \
+                col.put(row_number, *(CPPTYPE *) data); \
+                break; \
+            }
+
+#define VECTOR_CASE(DTYPE, CPPTYPE) \
+            case GlueDataType::DTYPE: { \
+                casa::ArrayColumn<CPPTYPE> col(table, col_name); \
+                casa::IPosition shape(n_dims); \
+                for (casa::uInt i = 0; i < n_dims; i++) \
+                    shape[i] = dims[i]; \
+                casa::Array<CPPTYPE> array(shape, (CPPTYPE *) data, casa::StorageInitPolicy::SHARE); \
+                col.put(row_number, array); \
+                break; \
+            }
+
+            SCALAR_CASE(TpBool, casa::Bool)
+            SCALAR_CASE(TpChar, casa::Char)
+            SCALAR_CASE(TpUChar, casa::uChar)
+            SCALAR_CASE(TpShort, casa::Short)
+            SCALAR_CASE(TpUShort, casa::uShort)
+            SCALAR_CASE(TpInt, casa::Int)
+            SCALAR_CASE(TpUInt, casa::uInt)
+            SCALAR_CASE(TpFloat, float)
+            SCALAR_CASE(TpDouble, double)
+            SCALAR_CASE(TpComplex, casa::Complex)
+            SCALAR_CASE(TpDComplex, casa::DComplex)
+            SCALAR_CASE(TpString, casa::String)
+
+            VECTOR_CASE(TpArrayBool, casa::Bool)
+            VECTOR_CASE(TpArrayChar, casa::Char)
+            VECTOR_CASE(TpArrayUChar, casa::uChar)
+            VECTOR_CASE(TpArrayShort, casa::Short)
+            VECTOR_CASE(TpArrayUShort, casa::uShort)
+            VECTOR_CASE(TpArrayInt, casa::Int)
+            VECTOR_CASE(TpArrayUInt, casa::uInt)
+            VECTOR_CASE(TpArrayFloat, float)
+            VECTOR_CASE(TpArrayDouble, double)
+            VECTOR_CASE(TpArrayComplex, casa::Complex)
+            VECTOR_CASE(TpArrayDComplex, casa::DComplex)
+            VECTOR_CASE(TpArrayString, casa::String)
+
+#undef SCALAR_CASE
+#undef VECTOR_CASE
+
+            default:
+                throw std::runtime_error("unhandled cell data type");
+            }
+        } catch (...) {
+            handle_exception(exc);
+            return 1;
+        }
+
+        return 0;
+    }
+
+    int
     table_add_rows(GlueTable &table, const unsigned long n_rows, ExcInfo &exc)
     {
         try {
