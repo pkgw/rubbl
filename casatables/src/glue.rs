@@ -100,6 +100,14 @@ impl Clone for _ExcInfo {
     fn clone(&self) -> Self { *self }
 }
 pub type ExcInfo = _ExcInfo;
+#[repr(u32)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+pub enum _TableOpenMode {
+    TOM_OPEN_READONLY = 1,
+    TOM_OPEN_RW = 2,
+    TOM_CREATE = 3,
+}
+pub use self::_TableOpenMode as TableOpenMode;
 extern "C" {
     pub fn string_check_size() -> ::std::os::raw::c_ulong;
 }
@@ -121,8 +129,8 @@ extern "C" {
      -> ::std::os::raw::c_int;
 }
 extern "C" {
-    pub fn table_alloc_and_open(path: *const GlueString, exc: *mut ExcInfo)
-     -> *mut GlueTable;
+    pub fn table_alloc_and_open(path: *const GlueString, mode: TableOpenMode,
+                                exc: *mut ExcInfo) -> *mut GlueTable;
 }
 extern "C" {
     pub fn table_close_and_free(table: *mut GlueTable, exc: *mut ExcInfo);

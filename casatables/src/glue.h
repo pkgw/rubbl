@@ -66,6 +66,12 @@ typedef struct _ExcInfo {
     char message[512];
 } ExcInfo;
 
+typedef enum _TableOpenMode {
+    TOM_OPEN_READONLY = 1,
+    TOM_OPEN_RW = 2,
+    TOM_CREATE = 3,
+} TableOpenMode;
+
 extern "C" {
     unsigned long string_check_size(void);
     void string_init(GlueString &str, const void *data, const unsigned long n_bytes);
@@ -74,7 +80,7 @@ extern "C" {
 
     int data_type_get_element_size(const GlueDataType ty);
 
-    GlueTable *table_alloc_and_open(const GlueString &path, ExcInfo &exc);
+    GlueTable *table_alloc_and_open(const GlueString &path, const TableOpenMode mode, ExcInfo &exc);
     void table_close_and_free(GlueTable *table, ExcInfo &exc);
     unsigned long table_n_rows(const GlueTable &table);
     unsigned long table_n_columns(const GlueTable &table);

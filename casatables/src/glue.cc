@@ -111,10 +111,17 @@ extern "C" {
     // Tables
 
     GlueTable *
-    table_alloc_and_open(const GlueString &path, ExcInfo &exc)
+    table_alloc_and_open(const GlueString &path, const TableOpenMode mode, ExcInfo &exc)
     {
+        GlueTable::TableOption option = GlueTable::Old;
+
+        if (mode == TOM_OPEN_RW)
+            option = GlueTable::Update;
+        else if (mode == TOM_CREATE)
+            option = GlueTable::NewNoReplace;
+
         try {
-            return new GlueTable(path, GlueTable::Old, casacore::TSMOption());
+            return new GlueTable(path, option, casacore::TSMOption());
         } catch (...) {
             handle_exception(exc);
             return NULL;

@@ -12,7 +12,7 @@ use std::path::Path;
 #[macro_use] pub mod errors; // most come first to provide macros for other modules
 use errors::{Error, ErrorKind, Result};
 
-mod glue;
+#[allow(non_camel_case_types, unused)] mod glue;
 
 /// OMG. Strings were incredibly painful.
 ///
@@ -328,8 +328,14 @@ pub struct Table {
     exc_info: glue::ExcInfo,
 }
 
+pub enum TableOpenMode {
+    Read = 1,
+    ReadWrite = 2,
+    Create = 3
+}
+
 impl Table {
-    pub fn open<P: AsRef<Path>>(path: P) -> Result<Self> {
+    pub fn open<P: AsRef<Path>>(path: P, mode: TableOpenMode) -> Result<Self> {
         let spath = match path.as_ref().to_str() {
             Some(s) => s,
             None => return Err("table paths must be representable as UTF-8 strings".into()),
@@ -337,7 +343,13 @@ impl Table {
         let cpath = glue::GlueString::from_rust(spath);
         let mut exc_info = unsafe { std::mem::zeroed::<glue::ExcInfo>() };
 
-        let handle = unsafe { glue::table_alloc_and_open(&cpath, &mut exc_info) };
+        let cmode = match mode {
+            TableOpenMode::Read => glue::TableOpenMode::TOM_OPEN_READONLY,
+            TableOpenMode::ReadWrite => glue::TableOpenMode::TOM_OPEN_RW,
+            TableOpenMode::Create => glue::TableOpenMode::TOM_CREATE,
+        };
+
+        let handle = unsafe { glue::table_alloc_and_open(&cpath, cmode, &mut exc_info) };
         if handle.is_null() {
             return exc_info.as_err();
         }

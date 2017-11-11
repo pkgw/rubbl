@@ -8,7 +8,7 @@ extern crate rubbl_casatables;
 extern crate clap;
 
 use clap::{App, Arg};
-use rubbl_casatables::Table;
+use rubbl_casatables::{Table, TableOpenMode};
 use rubbl_casatables::errors::Result;
 use rubbl_core::notify::ClapNotificationArgsExt;
 use std::cmp::max;
@@ -29,7 +29,7 @@ fn main() {
     process::exit(rubbl_core::notify::run_with_notifications(matches, |matches, _nbe| -> Result<i32> {
         let inpath = Path::new(matches.value_of_os("IN-TABLE").unwrap()).to_owned();
 
-        let mut t = ctry!(Table::open(&inpath);
+        let mut t = ctry!(Table::open(&inpath, TableOpenMode::Read);
                           "failed to open input table \"{}\"", inpath.display());
 
         println!("Table \"{}\":", inpath.display());
