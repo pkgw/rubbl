@@ -483,8 +483,13 @@ impl Table {
             unsafe { result.set_len(n_rows as usize); }
         } else {
             // We are not given ownership of the String objects that are
-            // returned, so we must std::mem::forget() them.
+            // returned, so we must std::mem::forget() them. Empirically, we
+            // have to initialize our string structures.
             let mut glue_strings = Vec::<glue::GlueString>::with_capacity(n_rows as usize);
+
+            for i in 0..n_rows as usize {
+                glue_strings.push(glue::GlueString::from_rust(""));
+            }
 
             let rv = unsafe {
                 glue::table_get_scalar_column_data(
@@ -498,8 +503,6 @@ impl Table {
             if rv != 0 {
                 return self.exc_info.as_err();
             }
-
-            unsafe { glue_strings.set_len(n_rows as usize); }
 
             for cstr in glue_strings.into_iter() {
                 result.push(T::casatables_string_pass_through(cstr.to_rust()));
@@ -557,7 +560,7 @@ impl Table {
         } else {
             // We are not given ownership of the String object that is
             // returned, so we must std::mem::forget() it.
-            let mut glue_string = unsafe { glue::GlueString::new_invalid() };
+            let mut glue_string = glue::GlueString::from_rust("");
 
             let rv = unsafe {
                 glue::table_get_cell(
@@ -633,6 +636,10 @@ impl Table {
             // returned, so we must std::mem::forget() them.
             let mut glue_strings = Vec::<glue::GlueString>::with_capacity(n_items as usize);
 
+            for i in 0..n_items as usize {
+                glue_strings.push(glue::GlueString::from_rust(""));
+            }
+
             let rv = unsafe {
                 glue::table_get_cell(
                     self.handle,
@@ -646,8 +653,6 @@ impl Table {
             if rv != 0 {
                 return self.exc_info.as_err();
             }
-
-            unsafe { glue_strings.set_len(n_items as usize); }
 
             for cstr in glue_strings.into_iter() {
                 result.push(T::casatables_string_pass_through(cstr.to_rust()));
