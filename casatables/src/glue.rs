@@ -148,6 +148,10 @@ extern "C" {
                                   exc: *mut ExcInfo) -> ::std::os::raw::c_int;
 }
 extern "C" {
+    pub fn table_copy_rows(source: *const GlueTable, dest: *mut GlueTable,
+                           exc: *mut ExcInfo) -> ::std::os::raw::c_int;
+}
+extern "C" {
     pub fn table_deep_copy_no_rows(table: *const GlueTable,
                                    dest_path: *const GlueString,
                                    exc: *mut ExcInfo)

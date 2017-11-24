@@ -170,6 +170,19 @@ extern "C" {
     }
 
     int
+    table_copy_rows(const GlueTable &source, GlueTable &dest, ExcInfo &exc)
+    {
+        try {
+            casa::TableCopy::copyRows(dest, source);
+        } catch (...) {
+            handle_exception(exc);
+            return 1;
+        }
+
+        return 0;
+    }
+
+    int
     table_deep_copy_no_rows(const GlueTable &table, const GlueString &dest_path, ExcInfo &exc)
     {
         try {

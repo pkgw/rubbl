@@ -828,6 +828,15 @@ impl Table {
     }
 
 
+    pub fn copy_rows_to(&mut self, dest: &mut Table) -> Result<()> {
+        if unsafe { glue::table_copy_rows(self.handle, dest.handle, &mut self.exc_info) != 0 } {
+            self.exc_info.as_err()
+        } else {
+            Ok(())
+        }
+    }
+
+
     pub fn deep_copy_no_rows(&mut self, dest_path: &str) -> Result<()> {
         let cdest_path = glue::GlueString::from_rust(dest_path);
 
