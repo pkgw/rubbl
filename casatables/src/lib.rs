@@ -1008,6 +1008,23 @@ impl TableRow {
 
         Ok(result)
     }
+
+    pub fn copy_and_put(&mut self, dest: &mut TableRow, row_number: u64) -> Result<()> {
+        let rv = unsafe {
+            glue::table_row_copy_and_put(
+                self.handle,
+                row_number,
+                dest.handle,
+                &mut self.exc_info
+            )
+        };
+
+        if rv != 0 {
+            return self.exc_info.as_err();
+        }
+
+        Ok(())
+    }
 }
 
 impl Drop for TableRow {
