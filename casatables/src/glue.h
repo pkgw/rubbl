@@ -86,6 +86,8 @@ extern "C" {
     unsigned long table_n_rows(const GlueTable &table);
     unsigned long table_n_columns(const GlueTable &table);
     int table_get_column_names(const GlueTable &table, GlueString *col_names, ExcInfo &exc);
+    unsigned long table_n_keywords(const GlueTable &table);
+    int table_get_keyword_info(const GlueTable &table, GlueString *names, GlueDataType *types, ExcInfo &exc);
     int table_copy_rows(const GlueTable &source, GlueTable &dest, ExcInfo &exc);
     int table_deep_copy_no_rows(const GlueTable &table, const GlueString &dest_path, ExcInfo &exc);
     int table_get_column_info(const GlueTable &table, const GlueString &col_name,

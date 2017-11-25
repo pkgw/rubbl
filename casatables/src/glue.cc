@@ -170,6 +170,31 @@ extern "C" {
         return 0;
     }
 
+    unsigned long
+    table_n_keywords(const GlueTable &table)
+    {
+        return table.keywordSet().nfields();
+    }
+
+    int
+    table_get_keyword_info(const GlueTable &table, GlueString *names, GlueDataType *types, ExcInfo &exc)
+    {
+        try {
+            const casa::TableRecord &rec = table.keywordSet();
+            casa::uInt n_kws = rec.nfields();
+
+            for (casa::uInt i = 0; i < n_kws; i++) {
+                types[i] = rec.type(i);
+                names[i] = rec.name(i);
+            }
+        } catch (...) {
+            handle_exception(exc);
+            return 1;
+        }
+
+        return 0;
+    }
+
     int
     table_copy_rows(const GlueTable &source, GlueTable &dest, ExcInfo &exc)
     {

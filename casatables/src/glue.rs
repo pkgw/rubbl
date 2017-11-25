@@ -154,6 +154,16 @@ extern "C" {
                                   exc: *mut ExcInfo) -> ::std::os::raw::c_int;
 }
 extern "C" {
+    pub fn table_n_keywords(table: *const GlueTable)
+     -> ::std::os::raw::c_ulong;
+}
+extern "C" {
+    pub fn table_get_keyword_info(table: *const GlueTable,
+                                  names: *mut GlueString,
+                                  types: *mut GlueDataType, exc: *mut ExcInfo)
+     -> ::std::os::raw::c_int;
+}
+extern "C" {
     pub fn table_copy_rows(source: *const GlueTable, dest: *mut GlueTable,
                            exc: *mut ExcInfo) -> ::std::os::raw::c_int;
 }

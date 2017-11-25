@@ -68,6 +68,18 @@ fn main() {
             println!("{0:<1$}  {2:<3$}  {4}", i.0, max_name_len, i.1, max_type_len, i.2);
         }
 
+        let table_kw_names = ctry!(t.table_keyword_names();
+                                   "failed to get keyword info in \"{}\"", inpath.display());
+
+        if table_kw_names.len() != 0 {
+            println!();
+            println!("Sub-tables (table-type \"keywords\"):");
+
+            for n in &table_kw_names {
+                println!("  {}", n);
+            }
+        }
+
         Ok(0)
     }));
 }

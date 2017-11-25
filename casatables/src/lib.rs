@@ -468,9 +468,37 @@ impl Table {
             return self.exc_info.as_err();
         }
 
-        unsafe { cnames.set_len(n_cols); }
-
         Ok(cnames.iter().map(|cstr| cstr.to_rust()).collect())
+    }
+
+    pub fn table_keyword_names(&mut self) -> Result<Vec<String>> {
+        let n_kws = unsafe { glue::table_n_keywords(self.handle) } as usize;
+        let mut cnames: Vec<glue::GlueString> = Vec::with_capacity(n_kws);
+        let mut types: Vec<glue::GlueDataType> = Vec::with_capacity(n_kws);
+
+        for _ in 0..n_kws {
+            cnames.push(glue::GlueString::from_rust(""));
+            types.push(glue::GlueDataType::TpOther);
+        }
+
+        let rv = unsafe {
+            glue::table_get_keyword_info(
+                self.handle,
+                cnames.as_mut_ptr(),
+                types.as_mut_ptr(),
+                &mut self.exc_info
+            )
+        };
+
+        if rv != 0 {
+            return self.exc_info.as_err();
+        }
+
+        Ok(cnames.iter()
+           .zip(types.iter())
+           .filter(|&(_n, t)| *t == glue::GlueDataType::TpTable)
+           .map(|(n, _t)| n.to_rust())
+           .collect())
     }
 
     pub fn get_col_desc(&mut self, col_name: &str) -> Result<ColumnDescription> {
