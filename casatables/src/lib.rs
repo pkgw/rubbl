@@ -333,7 +333,9 @@ impl CasaDataType for Vec<f64> {
             panic!("Vecs must be mapped to 1-dimensional arrays only");
         }
 
-        Vec::with_capacity(shape[0] as usize)
+        let mut rv = Vec::with_capacity(shape[0] as usize);
+        unsafe { rv.set_len(shape[0] as usize); }
+        rv
     }
 
     fn casatables_put_shape(&self, shape_dest: &mut Vec<u64>) {
@@ -358,7 +360,9 @@ impl CasaDataType for Vec<String> {
             panic!("Vecs must be mapped to 1-dimensional arrays only");
         }
 
-        Vec::with_capacity(shape[0] as usize)
+        let mut rv = Vec::with_capacity(shape[0] as usize);
+        unsafe { rv.set_len(shape[0] as usize); }
+        rv
     }
 
     fn casatables_stringvec_pass_through_out(svec: Self) -> Vec<glue::GlueString> {
