@@ -80,6 +80,12 @@ pub struct _GlueTable {
 }
 pub type GlueTable = _GlueTable;
 #[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct _GlueTableRow {
+    _unused: [u8; 0],
+}
+pub type GlueTableRow = _GlueTableRow;
+#[repr(C)]
 #[derive(Copy)]
 pub struct _ExcInfo {
     pub message: [::std::os::raw::c_char; 512usize],
@@ -204,4 +210,39 @@ extern "C" {
     pub fn table_add_rows(table: *mut GlueTable,
                           n_rows: ::std::os::raw::c_ulong, exc: *mut ExcInfo)
      -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn table_row_alloc(table: *const GlueTable,
+                           is_read_only: ::std::os::raw::c_uchar,
+                           exc: *mut ExcInfo) -> *mut GlueTableRow;
+}
+extern "C" {
+    pub fn table_row_free(row: *mut GlueTableRow, exc: *mut ExcInfo)
+     -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn table_row_read(row: *mut GlueTableRow,
+                          row_number: ::std::os::raw::c_ulong,
+                          exc: *mut ExcInfo) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn table_row_copy_and_put(src_row: *mut GlueTableRow,
+                                  dest_row_number: ::std::os::raw::c_ulong,
+                                  dest_row: *mut GlueTableRow,
+                                  exc: *mut ExcInfo) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn table_row_get_cell_info(row: *const GlueTableRow,
+                                   col_name: *const GlueString,
+                                   data_type: *mut GlueDataType,
+                                   n_dim: *mut ::std::os::raw::c_int,
+                                   dims: *mut ::std::os::raw::c_ulong,
+                                   exc: *mut ExcInfo)
+     -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn table_row_get_cell(row: *const GlueTableRow,
+                              col_name: *const GlueString,
+                              data: *mut ::std::os::raw::c_void,
+                              exc: *mut ExcInfo) -> ::std::os::raw::c_int;
 }

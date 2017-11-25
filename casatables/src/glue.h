@@ -60,6 +60,7 @@ typedef enum _GlueDataType {
  */
 typedef struct _GlueString { void *a, *b, *c, *d; } GlueString;
 typedef struct _GlueTable GlueTable;
+typedef struct _GlueTableRow GlueTableRow;
 #endif
 
 typedef struct _ExcInfo {
@@ -103,4 +104,15 @@ extern "C" {
                        const unsigned long n_dims, const unsigned long *dims,
                        void *data, ExcInfo &exc);
     int table_add_rows(GlueTable &table, const unsigned long n_rows, ExcInfo &exc);
+
+    GlueTableRow *table_row_alloc(const GlueTable &table, const unsigned char is_read_only, ExcInfo &exc);
+    int table_row_free(GlueTableRow *row, ExcInfo &exc);
+    int table_row_read(GlueTableRow &row, const unsigned long row_number, ExcInfo &exc);
+    int table_row_copy_and_put(GlueTableRow &src_row, const unsigned long dest_row_number,
+                               GlueTableRow &dest_row, ExcInfo &exc);
+    int table_row_get_cell_info(const GlueTableRow &row, const GlueString &col_name,
+                                GlueDataType *data_type, int *n_dim,
+                                unsigned long dims[8], ExcInfo &exc);
+    int table_row_get_cell(const GlueTableRow &row, const GlueString &col_name,
+                           void *data, ExcInfo &exc);
 }

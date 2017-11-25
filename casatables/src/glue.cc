@@ -7,6 +7,7 @@
 #define CASA_TYPES_ALREADY_DECLARED
 #define GlueString casacore::String
 #define GlueTable casacore::Table
+#define GlueTableRow casacore::ROTableRow
 #define GlueDataType casacore::DataType
 
 #include "glue.h"
@@ -459,4 +460,170 @@ extern "C" {
 
         return 0;
     }
+
+    // Rows
+
+    GlueTableRow *
+    table_row_alloc(const GlueTable &table, const unsigned char is_read_only, ExcInfo &exc)
+    {
+        try {
+            if (is_read_only)
+                return new casa::ROTableRow(table);
+            else
+                return new casa::TableRow(table);
+        } catch (...) {
+            handle_exception(exc);
+            return NULL;
+        }
+    }
+
+    int
+    table_row_free(GlueTableRow *row, ExcInfo &exc)
+    {
+        try {
+            delete row;
+            return 0;
+        } catch (...) {
+            handle_exception(exc);
+            return 1;
+        }
+    }
+
+    int
+    table_row_read(GlueTableRow &row, const unsigned long row_number, ExcInfo &exc)
+    {
+        try {
+            row.get(row_number);
+            return 0;
+        } catch (...) {
+            handle_exception(exc);
+            return 1;
+        }
+    }
+
+    int
+    table_row_copy_and_put(GlueTableRow &src_row, const unsigned long dest_row_number,
+                           GlueTableRow &wrap_dest_row, ExcInfo &exc)
+    {
+        casa::TableRow &dest_row = (casa::TableRow &) wrap_dest_row;
+
+        try {
+            dest_row.put(dest_row_number, src_row.record(), src_row.getDefined());
+            return 0;
+        } catch (...) {
+            handle_exception(exc);
+            return 1;
+        }
+    }
+
+    int
+    table_row_get_cell_info(const GlueTableRow &row, const GlueString &col_name,
+                            GlueDataType *data_type, int *n_dim,
+                            unsigned long dims[8], ExcInfo &exc)
+    {
+        try {
+            const casa::TableRecord &rec = row.record();
+            const casa::RecordDesc &desc = rec.description();
+            casa::Int field_num = rec.fieldNumber(col_name);
+
+            if (field_num < 0)
+                throw std::runtime_error("unrecognized column name");
+
+            *data_type = rec.type(field_num);
+
+            if (desc.isScalar(field_num))
+                *n_dim = 0;
+            else {
+                const casa::IPosition shape = desc.shape(field_num);
+                *n_dim = (int) shape.size();
+
+                if (*n_dim > 8)
+                    throw std::runtime_error("cannot handle cells with data of dimensionality greater than 8");
+
+                for (int i = 0; i < *n_dim; i++)
+                    dims[i] = (unsigned long) shape[i];
+            }
+
+            return 0;
+        } catch (...) {
+            handle_exception(exc);
+            return 1;
+        }
+    }
+
+    // This function assumes that the caller has already vetted the types and
+    // has figured how big `data` needs to be.
+    int
+    table_row_get_cell(const GlueTableRow &row, const GlueString &col_name,
+                       void *data, ExcInfo &exc)
+    {
+        try {
+            const casa::TableRecord &rec = row.record();
+            const casa::RecordDesc &desc = rec.description();
+            casa::Int field_num = rec.fieldNumber(col_name);
+            casa::IPosition shape;
+
+            if (field_num < 0)
+                throw std::runtime_error("unrecognized column name");
+
+            if (!desc.isScalar(field_num))
+                shape = desc.shape(field_num);
+
+            switch (rec.type(field_num)) {
+
+#define SCALAR_CASE(DTYPE, CPPTYPE) \
+            case GlueDataType::DTYPE: { \
+                CPPTYPE datum; \
+                rec.get(field_num, datum); \
+                *((CPPTYPE *) data) = datum; \
+                break; \
+            }
+
+#define VECTOR_CASE(DTYPE, CPPTYPE) \
+            case GlueDataType::DTYPE: { \
+                casa::Array<CPPTYPE> array(shape, (CPPTYPE *) data, casa::StorageInitPolicy::SHARE); \
+                rec.get(field_num, array); \
+                break; \
+            }
+
+            SCALAR_CASE(TpBool, casa::Bool)
+            //SCALAR_CASE(TpChar, casa::Char)
+            SCALAR_CASE(TpUChar, casa::uChar)
+            SCALAR_CASE(TpShort, casa::Short)
+            //SCALAR_CASE(TpUShort, casa::uShort)
+            SCALAR_CASE(TpInt, casa::Int)
+            SCALAR_CASE(TpUInt, casa::uInt)
+            SCALAR_CASE(TpFloat, float)
+            SCALAR_CASE(TpDouble, double)
+            SCALAR_CASE(TpComplex, casa::Complex)
+            SCALAR_CASE(TpDComplex, casa::DComplex)
+            SCALAR_CASE(TpString, casa::String)
+
+            VECTOR_CASE(TpArrayBool, casa::Bool)
+            //VECTOR_CASE(TpArrayChar, casa::Char)
+            VECTOR_CASE(TpArrayUChar, casa::uChar)
+            VECTOR_CASE(TpArrayShort, casa::Short)
+            //VECTOR_CASE(TpArrayUShort, casa::uShort)
+            VECTOR_CASE(TpArrayInt, casa::Int)
+            VECTOR_CASE(TpArrayUInt, casa::uInt)
+            VECTOR_CASE(TpArrayFloat, float)
+            VECTOR_CASE(TpArrayDouble, double)
+            VECTOR_CASE(TpArrayComplex, casa::Complex)
+            VECTOR_CASE(TpArrayDComplex, casa::DComplex)
+            VECTOR_CASE(TpArrayString, casa::String)
+
+#undef SCALAR_CASE
+#undef VECTOR_CASE
+
+            default:
+                throw std::runtime_error("unhandled cell data type");
+            }
+        } catch (...) {
+            handle_exception(exc);
+            return 1;
+        }
+
+        return 0;
+    }
+
 }

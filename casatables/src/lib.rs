@@ -832,6 +832,46 @@ impl Table {
     }
 
 
+    pub fn get_row_writer(&mut self) -> Result<TableRow> {
+        let mut exc_info = unsafe { std::mem::zeroed::<glue::ExcInfo>() };
+
+        let handle = unsafe { glue::table_row_alloc(self.handle, 0, &mut exc_info) };
+        if handle.is_null() {
+            return exc_info.as_err();
+        }
+
+        Ok(TableRow {
+            handle: handle,
+            exc_info: exc_info,
+        })
+    }
+
+
+    pub fn for_each_row<F>(&mut self, mut func: F) -> Result<()>
+        where F: FnMut(&mut TableRow) -> Result<()> {
+        let mut exc_info = unsafe { std::mem::zeroed::<glue::ExcInfo>() };
+
+        let handle = unsafe { glue::table_row_alloc(self.handle, 1, &mut exc_info) };
+        if handle.is_null() {
+            return exc_info.as_err();
+        }
+
+        let mut row = TableRow {
+            handle: handle,
+            exc_info: exc_info,
+        };
+
+        for row_number in 0..self.n_rows() {
+            if unsafe { glue::table_row_read(row.handle, row_number as u64, &mut row.exc_info) } != 0 {
+                return row.exc_info.as_err();
+            }
+
+            func(&mut row)?;
+        }
+
+        Ok(())
+    }
+
     pub fn copy_rows_to(&mut self, dest: &mut Table) -> Result<()> {
         if unsafe { glue::table_copy_rows(self.handle, dest.handle, &mut self.exc_info) != 0 } {
             self.exc_info.as_err()
@@ -889,6 +929,92 @@ impl ColumnDescription {
 
     pub fn shape(&self) -> Option<&[u64]> {
         self.shape.as_ref().map(|v| &v[..])
+    }
+}
+
+
+// Table Row handles
+
+pub struct TableRow {
+    handle: *mut glue::GlueTableRow,
+    exc_info: glue::ExcInfo,
+}
+
+impl TableRow {
+    pub fn get_cell<T: CasaDataType>(&mut self, col_name: &str) -> Result<T> {
+        let ccol_name = glue::GlueString::from_rust(col_name);
+        let mut data_type = glue::GlueDataType::TpOther;
+        let mut n_dim = 0;
+        let mut dims = [0; 8];
+
+        let rv = unsafe {
+            glue::table_row_get_cell_info(
+                self.handle,
+                &ccol_name,
+                &mut data_type,
+                &mut n_dim,
+                dims.as_mut_ptr(),
+                &mut self.exc_info
+            )
+        };
+
+        if rv != 0 {
+            return self.exc_info.as_err();
+        }
+
+        if data_type != T::DATA_TYPE {
+            return Err(ErrorKind::UnexpectedCasaType(data_type).into());
+        }
+
+        let result = if data_type != glue::GlueDataType::TpString {
+            let mut result = T::casatables_alloc(&dims[..n_dim as usize]);
+
+            let rv = unsafe {
+                glue::table_row_get_cell(
+                    self.handle,
+                    &ccol_name,
+                    result.casatables_as_mut_buf() as _,
+                    &mut self.exc_info
+                )
+            };
+
+            if rv != 0 {
+                return self.exc_info.as_err();
+            }
+
+            result
+        } else {
+            // We are not given ownership of the String object that is
+            // returned, so we must std::mem::forget() it.
+            let mut glue_string = glue::GlueString::from_rust("");
+
+            let rv = unsafe {
+                glue::table_row_get_cell(
+                    self.handle,
+                    &ccol_name,
+                    &mut glue_string as *mut glue::GlueString as _,
+                    &mut self.exc_info
+                )
+            };
+
+            if rv != 0 {
+                return self.exc_info.as_err();
+            }
+
+            let result = T::casatables_string_pass_through(glue_string.to_rust());
+            std::mem::forget(glue_string);
+            result
+        };
+
+        Ok(result)
+    }
+}
+
+impl Drop for TableRow {
+    fn drop(&mut self) {
+        // FIXME: not sure if this function can actually produce useful
+        // exceptions anyway, but we can't do anything if it does!
+        unsafe { glue::table_row_free(self.handle, &mut self.exc_info); }
     }
 }
 
