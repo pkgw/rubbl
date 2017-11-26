@@ -325,6 +325,62 @@ impl CasaScalarData for String {
 }
 
 
+impl CasaDataType for Vec<bool> {
+    const DATA_TYPE: glue::GlueDataType = glue::GlueDataType::TpArrayBool;
+
+    fn casatables_alloc(shape: &[u64]) -> Self {
+        if shape.len() != 1 {
+            panic!("Vecs must be mapped to 1-dimensional arrays only");
+        }
+
+        let mut rv = Vec::with_capacity(shape[0] as usize);
+        unsafe { rv.set_len(shape[0] as usize); }
+        rv
+    }
+
+    fn casatables_put_shape(&self, shape_dest: &mut Vec<u64>) {
+        shape_dest.truncate(0);
+        shape_dest.push(self.len() as u64);
+    }
+
+    fn casatables_as_buf(&self) -> *const () {
+        self.as_ptr() as _
+    }
+
+    fn casatables_as_mut_buf(&mut self) -> *mut () {
+        self.as_mut_ptr() as _
+    }
+}
+
+
+impl CasaDataType for Vec<f32> {
+    const DATA_TYPE: glue::GlueDataType = glue::GlueDataType::TpArrayFloat;
+
+    fn casatables_alloc(shape: &[u64]) -> Self {
+        if shape.len() != 1 {
+            panic!("Vecs must be mapped to 1-dimensional arrays only");
+        }
+
+        let mut rv = Vec::with_capacity(shape[0] as usize);
+        unsafe { rv.set_len(shape[0] as usize); }
+        rv
+    }
+
+    fn casatables_put_shape(&self, shape_dest: &mut Vec<u64>) {
+        shape_dest.truncate(0);
+        shape_dest.push(self.len() as u64);
+    }
+
+    fn casatables_as_buf(&self) -> *const () {
+        self.as_ptr() as _
+    }
+
+    fn casatables_as_mut_buf(&mut self) -> *mut () {
+        self.as_mut_ptr() as _
+    }
+}
+
+
 impl CasaDataType for Vec<f64> {
     const DATA_TYPE: glue::GlueDataType = glue::GlueDataType::TpArrayDouble;
 
