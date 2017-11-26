@@ -1,6 +1,11 @@
 // Copyright 2017 Peter Williams <peter@newton.cx> and collaborators
 // Licensed under the MIT License.
 
+// Note that in CASA, an array shape like (4, 64) means that the most
+// rapidly-varying axis is 4, i.e. Fortran array ordering. Rust's ndarray uses
+// C ordering instead. So we must take care to reverse array shapes when
+// translating from C++-land to Rust-land.
+
 #include <casacore/casa/BasicSL.h>
 #include <casacore/tables/Tables.h>
 
@@ -248,7 +253,7 @@ extern "C" {
             *n_dim = (int) desc.ndim();
 
             for (int i = 0; i < *n_dim; i++) // note: for empty cols, n_dim = -1; this is OK
-                dims[i] = (unsigned long) shape[i];
+                dims[*n_dim - 1 - i] = (unsigned long) shape[i];
         } catch (...) {
             handle_exception(exc);
             return 1;
@@ -325,7 +330,7 @@ extern "C" {
                 const casa::IPosition shape = col.shape(row_number);
 
                 for (int i = 0; i < *n_dim; i++)
-                    dims[i] = (unsigned long) shape[i];
+                    dims[*n_dim - 1 - i] = (unsigned long) shape[i];
             }
         } catch (...) {
             handle_exception(exc);
@@ -427,7 +432,7 @@ extern "C" {
                 casa::ArrayColumn<CPPTYPE> col(table, col_name); \
                 casa::IPosition shape(n_dims); \
                 for (casa::uInt i = 0; i < n_dims; i++) \
-                    shape[i] = dims[i]; \
+                    shape[i] = dims[n_dims - 1 - i]; \
                 casa::Array<CPPTYPE> array(shape, (CPPTYPE *) data, casa::StorageInitPolicy::SHARE); \
                 col.put(row_number, array); \
                 break; \
@@ -571,7 +576,7 @@ extern "C" {
                 const casa::IPosition shape = col.shape(row.rowNumber());
 
                 for (int i = 0; i < *n_dim; i++)
-                    dims[i] = (unsigned long) shape[i];
+                    dims[*n_dim - 1 - i] = (unsigned long) shape[i];
             }
 
             return 0;
@@ -681,7 +686,7 @@ extern "C" {
             case GlueDataType::DTYPE: { \
                 casa::IPosition shape(n_dims); \
                 for (casa::uInt i = 0; i < n_dims; i++) \
-                    shape[i] = dims[i]; \
+                    shape[i] = dims[n_dims - 1 - i]; \
                 casa::Array<CPPTYPE> array(shape, (CPPTYPE *) data, casa::StorageInitPolicy::SHARE); \
                 rec.define(field_num, array); \
                 break; \
