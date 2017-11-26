@@ -559,11 +559,16 @@ extern "C" {
             if (desc.isScalar(field_num))
                 *n_dim = 0;
             else {
-                const casa::IPosition shape = desc.shape(field_num);
-                *n_dim = (int) shape.size();
+                // desc.shape() is generic, not specific to the row we're
+                // looking at, so we have to create a TableColumn to get the
+                // cell's shape.
+                casa::TableColumn col(row.table(), col_name);
+                *n_dim = (int) col.ndim(row.rowNumber());
 
                 if (*n_dim > 8)
                     throw std::runtime_error("cannot handle cells with data of dimensionality greater than 8");
+
+                const casa::IPosition shape = col.shape(row.rowNumber());
 
                 for (int i = 0; i < *n_dim; i++)
                     dims[i] = (unsigned long) shape[i];
@@ -591,8 +596,10 @@ extern "C" {
             if (field_num < 0)
                 throw std::runtime_error("unrecognized column name");
 
-            if (!desc.isScalar(field_num))
-                shape = desc.shape(field_num);
+            if (!desc.isScalar(field_num)) {
+                casa::TableColumn col(row.table(), col_name);
+                shape = col.shape(row.rowNumber());
+            }
 
             switch (rec.type(field_num)) {
 
