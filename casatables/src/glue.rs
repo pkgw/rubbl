@@ -256,3 +256,17 @@ extern "C" {
                               data: *mut ::std::os::raw::c_void,
                               exc: *mut ExcInfo) -> ::std::os::raw::c_int;
 }
+extern "C" {
+    pub fn table_row_put_cell(row: *mut GlueTableRow,
+                              col_name: *const GlueString,
+                              data_type: GlueDataType,
+                              n_dims: ::std::os::raw::c_ulong,
+                              dims: *const ::std::os::raw::c_ulong,
+                              data: *mut ::std::os::raw::c_void,
+                              exc: *mut ExcInfo) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn table_row_write(row: *mut GlueTableRow,
+                           dest_row_number: ::std::os::raw::c_ulong,
+                           exc: *mut ExcInfo) -> ::std::os::raw::c_int;
+}

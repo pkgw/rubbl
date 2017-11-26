@@ -117,4 +117,8 @@ extern "C" {
                                 unsigned long dims[8], ExcInfo &exc);
     int table_row_get_cell(const GlueTableRow &row, const GlueString &col_name,
                            void *data, ExcInfo &exc);
+    int table_row_put_cell(GlueTableRow &row, const GlueString &col_name,
+                           const GlueDataType data_type, const unsigned long n_dims,
+                           const unsigned long *dims, void *data, ExcInfo &exc);
+    int table_row_write(GlueTableRow &row, const unsigned long dest_row_number, ExcInfo &exc);
 }

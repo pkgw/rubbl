@@ -115,13 +115,13 @@ pub trait CasaDataType: Clone + PartialEq + Sized {
 
     /// A hack that lets us properly special-case strings as scalar types.
     #[doc(hidden)]
-    fn casatables_string_pass_through_out(_s: Self) -> String {
+    fn casatables_string_pass_through_out(_s: &Self) -> String {
         unreachable!();
     }
 
     /// A hack that lets us properly special-case string vectors
     #[doc(hidden)]
-    fn casatables_stringvec_pass_through_out(_s: Self) -> Vec<glue::GlueString> {
+    fn casatables_stringvec_pass_through_out(_s: &Self) -> Vec<glue::GlueString> {
         unreachable!();
     }
 
@@ -303,8 +303,8 @@ impl CasaDataType for String {
         s
     }
 
-    fn casatables_string_pass_through_out(s: Self) -> String {
-        s
+    fn casatables_string_pass_through_out(s: &Self) -> String {
+        s.to_owned()
     }
 
     fn casatables_alloc(_shape: &[u64]) -> Self {
@@ -421,7 +421,7 @@ impl CasaDataType for Vec<String> {
         rv
     }
 
-    fn casatables_stringvec_pass_through_out(svec: Self) -> Vec<glue::GlueString> {
+    fn casatables_stringvec_pass_through_out(svec: &Self) -> Vec<glue::GlueString> {
         svec.iter().map(|s| glue::GlueString::from_rust(s)).collect()
     }
 
@@ -839,7 +839,7 @@ impl Table {
         Ok(result)
     }
 
-    pub fn put_cell<T: CasaDataType>(&mut self, col_name: &str, row: u64, value: T) -> Result<()> {
+    pub fn put_cell<T: CasaDataType>(&mut self, col_name: &str, row: u64, value: &T) -> Result<()> {
         let ccol_name = glue::GlueString::from_rust(col_name);
         let mut shape = Vec::new();
 
@@ -1093,12 +1093,92 @@ impl TableRow {
         Ok(result)
     }
 
+    pub fn put_cell<T: CasaDataType>(&mut self, col_name: &str, value: &T) -> Result<()> {
+        let ccol_name = glue::GlueString::from_rust(col_name);
+        let mut shape = Vec::new();
+
+        value.casatables_put_shape(&mut shape);
+
+        if T::DATA_TYPE == glue::GlueDataType::TpString {
+            let as_string = T::casatables_string_pass_through_out(value);
+            let glue_string = glue::GlueString::from_rust(&as_string);
+
+            let rv = unsafe {
+                glue::table_row_put_cell(
+                    self.handle,
+                    &ccol_name,
+                    T::DATA_TYPE,
+                    shape.len() as u64,
+                    shape.as_ptr(),
+                    &glue_string as *const glue::GlueString as _,
+                    &mut self.exc_info
+                )
+            };
+
+            if rv != 0 {
+                return self.exc_info.as_err();
+            }
+        } else if T::DATA_TYPE == glue::GlueDataType::TpArrayString {
+            let glue_strings = T::casatables_stringvec_pass_through_out(value);
+
+            let rv = unsafe {
+                glue::table_row_put_cell(
+                    self.handle,
+                    &ccol_name,
+                    T::DATA_TYPE,
+                    shape.len() as u64,
+                    shape.as_ptr(),
+                    glue_strings.as_ptr() as _,
+                    &mut self.exc_info
+                )
+            };
+
+            if rv != 0 {
+                return self.exc_info.as_err();
+            }
+        } else {
+            let rv = unsafe {
+                glue::table_row_put_cell(
+                    self.handle,
+                    &ccol_name,
+                    T::DATA_TYPE,
+                    shape.len() as u64,
+                    shape.as_ptr(),
+                    value.casatables_as_buf() as _,
+                    &mut self.exc_info
+                )
+            };
+
+            if rv != 0 {
+                return self.exc_info.as_err();
+            }
+        }
+
+        Ok(())
+    }
+
     pub fn copy_and_put(&mut self, dest: &mut TableRow, row_number: u64) -> Result<()> {
         let rv = unsafe {
             glue::table_row_copy_and_put(
                 self.handle,
                 row_number,
                 dest.handle,
+                &mut self.exc_info
+            )
+        };
+
+        if rv != 0 {
+            return self.exc_info.as_err();
+        }
+
+        Ok(())
+    }
+
+    pub fn put(&mut self, row_number: u64) -> Result<()> {
+        let rv = unsafe {
+            glue::table_row_write(
+                self.handle,
+                row_number,
                 &mut self.exc_info
             )
         };
