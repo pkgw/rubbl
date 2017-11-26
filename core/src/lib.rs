@@ -4,6 +4,7 @@
 extern crate byteorder;
 extern crate clap;
 #[macro_use] extern crate error_chain;
+extern crate ndarray;
 extern crate num_complex;
 extern crate termcolor;
 
@@ -11,4 +12,5 @@ extern crate termcolor;
 pub mod io;
 pub mod notify;
 
+pub use ndarray::{Array, Ix2};
 pub use num_complex::Complex; // convenience re-export
