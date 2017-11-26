@@ -441,7 +441,7 @@ impl CasaDataType for Array<bool, Ix2> {
 
     fn casatables_alloc(shape: &[u64]) -> Self {
         if shape.len() != 2 {
-            panic!("expecte 2-dimensional array");
+            panic!("expect 2-dimensional array");
         }
 
         unsafe { Self::uninitialized((shape[0] as usize, shape[1] as usize)) }
@@ -469,7 +469,35 @@ impl CasaDataType for Array<f32, Ix2> {
 
     fn casatables_alloc(shape: &[u64]) -> Self {
         if shape.len() != 2 {
-            panic!("expecte 2-dimensional array");
+            panic!("expect 2-dimensional array");
+        }
+
+        unsafe { Self::uninitialized((shape[0] as usize, shape[1] as usize)) }
+    }
+
+    fn casatables_put_shape(&self, shape_dest: &mut Vec<u64>) {
+        shape_dest.truncate(0);
+        for s in self.shape() {
+            shape_dest.push(*s as u64);
+        }
+    }
+
+    fn casatables_as_buf(&self) -> *const () {
+        self.as_ptr() as _
+    }
+
+    fn casatables_as_mut_buf(&mut self) -> *mut () {
+        self.as_mut_ptr() as _
+    }
+}
+
+// FIXME! Make generic regarding ndim!
+impl CasaDataType for Array<Complex<f32>, Ix2> {
+    const DATA_TYPE: glue::GlueDataType = glue::GlueDataType::TpArrayComplex;
+
+    fn casatables_alloc(shape: &[u64]) -> Self {
+        if shape.len() != 2 {
+            panic!("expect 2-dimensional array");
         }
 
         unsafe { Self::uninitialized((shape[0] as usize, shape[1] as usize)) }
