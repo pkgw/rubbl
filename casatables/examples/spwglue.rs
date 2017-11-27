@@ -28,14 +28,11 @@ use std::str::FromStr;
 // shame that we can't handle the options purely with data tables, but
 // type-based column reading has a lot of advantages more generally.
 
-struct IgnoreColumnHandler<T> {
-    _nope: PhantomData<T>
-}
+/// Columns handled by this struct are simply ignored.
+struct SpwIgnoreColumn<T> { _nope: PhantomData<T> }
 
-impl<T> IgnoreColumnHandler<T> {
-    pub fn new() -> Self {
-        Self { _nope: PhantomData }
-    }
+impl<T> SpwIgnoreColumn<T> {
+    pub fn new() -> Self { Self { _nope: PhantomData } }
 
     pub fn process(&self, _src_table: &mut Table, _col_name: &str,
                    _mappings: &[OutputSpwInfo], _dest_table: &mut Table) -> Result<()> {
@@ -44,14 +41,11 @@ impl<T> IgnoreColumnHandler<T> {
 }
 
 
-struct UseFirstColumnHandler<T: CasaScalarData> {
-    _nope: PhantomData<T>
-}
+/// Columns handled by this struct use the first value that appears.
+struct SpwUseFirstColumn<T: CasaScalarData> { _nope: PhantomData<T> }
 
-impl<T: CasaScalarData> UseFirstColumnHandler<T> {
-    pub fn new() -> Self {
-        Self { _nope: PhantomData }
-    }
+impl<T: CasaScalarData> SpwUseFirstColumn<T> {
+    pub fn new() -> Self { Self { _nope: PhantomData } }
 
     pub fn process(&self, src_table: &mut Table, col_name: &str,
                    mappings: &[OutputSpwInfo], dest_table: &mut Table) -> Result<()> {
@@ -68,14 +62,11 @@ impl<T: CasaScalarData> UseFirstColumnHandler<T> {
 }
 
 
-struct MustMatchColumnHandler<T: CasaScalarData> {
-    _nope: PhantomData<T>
-}
+/// In columns handled by this struct, every value must be the same.
+struct SpwMustMatchColumn<T: CasaScalarData> { _nope: PhantomData<T> }
 
-impl<T: CasaScalarData + Display> MustMatchColumnHandler<T> {
-    pub fn new() -> Self {
-        Self { _nope: PhantomData }
-    }
+impl<T: CasaScalarData + Display> SpwMustMatchColumn<T> {
+    pub fn new() -> Self { Self { _nope: PhantomData } }
 
     pub fn process(&self, src_table: &mut Table, col_name: &str,
                    mappings: &[OutputSpwInfo], dest_table: &mut Table) -> Result<()> {
@@ -100,14 +91,12 @@ impl<T: CasaScalarData + Display> MustMatchColumnHandler<T> {
 }
 
 
-struct SumScalarColumnHandler<T> {
-    _nope: PhantomData<T>
-}
+/// In columns handled by this struct, the cell values are scalars and the
+/// output is the sum of the inputs.
+struct SpwSumScalarColumn<T> { _nope: PhantomData<T> }
 
-impl<T: CasaScalarData + AddAssign + Copy + Default> SumScalarColumnHandler<T> {
-    pub fn new() -> Self {
-        Self { _nope: PhantomData }
-    }
+impl<T: CasaScalarData + AddAssign + Copy + Default> SpwSumScalarColumn<T> {
+    pub fn new() -> Self { Self { _nope: PhantomData } }
 
     pub fn process(&self, src_table: &mut Table, col_name: &str,
                    mappings: &[OutputSpwInfo], dest_table: &mut Table) -> Result<()> {
@@ -128,16 +117,12 @@ impl<T: CasaScalarData + AddAssign + Copy + Default> SumScalarColumnHandler<T> {
 }
 
 
-struct ConcatVectorColumnHandler<T: CasaScalarData> {
-    _nope: PhantomData<T>
-}
+/// In columns handled by this struct, the cell values are 1D vectors, and the
+/// output is the concatenation of all of the inputs.
+struct SpwConcatVectorColumn<T: CasaScalarData> { _nope: PhantomData<T> }
 
-impl<T: CasaScalarData> ConcatVectorColumnHandler<T>
-    where Vec<T>: CasaDataType
-{
-    pub fn new() -> Self {
-        Self { _nope: PhantomData }
-    }
+impl<T: CasaScalarData> SpwConcatVectorColumn<T> where Vec<T>: CasaDataType {
+    pub fn new() -> Self { Self { _nope: PhantomData } }
 
     pub fn process(&self, src_table: &mut Table, col_name: &str,
                    mappings: &[OutputSpwInfo], dest_table: &mut Table) -> Result<()> {
@@ -160,10 +145,11 @@ impl<T: CasaScalarData> ConcatVectorColumnHandler<T>
 // Now we use a macro to create the enum type that handles all of the possible
 // columns that might appear in the SPECTRAL_WINDOW table. The enum type is
 // kind of awkward, but once you work out the macro magic it becomes fairly
-// straightforward to use.
+// straightforward to use, and as mentioned before this approach allows us to
+// leverage Rust's type system nicely.
 //
 // Because macros work on an AST level, we can't capture the "state type" of
-// each column as a genuine type (e.g. UseFirstColumnHandler<i32>) because we are
+// each column as a genuine type (e.g. SpwUseFirstColumn<i32>) because we are
 // then unable to refer to that type in expression contexts. Therefore we have
 // to put our macros all in terms of "ident" typed captures.
 macro_rules! spectral_window_columns {
@@ -172,17 +158,17 @@ macro_rules! spectral_window_columns {
         /// SPECTRAL_WINDOW table of a visibility data measurement set. We
         /// have to use an enumeration type so that we can leverage Rust's
         /// generics to read in the data with strong, correct typing.
-        enum SpectralWindowColumnHandler {
+        enum SpectralWindowColumn {
             $(
                 $variant_name($state_type<$data_type>),
             )+
         }
 
-        impl SpectralWindowColumnHandler {
+        impl SpectralWindowColumn {
             pub fn col_name(&self) -> &'static str {
                 match self {
                     $(
-                        &SpectralWindowColumnHandler::$variant_name(_) => stringify!($col_name),
+                        &SpectralWindowColumn::$variant_name(_) => stringify!($col_name),
                     )+
                 }
             }
@@ -190,20 +176,20 @@ macro_rules! spectral_window_columns {
             pub fn process(&self, src_table: &mut Table, mappings: &[OutputSpwInfo], dest_table: &mut Table) -> Result<()> {
                 match self {
                     $(
-                        &SpectralWindowColumnHandler::$variant_name(ref h) =>
+                        &SpectralWindowColumn::$variant_name(ref h) =>
                             h.process(src_table, self.col_name(), mappings, dest_table),
                     )+
                 }
             }
         }
 
-        impl FromStr for SpectralWindowColumnHandler {
+        impl FromStr for SpectralWindowColumn {
             type Err = Error;
 
             fn from_str(s: &str) -> Result<Self> {
                 match s {
                     $(
-                        stringify!($col_name) => Ok(SpectralWindowColumnHandler::$variant_name($state_type::new())),
+                        stringify!($col_name) => Ok(SpectralWindowColumn::$variant_name($state_type::new())),
                     )+
                     _ => err_msg!("unrecognized column in SPECTRAL_WINDOW table: \"{}\"", s)
                 }
@@ -214,24 +200,24 @@ macro_rules! spectral_window_columns {
 
 
 spectral_window_columns! {
-    AssocNature(ASSOC_NATURE, IgnoreColumnHandler, ()),
-    AssocSpwId(ASSOC_SPW_ID, IgnoreColumnHandler, ()),
-    BbcNo(BBC_NO, MustMatchColumnHandler, i32),
-    ChanFreq(CHAN_FREQ, ConcatVectorColumnHandler, f64),
-    ChanWidth(CHAN_WIDTH, ConcatVectorColumnHandler, f64),
-    DopplerId(DOPPLER_ID, UseFirstColumnHandler, i32),
-    EffectiveBw(EFFECTIVE_BW, ConcatVectorColumnHandler, f64),
-    FlagRow(FLAG_ROW, MustMatchColumnHandler, bool),
-    FreqGroup(FREQ_GROUP, MustMatchColumnHandler, i32),
-    FreqGroupName(FREQ_GROUP_NAME, MustMatchColumnHandler, String),
-    IfConvChain(IF_CONV_CHAIN, MustMatchColumnHandler, i32),
-    MeasFreqRef(MEAS_FREQ_REF, MustMatchColumnHandler, i32),
-    Name(NAME, UseFirstColumnHandler, String),
-    NetSideband(NET_SIDEBAND, MustMatchColumnHandler, i32),
-    NumChan(NUM_CHAN, SumScalarColumnHandler, i32),
-    RefFrequency(REF_FREQUENCY, UseFirstColumnHandler, f64),
-    Resolution(RESOLUTION, ConcatVectorColumnHandler, f64),
-    TotalBandwidth(TOTAL_BANDWIDTH, SumScalarColumnHandler, f64)
+    AssocNature(ASSOC_NATURE, SpwIgnoreColumn, ()),
+    AssocSpwId(ASSOC_SPW_ID, SpwIgnoreColumn, ()),
+    BbcNo(BBC_NO, SpwMustMatchColumn, i32),
+    ChanFreq(CHAN_FREQ, SpwConcatVectorColumn, f64),
+    ChanWidth(CHAN_WIDTH, SpwConcatVectorColumn, f64),
+    DopplerId(DOPPLER_ID, SpwUseFirstColumn, i32),
+    EffectiveBw(EFFECTIVE_BW, SpwConcatVectorColumn, f64),
+    FlagRow(FLAG_ROW, SpwMustMatchColumn, bool),
+    FreqGroup(FREQ_GROUP, SpwMustMatchColumn, i32),
+    FreqGroupName(FREQ_GROUP_NAME, SpwMustMatchColumn, String),
+    IfConvChain(IF_CONV_CHAIN, SpwMustMatchColumn, i32),
+    MeasFreqRef(MEAS_FREQ_REF, SpwMustMatchColumn, i32),
+    Name(NAME, SpwUseFirstColumn, String),
+    NetSideband(NET_SIDEBAND, SpwMustMatchColumn, i32),
+    NumChan(NUM_CHAN, SpwSumScalarColumn, i32),
+    RefFrequency(REF_FREQUENCY, SpwUseFirstColumn, f64),
+    Resolution(RESOLUTION, SpwConcatVectorColumn, f64),
+    TotalBandwidth(TOTAL_BANDWIDTH, SpwSumScalarColumn, f64)
 }
 
 
@@ -871,7 +857,7 @@ zero-based.")
                   "failed to add {} rows to \"{}\"", out_spws.len(), out_spw_path.display());
 
             for n in col_names {
-                let handler = ctry!(n.parse::<SpectralWindowColumnHandler>();
+                let handler = ctry!(n.parse::<SpectralWindowColumn>();
                                     "unhandled column \"{}\" in input sub-table \"{}\"",
                                     n, in_spw_path.display());
                 ctry!(handler.process(&mut in_spw_table, &out_spws, &mut out_spw_table);
