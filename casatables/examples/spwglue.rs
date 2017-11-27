@@ -17,7 +17,7 @@ use std::collections::HashMap;
 use std::default::Default;
 use std::fmt::Display;
 use std::marker::PhantomData;
-use std::ops::{AddAssign, Range};
+use std::ops::{AddAssign, BitOrAssign, Range, Sub};
 use std::path::Path;
 use std::process;
 use std::str::FromStr;
@@ -335,7 +335,7 @@ trait NeverImpledForVec {}
 impl NeverImpledForVec for f32 {}
 impl NeverImpledForVec for f64 {}
 
-impl<T: Float + One + NeverImpledForVec + PartialOrd + Signed + std::ops::Sub + Zero> CheckApproximateMatch for T {
+impl<T: Float + One + NeverImpledForVec + PartialOrd + Signed + Sub + Zero> CheckApproximateMatch for T {
     type Element = T;
 
     fn is_approximately_same(&self, other: &Self) -> bool {
@@ -350,7 +350,7 @@ impl<T: Float + One + NeverImpledForVec + PartialOrd + Signed + std::ops::Sub + 
     }
 }
 
-impl<T: std::fmt::Debug + Float + One + PartialOrd + Signed + std::ops::Sub + Zero> CheckApproximateMatch for Vec<T> {
+impl<T: Float + One + PartialOrd + Signed + Sub + Zero> CheckApproximateMatch for Vec<T> {
     type Element = T;
 
     fn is_approximately_same(&self, other: &Self) -> bool {
@@ -448,7 +448,7 @@ struct VisLogicalOrColumn<T: CasaDataType + Default> {
     value: T,
 }
 
-impl<T: CasaDataType + Default + std::ops::BitOrAssign> VisLogicalOrColumn<T> {
+impl<T: CasaDataType + Default + BitOrAssign> VisLogicalOrColumn<T> {
     pub fn new() -> Self {
         Self { value: T::default() }
     }
