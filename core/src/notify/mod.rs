@@ -22,7 +22,7 @@ use std::cmp;
 use std::fmt::Arguments;
 use std::result::Result as StdResult;
 
-use errors::{Error, Result};
+use errors::Error;
 
 
 /// How chatty the notification system should be.
