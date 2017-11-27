@@ -509,220 +509,107 @@ impl<T: CasaScalarData + Default + std::fmt::Debug> VisPolConcatColumn<T> where 
 }
 
 
-#[derive(Clone, Debug, PartialEq)]
-enum VisDataColumnHandler {
-    Antenna1(VisIdentityColumn<i32>),
-    Antenna2(VisIdentityColumn<i32>),
-    ArrayId(VisIdentityColumn<i32>),
-    CorrectedData(VisPolConcatColumn<Complex<f32>>),
-    DataDescId(VisIdentityColumn<i32>),
-    Data(VisPolConcatColumn<Complex<f32>>),
-    Exposure(VisApproxMatchColumn<f64>),
-    Feed1(VisIdentityColumn<i32>),
-    Feed2(VisIdentityColumn<i32>),
-    FieldId(VisIdentityColumn<i32>),
-    FlagCategory(VisEmptyColumn<Vec<bool>>),
-    FlagRow(VisLogicalOrColumn<bool>),
-    Flag(VisPolConcatColumn<bool>),
-    Interval(VisApproxMatchColumn<f64>),
-    ModelData(VisPolConcatColumn<Complex<f32>>),
-    ObservationId(VisIdentityColumn<i32>),
-    ProcessorId(VisIdentityColumn<i32>),
-    ScanNumber(VisIdentityColumn<i32>),
-    Sigma(VisApproxMatchColumn<Vec<f32>>),
-    StateId(VisIdentityColumn<i32>),
-    TimeCentroid(VisApproxMatchColumn<f64>),
-    Time(VisIdentityColumn<f64>),
-    Uvw(VisApproxMatchColumn<Vec<f64>>),
-    WeightSpectrum(VisPolConcatColumn<f32>),
-    Weight(VisApproxMatchColumn<Vec<f32>>),
+// Now we use a macro to create the enum type that handles all of the possible
+// columns that might appear in the main visibility data table. The enum type
+// is kind of awkward, but once you work out the macro magic it becomes fairly
+// straightforward to use.
+//
+// Because macros work on an AST level, we can't capture the "state type" of
+// each column as a genuine type (e.g. VisIdentityColumn<i32>) because we are
+// then unable to refer to that type in expression contexts. Therefore we have
+// to put our macros all in terms of "ident" typed captures.
+macro_rules! vis_data_columns {
+    {$($variant_name:ident($col_name:ident, $state_type:ident, $data_type:ty)),+} => {
+        /// This enumeration type represents a column that may appear in the
+        /// main table of a visibility data measurement set. We have to use an
+        /// enumeration type so that we can leverage Rust's generics to read
+        /// in the data with strong, correct typing.
+        #[derive(Clone, Debug, PartialEq)]
+        enum VisDataColumnHandler {
+            $(
+                $variant_name($state_type<$data_type>),
+            )+
+        }
+
+        impl VisDataColumnHandler {
+            pub fn col_name(&self) -> &'static str {
+                match self {
+                    $(
+                        &VisDataColumnHandler::$variant_name(_) => stringify!($col_name),
+                    )+
+                }
+            }
+
+            pub fn process(&mut self, in_spw: &InputSpwInfo, out_spw: &OutputSpwInfo, row: &mut TableRow) -> Result<()> {
+                let col_name = self.col_name();
+
+                Ok(ctry!(match self {
+                    $(
+                        &mut VisDataColumnHandler::$variant_name(ref mut s) => s.process(col_name, in_spw, out_spw, row),
+                    )+
+                }; "problem processing column {}", col_name))
+            }
+
+            pub fn emit(&self, table: &mut Table, row: u64) -> Result<()> {
+                let col_name = self.col_name();
+
+                Ok(ctry!(match self {
+                    $(
+                        &VisDataColumnHandler::$variant_name(ref s) => s.emit(col_name, table, row),
+                    )+
+                }; "problem emitting column {}", col_name))
+            }
+
+            pub fn reset(&mut self) {
+                match self {
+                    $(
+                        &mut VisDataColumnHandler::$variant_name(ref mut s) => s.reset(),
+                    )+
+                }
+            }
+        }
+
+        impl FromStr for VisDataColumnHandler {
+            type Err = Error;
+
+            fn from_str(s: &str) -> Result<Self> {
+                match s {
+                    $(
+                        stringify!($col_name) => Ok(VisDataColumnHandler::$variant_name($state_type::new())),
+                    )+
+                    _ => err_msg!("unrecognized column in visibility data table: \"{}\"", s)
+                }
+            }
+        }
+    };
 }
 
-
-impl FromStr for VisDataColumnHandler {
-    type Err = Error;
-
-    fn from_str(s: &str) -> Result<Self> {
-        if s == "ANTENNA1" {
-            Ok(VisDataColumnHandler::Antenna1(VisIdentityColumn::new()))
-        } else if s == "ANTENNA2" {
-            Ok(VisDataColumnHandler::Antenna2(VisIdentityColumn::new()))
-        } else if s == "ARRAY_ID" {
-            Ok(VisDataColumnHandler::ArrayId(VisIdentityColumn::new()))
-        } else if s == "CORRECTED_DATA" {
-            Ok(VisDataColumnHandler::CorrectedData(VisPolConcatColumn::new()))
-        } else if s == "DATA_DESC_ID" {
-            Ok(VisDataColumnHandler::DataDescId(VisIdentityColumn::new()))
-        } else if s == "DATA" {
-            Ok(VisDataColumnHandler::Data(VisPolConcatColumn::new()))
-        } else if s == "EXPOSURE" {
-            Ok(VisDataColumnHandler::Exposure(VisApproxMatchColumn::new()))
-        } else if s == "FEED1" {
-            Ok(VisDataColumnHandler::Feed1(VisIdentityColumn::new()))
-        } else if s == "FEED2" {
-            Ok(VisDataColumnHandler::Feed2(VisIdentityColumn::new()))
-        } else if s == "FIELD_ID" {
-            Ok(VisDataColumnHandler::FieldId(VisIdentityColumn::new()))
-        } else if s == "FLAG_CATEGORY" {
-            Ok(VisDataColumnHandler::FlagCategory(VisEmptyColumn::new()))
-        } else if s == "FLAG_ROW" {
-            Ok(VisDataColumnHandler::FlagRow(VisLogicalOrColumn::new()))
-        } else if s == "FLAG" {
-            Ok(VisDataColumnHandler::Flag(VisPolConcatColumn::new()))
-        } else if s == "INTERVAL" {
-            Ok(VisDataColumnHandler::Interval(VisApproxMatchColumn::new()))
-        } else if s == "MODEL_DATA" {
-            Ok(VisDataColumnHandler::ModelData(VisPolConcatColumn::new()))
-        } else if s == "OBSERVATION_ID" {
-            Ok(VisDataColumnHandler::ObservationId(VisIdentityColumn::new()))
-        } else if s == "PROCESSOR_ID" {
-            Ok(VisDataColumnHandler::ProcessorId(VisIdentityColumn::new()))
-        } else if s == "SCAN_NUMBER" {
-            Ok(VisDataColumnHandler::ScanNumber(VisIdentityColumn::new()))
-        } else if s == "SIGMA" {
-            Ok(VisDataColumnHandler::Sigma(VisApproxMatchColumn::new()))
-        } else if s == "STATE_ID" {
-            Ok(VisDataColumnHandler::StateId(VisIdentityColumn::new()))
-        } else if s == "TIME_CENTROID" {
-            Ok(VisDataColumnHandler::TimeCentroid(VisApproxMatchColumn::new()))
-        } else if s == "TIME" {
-            Ok(VisDataColumnHandler::Time(VisIdentityColumn::new()))
-        } else if s == "UVW" {
-            Ok(VisDataColumnHandler::Uvw(VisApproxMatchColumn::new()))
-        } else if s == "WEIGHT_SPECTRUM" {
-            Ok(VisDataColumnHandler::WeightSpectrum(VisPolConcatColumn::new()))
-        } else if s == "WEIGHT" {
-            Ok(VisDataColumnHandler::Weight(VisApproxMatchColumn::new()))
-        } else {
-            err_msg!("unrecognized column in visibility data table: \"{}\"", s)
-        }
-    }
-}
-
-impl VisDataColumnHandler {
-    pub fn col_name(&self) -> &'static str {
-        match self {
-            &VisDataColumnHandler::Antenna1(_) => "ANTENNA1",
-            &VisDataColumnHandler::Antenna2(_) => "ANTENNA2",
-            &VisDataColumnHandler::ArrayId(_) => "ARRAY_ID",
-            &VisDataColumnHandler::CorrectedData(_) => "CORRECTED_DATA",
-            &VisDataColumnHandler::DataDescId(_) => "DATA_DESC_ID",
-            &VisDataColumnHandler::Data(_) => "DATA",
-            &VisDataColumnHandler::Exposure(_) => "EXPOSURE",
-            &VisDataColumnHandler::Feed1(_) => "FEED1",
-            &VisDataColumnHandler::Feed2(_) => "FEED2",
-            &VisDataColumnHandler::FieldId(_) => "FIELD_ID",
-            &VisDataColumnHandler::FlagCategory(_) => "FLAG_CATEGORY",
-            &VisDataColumnHandler::FlagRow(_) => "FLAG_ROW",
-            &VisDataColumnHandler::Flag(_) => "FLAG",
-            &VisDataColumnHandler::Interval(_) => "INTERVAL",
-            &VisDataColumnHandler::ModelData(_) => "MODEL_DATA",
-            &VisDataColumnHandler::ObservationId(_) => "OBSERVATION_ID",
-            &VisDataColumnHandler::ProcessorId(_) => "PROCESSOR_ID",
-            &VisDataColumnHandler::ScanNumber(_) => "SCAN_NUMBER",
-            &VisDataColumnHandler::Sigma(_) => "SIGMA",
-            &VisDataColumnHandler::StateId(_) => "STATE_ID",
-            &VisDataColumnHandler::TimeCentroid(_) => "TIME_CENTROID",
-            &VisDataColumnHandler::Time(_) => "TIME",
-            &VisDataColumnHandler::Uvw(_) => "UVW",
-            &VisDataColumnHandler::WeightSpectrum(_) => "WEIGHT_SPECTRUM",
-            &VisDataColumnHandler::Weight(_) => "WEIGHT",
-        }
-    }
-
-    pub fn process(&mut self, in_spw: &InputSpwInfo, out_spw: &OutputSpwInfo, row: &mut TableRow) -> Result<()> {
-        let col_name = self.col_name();
-
-        Ok(ctry!(match self {
-            &mut VisDataColumnHandler::Antenna1(ref mut s) => s.process(col_name, in_spw, out_spw, row),
-            &mut VisDataColumnHandler::Antenna2(ref mut s) => s.process(col_name, in_spw, out_spw, row),
-            &mut VisDataColumnHandler::ArrayId(ref mut s) => s.process(col_name, in_spw, out_spw, row),
-            &mut VisDataColumnHandler::CorrectedData(ref mut s) => s.process(col_name, in_spw, out_spw, row),
-            &mut VisDataColumnHandler::DataDescId(ref mut s) => s.process(col_name, in_spw, out_spw, row),
-            &mut VisDataColumnHandler::Data(ref mut s) => s.process(col_name, in_spw, out_spw, row),
-            &mut VisDataColumnHandler::Exposure(ref mut s) => s.process(col_name, in_spw, out_spw, row),
-            &mut VisDataColumnHandler::Feed1(ref mut s) => s.process(col_name, in_spw, out_spw, row),
-            &mut VisDataColumnHandler::Feed2(ref mut s) => s.process(col_name, in_spw, out_spw, row),
-            &mut VisDataColumnHandler::FieldId(ref mut s) => s.process(col_name, in_spw, out_spw, row),
-            &mut VisDataColumnHandler::FlagCategory(ref mut s) => s.process(col_name, in_spw, out_spw, row),
-            &mut VisDataColumnHandler::FlagRow(ref mut s) => s.process(col_name, in_spw, out_spw, row),
-            &mut VisDataColumnHandler::Flag(ref mut s) => s.process(col_name, in_spw, out_spw, row),
-            &mut VisDataColumnHandler::Interval(ref mut s) => s.process(col_name, in_spw, out_spw, row),
-            &mut VisDataColumnHandler::ModelData(ref mut s) => s.process(col_name, in_spw, out_spw, row),
-            &mut VisDataColumnHandler::ObservationId(ref mut s) => s.process(col_name, in_spw, out_spw, row),
-            &mut VisDataColumnHandler::ProcessorId(ref mut s) => s.process(col_name, in_spw, out_spw, row),
-            &mut VisDataColumnHandler::ScanNumber(ref mut s) => s.process(col_name, in_spw, out_spw, row),
-            &mut VisDataColumnHandler::Sigma(ref mut s) => s.process(col_name, in_spw, out_spw, row),
-            &mut VisDataColumnHandler::StateId(ref mut s) => s.process(col_name, in_spw, out_spw, row),
-            &mut VisDataColumnHandler::TimeCentroid(ref mut s) => s.process(col_name, in_spw, out_spw, row),
-            &mut VisDataColumnHandler::Time(ref mut s) => s.process(col_name, in_spw, out_spw, row),
-            &mut VisDataColumnHandler::Uvw(ref mut s) => s.process(col_name, in_spw, out_spw, row),
-            &mut VisDataColumnHandler::WeightSpectrum(ref mut s) => s.process(col_name, in_spw, out_spw, row),
-            &mut VisDataColumnHandler::Weight(ref mut s) => s.process(col_name, in_spw, out_spw, row),
-        }; "problem processing column {}", col_name))
-    }
-
-    pub fn emit(&self, table: &mut Table, row: u64) -> Result<()> {
-        let col_name = self.col_name();
-
-        Ok(ctry!(match self {
-            &VisDataColumnHandler::Antenna1(ref s) => s.emit(col_name, table, row),
-            &VisDataColumnHandler::Antenna2(ref s) => s.emit(col_name, table, row),
-            &VisDataColumnHandler::ArrayId(ref s) => s.emit(col_name, table, row),
-            &VisDataColumnHandler::CorrectedData(ref s) => s.emit(col_name, table, row),
-            &VisDataColumnHandler::DataDescId(ref s) => s.emit(col_name, table, row),
-            &VisDataColumnHandler::Data(ref s) => s.emit(col_name, table, row),
-            &VisDataColumnHandler::Exposure(ref s) => s.emit(col_name, table, row),
-            &VisDataColumnHandler::Feed1(ref s) => s.emit(col_name, table, row),
-            &VisDataColumnHandler::Feed2(ref s) => s.emit(col_name, table, row),
-            &VisDataColumnHandler::FieldId(ref s) => s.emit(col_name, table, row),
-            &VisDataColumnHandler::FlagCategory(ref s) => s.emit(col_name, table, row),
-            &VisDataColumnHandler::FlagRow(ref s) => s.emit(col_name, table, row),
-            &VisDataColumnHandler::Flag(ref s) => s.emit(col_name, table, row),
-            &VisDataColumnHandler::Interval(ref s) => s.emit(col_name, table, row),
-            &VisDataColumnHandler::ModelData(ref s) => s.emit(col_name, table, row),
-            &VisDataColumnHandler::ObservationId(ref s) => s.emit(col_name, table, row),
-            &VisDataColumnHandler::ProcessorId(ref s) => s.emit(col_name, table, row),
-            &VisDataColumnHandler::ScanNumber(ref s) => s.emit(col_name, table, row),
-            &VisDataColumnHandler::Sigma(ref s) => s.emit(col_name, table, row),
-            &VisDataColumnHandler::StateId(ref s) => s.emit(col_name, table, row),
-            &VisDataColumnHandler::TimeCentroid(ref s) => s.emit(col_name, table, row),
-            &VisDataColumnHandler::Time(ref s) => s.emit(col_name, table, row),
-            &VisDataColumnHandler::Uvw(ref s) => s.emit(col_name, table, row),
-            &VisDataColumnHandler::WeightSpectrum(ref s) => s.emit(col_name, table, row),
-            &VisDataColumnHandler::Weight(ref s) => s.emit(col_name, table, row),
-        }; "problem emitting column {}", col_name))
-    }
-
-    pub fn reset(&mut self) {
-        match self {
-            &mut VisDataColumnHandler::Antenna1(ref mut s) => s.reset(),
-            &mut VisDataColumnHandler::Antenna2(ref mut s) => s.reset(),
-            &mut VisDataColumnHandler::ArrayId(ref mut s) => s.reset(),
-            &mut VisDataColumnHandler::CorrectedData(ref mut s) => s.reset(),
-            &mut VisDataColumnHandler::DataDescId(ref mut s) => s.reset(),
-            &mut VisDataColumnHandler::Data(ref mut s) => s.reset(),
-            &mut VisDataColumnHandler::Exposure(ref mut s) => s.reset(),
-            &mut VisDataColumnHandler::Feed1(ref mut s) => s.reset(),
-            &mut VisDataColumnHandler::Feed2(ref mut s) => s.reset(),
-            &mut VisDataColumnHandler::FieldId(ref mut s) => s.reset(),
-            &mut VisDataColumnHandler::FlagCategory(ref mut s) => s.reset(),
-            &mut VisDataColumnHandler::FlagRow(ref mut s) => s.reset(),
-            &mut VisDataColumnHandler::Flag(ref mut s) => s.reset(),
-            &mut VisDataColumnHandler::Interval(ref mut s) => s.reset(),
-            &mut VisDataColumnHandler::ModelData(ref mut s) => s.reset(),
-            &mut VisDataColumnHandler::ObservationId(ref mut s) => s.reset(),
-            &mut VisDataColumnHandler::ProcessorId(ref mut s) => s.reset(),
-            &mut VisDataColumnHandler::ScanNumber(ref mut s) => s.reset(),
-            &mut VisDataColumnHandler::Sigma(ref mut s) => s.reset(),
-            &mut VisDataColumnHandler::StateId(ref mut s) => s.reset(),
-            &mut VisDataColumnHandler::TimeCentroid(ref mut s) => s.reset(),
-            &mut VisDataColumnHandler::Time(ref mut s) => s.reset(),
-            &mut VisDataColumnHandler::Uvw(ref mut s) => s.reset(),
-            &mut VisDataColumnHandler::WeightSpectrum(ref mut s) => s.reset(),
-            &mut VisDataColumnHandler::Weight(ref mut s) => s.reset(),
-        }
-    }
+vis_data_columns! {
+    Antenna1(ANTENNA1, VisIdentityColumn, i32),
+    Antenna2(ANTENNA2, VisIdentityColumn, i32),
+    ArrayId(ARRAY_ID, VisIdentityColumn, i32),
+    CorrectedData(CORRECTED_DATA, VisPolConcatColumn, Complex<f32>),
+    DataDescId(DATA_DESC_ID, VisIdentityColumn, i32),
+    Data(DATA, VisPolConcatColumn, Complex<f32>),
+    Exposure(EXPOSURE, VisApproxMatchColumn, f64),
+    Feed1(FEED1, VisIdentityColumn, i32),
+    Feed2(FEED2, VisIdentityColumn, i32),
+    FieldId(FIELD_ID, VisIdentityColumn, i32),
+    FlagCategory(FLAG_CATEGORY, VisEmptyColumn, Vec<bool>),
+    FlagRow(FLAG_ROW, VisLogicalOrColumn, bool),
+    Flag(FLAG, VisPolConcatColumn, bool),
+    Interval(INTERVAL, VisApproxMatchColumn, f64),
+    ModelData(MODEL_DATA, VisPolConcatColumn, Complex<f32>),
+    ObservationId(OBSERVATION_ID, VisIdentityColumn, i32),
+    ProcessorId(PROCESSOR_ID, VisIdentityColumn, i32),
+    ScanNumber(SCAN_NUMBER, VisIdentityColumn, i32),
+    Sigma(SIGMA, VisApproxMatchColumn, Vec<f32>),
+    StateId(STATE_ID, VisIdentityColumn, i32),
+    TimeCentroid(TIME_CENTROID, VisApproxMatchColumn, f64),
+    Time(TIME, VisIdentityColumn, f64),
+    Uvw(UVW, VisApproxMatchColumn, Vec<f64>),
+    WeightSpectrum(WEIGHT_SPECTRUM, VisPolConcatColumn, f32),
+    Weight(WEIGHT, VisApproxMatchColumn, Vec<f32>)
 }
 
 
