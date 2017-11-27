@@ -678,7 +678,7 @@ struct VisRecordIdentity<T: Clone + std::fmt::Debug + Eq + std::hash::Hash> {
     scan_number: i32,
     state_id: i32,
 
-    /// Needed since f64 is not Hash or Eq.
+    /// Needed since f64 is not Hash or Eq; we take care to ensure bitwise equality below.
     recast_time: u64,
 }
 
@@ -686,7 +686,10 @@ impl<T: Clone + std::fmt::Debug + Eq + std::hash::Hash> VisRecordIdentity<T> {
     pub fn create(discriminant: T, row: &mut TableRow, last_time: f64) -> Result<Self> {
         let mut time: f64 = row.get_cell("TIME")?;
 
-        if ((time - last_time) / time).abs() < 1e-8 {
+        // Times are seconds since MJD=0, so they have magnitudes of about
+        // several billion. Fractional variations of 1e-11 represent ~0.1
+        // second variations which seems like the right tolerance.
+        if ((time - last_time) / time).abs() < 1e-11 {
             time = last_time;
         }
 
