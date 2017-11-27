@@ -1,11 +1,13 @@
 // Copyright 2017 Peter Williams <peter@newton.cx> and collaborators
 // Licensed under the MIT License.
 
+extern crate ndarray;
 #[macro_use] extern crate error_chain;
 extern crate rubbl_core;
 extern crate rubbl_casatables_impl;
 
-use rubbl_core::{Array, Complex, Ix2};
+use ndarray::{Dimension, IntoDimension, Ix0, Ix1, Ix2, Ix3, Ix4};
+use rubbl_core::{Array, Complex};
 use std::path::Path;
 
 #[macro_use] pub mod errors; // most come first to provide macros for other modules
@@ -435,72 +437,70 @@ impl CasaDataType for Vec<String> {
 }
 
 
-// FIXME! Make generic regarding ndim!
-impl CasaDataType for Array<bool, Ix2> {
-    const DATA_TYPE: glue::GlueDataType = glue::GlueDataType::TpArrayBool;
+/// This is a helper trait that we need to create in order to support ndarray
+/// data buffers without tons of code duplication. It needs to be public
+/// because it appears in the trait bounds of the public Array impl of
+/// CasaDataType.
+pub trait DimFromShapeSlice {
+    fn from_shape_slice(shape: &[u64]) -> Self;
+}
 
-    fn casatables_alloc(shape: &[u64]) -> Self {
-        if shape.len() != 2 {
-            panic!("expect 2-dimensional array");
+impl DimFromShapeSlice for Ix0 {
+    fn from_shape_slice(shape: &[u64]) -> Self {
+        if shape.len() != 0 {
+            panic!("expect 0-dimensional array shape");
         }
 
-        unsafe { Self::uninitialized((shape[0] as usize, shape[1] as usize)) }
-    }
-
-    fn casatables_put_shape(&self, shape_dest: &mut Vec<u64>) {
-        shape_dest.truncate(0);
-        for s in self.shape() {
-            shape_dest.push(*s as u64);
-        }
-    }
-
-    fn casatables_as_buf(&self) -> *const () {
-        self.as_ptr() as _
-    }
-
-    fn casatables_as_mut_buf(&mut self) -> *mut () {
-        self.as_mut_ptr() as _
+        [].into_dimension()
     }
 }
 
-// FIXME! Make generic regarding ndim!
-impl CasaDataType for Array<f32, Ix2> {
-    const DATA_TYPE: glue::GlueDataType = glue::GlueDataType::TpArrayFloat;
-
-    fn casatables_alloc(shape: &[u64]) -> Self {
-        if shape.len() != 2 {
-            panic!("expect 2-dimensional array");
+impl DimFromShapeSlice for Ix1 {
+    fn from_shape_slice(shape: &[u64]) -> Self {
+        if shape.len() != 1 {
+            panic!("expect 1-dimensional array shape");
         }
 
-        unsafe { Self::uninitialized((shape[0] as usize, shape[1] as usize)) }
-    }
-
-    fn casatables_put_shape(&self, shape_dest: &mut Vec<u64>) {
-        shape_dest.truncate(0);
-        for s in self.shape() {
-            shape_dest.push(*s as u64);
-        }
-    }
-
-    fn casatables_as_buf(&self) -> *const () {
-        self.as_ptr() as _
-    }
-
-    fn casatables_as_mut_buf(&mut self) -> *mut () {
-        self.as_mut_ptr() as _
+        [shape[0] as usize].into_dimension()
     }
 }
 
-// FIXME! Make generic regarding ndim!
-impl CasaDataType for Array<Complex<f32>, Ix2> {
-    const DATA_TYPE: glue::GlueDataType = glue::GlueDataType::TpArrayComplex;
-
-    fn casatables_alloc(shape: &[u64]) -> Self {
+impl DimFromShapeSlice for Ix2 {
+    fn from_shape_slice(shape: &[u64]) -> Self {
         if shape.len() != 2 {
-            panic!("expect 2-dimensional array");
+            panic!("expect 2-dimensional array shape");
         }
 
-        unsafe { Self::uninitialized((shape[0] as usize, shape[1] as usize)) }
+        [shape[0] as usize, shape[1] as usize].into_dimension()
+    }
+}
+
+impl DimFromShapeSlice for Ix3 {
+    fn from_shape_slice(shape: &[u64]) -> Self {
+        if shape.len() != 3 {
+            panic!("expect 3-dimensional array shape");
+        }
+
+        [shape[0] as usize, shape[1] as usize, shape[2] as usize].into_dimension()
+    }
+}
+
+impl DimFromShapeSlice for Ix4 {
+    fn from_shape_slice(shape: &[u64]) -> Self {
+        if shape.len() != 4 {
+            panic!("expect 4-dimensional array shape");
+        }
+
+        [shape[0] as usize, shape[1] as usize, shape[2] as usize, shape[3] as usize].into_dimension()
+    }
+}
+
+
+impl<I: CasaScalarData + Copy, D: Dimension + DimFromShapeSlice> CasaDataType for Array<I, D> {
+    const DATA_TYPE: glue::GlueDataType = I::VECTOR_TYPE;
+
+    fn casatables_alloc(shape: &[u64]) -> Self {
+        unsafe { Self::uninitialized(D::from_shape_slice(shape)) }
     }
 
     fn casatables_put_shape(&self, shape_dest: &mut Vec<u64>) {
