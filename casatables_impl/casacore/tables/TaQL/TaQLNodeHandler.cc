@@ -75,7 +75,7 @@ namespace casacore { //# NAMESPACE CASACORE - BEGIN
   void TaQLNodeHandler::popStack()
   {
     delete topStack();
-    itsStack.resize (itsStack.size()-1);
+    itsStack.pop_back();
   }
   void TaQLNodeHandler::clearStack()
   {

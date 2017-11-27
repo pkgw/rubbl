@@ -54,7 +54,7 @@ namespace casacore { //# NAMESPACE CASACORE - BEGIN
   public:
     // Construct for a given data type.
     explicit TableExprGroupKey (TableExprNodeRep::NodeDataType dtype)
-      : itsDT (dtype)
+        : itsDT (dtype), itsBool(False), itsInt64(0), itsDouble(0.0), itsString("")
     {}
 
     // Get the data type.
