@@ -1,11 +1,12 @@
 // Copyright 2017 Peter Williams <peter@newton.cx> and collaborators
 // Licensed under the MIT License.
 
+extern crate clap;
 #[macro_use] extern crate ndarray;
 extern crate num_traits;
+extern crate pbr;
 extern crate rubbl_casatables;
 #[macro_use] extern crate rubbl_core;
-extern crate clap;
 
 use clap::{App, Arg};
 use num_traits::{Float, One, Signed, Zero};
@@ -1029,6 +1030,8 @@ zero-based.")
         let mut state_pool: Vec<OutputRecordState> = Vec::new();
         let mut last_time = 0f64;
         let mut in_row_num = 0usize;
+        let mut pb = pbr::ProgressBar::new(in_main_table.n_rows());
+        pb.set_max_refresh_rate(Some(std::time::Duration::from_millis(500)));
 
         let mut out_main_table = ctry!(Table::open(&outpath, TableOpenMode::ReadWrite);
                                       "failed to open output \"{}\"", outpath.display());
@@ -1068,11 +1071,13 @@ zero-based.")
 
             last_time = in_row.get_cell("TIME")?;
             in_row_num += 1;
+            pb.inc();
             Ok(())
         })?;
 
         // All done!
 
+        pb.finish();
         Ok(0)
     }));
 }
