@@ -28,6 +28,22 @@ use std::str::FromStr;
 // shame that we can't handle the options purely with data tables, but
 // type-based column reading has a lot of advantages more generally.
 
+struct IgnoreColumnHandler<T> {
+    _nope: PhantomData<T>
+}
+
+impl<T> IgnoreColumnHandler<T> {
+    pub fn new() -> Self {
+        Self { _nope: PhantomData }
+    }
+
+    pub fn process(&self, _src_table: &mut Table, _col_name: &str,
+                   _mappings: &[OutputSpwInfo], _dest_table: &mut Table) -> Result<()> {
+        Ok(())
+    }
+}
+
+
 struct UseFirstColumnHandler<T: CasaScalarData> {
     _nope: PhantomData<T>
 }
@@ -141,142 +157,81 @@ impl<T: CasaScalarData> ConcatVectorColumnHandler<T>
 }
 
 
-// A lot of this stuff could be condensed with some smart macro-ization, I
-// think, but it looks like it'd be some work so for now we just do it all
-// manually.
+// Now we use a macro to create the enum type that handles all of the possible
+// columns that might appear in the SPECTRAL_WINDOW table. The enum type is
+// kind of awkward, but once you work out the macro magic it becomes fairly
+// straightforward to use.
+//
+// Because macros work on an AST level, we can't capture the "state type" of
+// each column as a genuine type (e.g. UseFirstColumnHandler<i32>) because we are
+// then unable to refer to that type in expression contexts. Therefore we have
+// to put our macros all in terms of "ident" typed captures.
+macro_rules! spectral_window_columns {
+    {$($variant_name:ident($col_name:ident, $state_type:ident, $data_type:ty)),+} => {
+        /// This enumeration type represents a column that may appear in the
+        /// SPECTRAL_WINDOW table of a visibility data measurement set. We
+        /// have to use an enumeration type so that we can leverage Rust's
+        /// generics to read in the data with strong, correct typing.
+        enum SpectralWindowColumnHandler {
+            $(
+                $variant_name($state_type<$data_type>),
+            )+
+        }
 
-enum SpectralWindowColumnHandler {
-    AssocNature, // ignored
-    AssocSpwId, // ignored
-    BbcNo(MustMatchColumnHandler<i32>),
-    ChanFreq(ConcatVectorColumnHandler<f64>),
-    ChanWidth(ConcatVectorColumnHandler<f64>),
-    DopplerId(UseFirstColumnHandler<i32>),
-    EffectiveBw(ConcatVectorColumnHandler<f64>),
-    FlagRow(MustMatchColumnHandler<bool>),
-    FreqGroup(MustMatchColumnHandler<i32>),
-    FreqGroupName(MustMatchColumnHandler<String>),
-    IfConvChain(MustMatchColumnHandler<i32>),
-    MeasFreqRef(MustMatchColumnHandler<i32>),
-    Name(UseFirstColumnHandler<String>),
-    NetSideband(MustMatchColumnHandler<i32>),
-    NumChan(SumScalarColumnHandler<i32>),
-    RefFrequency(UseFirstColumnHandler<f64>),
-    Resolution(ConcatVectorColumnHandler<f64>),
-    TotalBandwidth(SumScalarColumnHandler<f64>),
+        impl SpectralWindowColumnHandler {
+            pub fn col_name(&self) -> &'static str {
+                match self {
+                    $(
+                        &SpectralWindowColumnHandler::$variant_name(_) => stringify!($col_name),
+                    )+
+                }
+            }
+
+            pub fn process(&self, src_table: &mut Table, mappings: &[OutputSpwInfo], dest_table: &mut Table) -> Result<()> {
+                match self {
+                    $(
+                        &SpectralWindowColumnHandler::$variant_name(ref h) =>
+                            h.process(src_table, self.col_name(), mappings, dest_table),
+                    )+
+                }
+            }
+        }
+
+        impl FromStr for SpectralWindowColumnHandler {
+            type Err = Error;
+
+            fn from_str(s: &str) -> Result<Self> {
+                match s {
+                    $(
+                        stringify!($col_name) => Ok(SpectralWindowColumnHandler::$variant_name($state_type::new())),
+                    )+
+                    _ => err_msg!("unrecognized column in SPECTRAL_WINDOW table: \"{}\"", s)
+                }
+            }
+        }
+    };
 }
 
-impl FromStr for SpectralWindowColumnHandler {
-    type Err = Error;
 
-    fn from_str(s: &str) -> Result<Self> {
-        if s == "ASSOC_NATURE" {
-            Ok(SpectralWindowColumnHandler::AssocNature)
-        } else if s == "ASSOC_SPW_ID" {
-            Ok(SpectralWindowColumnHandler::AssocSpwId)
-        } else if s == "BBC_NO" {
-            Ok(SpectralWindowColumnHandler::BbcNo(MustMatchColumnHandler::new()))
-        } else if s == "CHAN_FREQ" {
-            Ok(SpectralWindowColumnHandler::ChanFreq(ConcatVectorColumnHandler::new()))
-        } else if s == "CHAN_WIDTH" {
-            Ok(SpectralWindowColumnHandler::ChanWidth(ConcatVectorColumnHandler::new()))
-        } else if s == "DOPPLER_ID" {
-            Ok(SpectralWindowColumnHandler::DopplerId(UseFirstColumnHandler::new()))
-        } else if s == "EFFECTIVE_BW" {
-            Ok(SpectralWindowColumnHandler::EffectiveBw(ConcatVectorColumnHandler::new()))
-        } else if s == "FLAG_ROW" {
-            Ok(SpectralWindowColumnHandler::FlagRow(MustMatchColumnHandler::new()))
-        } else if s == "FREQ_GROUP" {
-            Ok(SpectralWindowColumnHandler::FreqGroup(MustMatchColumnHandler::new()))
-        } else if s == "FREQ_GROUP_NAME" {
-            Ok(SpectralWindowColumnHandler::FreqGroupName(MustMatchColumnHandler::new()))
-        } else if s == "IF_CONV_CHAIN" {
-            Ok(SpectralWindowColumnHandler::IfConvChain(MustMatchColumnHandler::new()))
-        } else if s == "MEAS_FREQ_REF" {
-            Ok(SpectralWindowColumnHandler::MeasFreqRef(MustMatchColumnHandler::new()))
-        } else if s == "NAME" {
-            Ok(SpectralWindowColumnHandler::Name(UseFirstColumnHandler::new()))
-        } else if s == "NET_SIDEBAND" {
-            Ok(SpectralWindowColumnHandler::NetSideband(MustMatchColumnHandler::new()))
-        } else if s == "NUM_CHAN" {
-            Ok(SpectralWindowColumnHandler::NumChan(SumScalarColumnHandler::new()))
-        } else if s == "REF_FREQUENCY" {
-            Ok(SpectralWindowColumnHandler::RefFrequency(UseFirstColumnHandler::new()))
-        } else if s == "RESOLUTION" {
-            Ok(SpectralWindowColumnHandler::Resolution(ConcatVectorColumnHandler::new()))
-        } else if s == "TOTAL_BANDWIDTH" {
-            Ok(SpectralWindowColumnHandler::TotalBandwidth(SumScalarColumnHandler::new()))
-        } else {
-            err_msg!("unrecognized column in SPECTRAL_WINDOW table: \"{}\"", s)
-        }
-    }
-}
-
-impl SpectralWindowColumnHandler {
-    pub fn col_name(&self) -> &str {
-        // No better way?
-        match self {
-            &SpectralWindowColumnHandler::AssocNature => "ASSOC_NATURE",
-            &SpectralWindowColumnHandler::AssocSpwId => "ASSOC_SPW_ID",
-            &SpectralWindowColumnHandler::BbcNo(_) => "BBC_NO",
-            &SpectralWindowColumnHandler::ChanFreq(_) => "CHAN_FREQ",
-            &SpectralWindowColumnHandler::ChanWidth(_) => "CHAN_WIDTH",
-            &SpectralWindowColumnHandler::DopplerId(_) => "DOPPLER_ID",
-            &SpectralWindowColumnHandler::EffectiveBw(_) => "EFFECTIVE_BW",
-            &SpectralWindowColumnHandler::FlagRow(_) => "FLAG_ROW",
-            &SpectralWindowColumnHandler::FreqGroup(_) => "FREQ_GROUP",
-            &SpectralWindowColumnHandler::FreqGroupName(_) => "FREQ_GROUP_NAME",
-            &SpectralWindowColumnHandler::IfConvChain(_) => "IF_CONV_CHAIN",
-            &SpectralWindowColumnHandler::MeasFreqRef(_) => "MEAS_FREQ_REF",
-            &SpectralWindowColumnHandler::Name(_) => "NAME",
-            &SpectralWindowColumnHandler::NetSideband(_) => "NET_SIDEBAND",
-            &SpectralWindowColumnHandler::NumChan(_) => "NUM_CHAN",
-            &SpectralWindowColumnHandler::RefFrequency(_) => "REF_FREQUENCY",
-            &SpectralWindowColumnHandler::Resolution(_) => "RESOLUTION",
-            &SpectralWindowColumnHandler::TotalBandwidth(_) => "TOTAL_BANDWIDTH",
-        }
-    }
-
-    pub fn process(&self, src_table: &mut Table, mappings: &[OutputSpwInfo], dest_table: &mut Table) -> Result<()> {
-        match self {
-            &SpectralWindowColumnHandler::AssocNature =>
-                Ok(()), // ignore
-            &SpectralWindowColumnHandler::AssocSpwId =>
-                Ok(()), // ignore
-            &SpectralWindowColumnHandler::BbcNo(ref handler) =>
-                handler.process(src_table, self.col_name(), mappings, dest_table),
-            &SpectralWindowColumnHandler::ChanFreq(ref handler) =>
-                handler.process(src_table, self.col_name(), mappings, dest_table),
-            &SpectralWindowColumnHandler::ChanWidth(ref handler) =>
-                handler.process(src_table, self.col_name(), mappings, dest_table),
-            &SpectralWindowColumnHandler::DopplerId(ref handler) =>
-                handler.process(src_table, self.col_name(), mappings, dest_table),
-            &SpectralWindowColumnHandler::EffectiveBw(ref handler) =>
-                handler.process(src_table, self.col_name(), mappings, dest_table),
-            &SpectralWindowColumnHandler::FlagRow(ref handler) =>
-                handler.process(src_table, self.col_name(), mappings, dest_table),
-            &SpectralWindowColumnHandler::FreqGroup(ref handler) =>
-                handler.process(src_table, self.col_name(), mappings, dest_table),
-            &SpectralWindowColumnHandler::FreqGroupName(ref handler) =>
-                handler.process(src_table, self.col_name(), mappings, dest_table),
-            &SpectralWindowColumnHandler::IfConvChain(ref handler) =>
-                handler.process(src_table, self.col_name(), mappings, dest_table),
-            &SpectralWindowColumnHandler::MeasFreqRef(ref handler) =>
-                handler.process(src_table, self.col_name(), mappings, dest_table),
-            &SpectralWindowColumnHandler::Name(ref handler) =>
-                handler.process(src_table, self.col_name(), mappings, dest_table),
-            &SpectralWindowColumnHandler::NetSideband(ref handler) =>
-                handler.process(src_table, self.col_name(), mappings, dest_table),
-            &SpectralWindowColumnHandler::NumChan(ref handler) =>
-                handler.process(src_table, self.col_name(), mappings, dest_table),
-            &SpectralWindowColumnHandler::RefFrequency(ref handler) =>
-                handler.process(src_table, self.col_name(), mappings, dest_table),
-            &SpectralWindowColumnHandler::Resolution(ref handler) =>
-                handler.process(src_table, self.col_name(), mappings, dest_table),
-            &SpectralWindowColumnHandler::TotalBandwidth(ref handler) =>
-                handler.process(src_table, self.col_name(), mappings, dest_table),
-        }
-    }
+spectral_window_columns! {
+    AssocNature(ASSOC_NATURE, IgnoreColumnHandler, ()),
+    AssocSpwId(ASSOC_SPW_ID, IgnoreColumnHandler, ()),
+    BbcNo(BBC_NO, MustMatchColumnHandler, i32),
+    ChanFreq(CHAN_FREQ, ConcatVectorColumnHandler, f64),
+    ChanWidth(CHAN_WIDTH, ConcatVectorColumnHandler, f64),
+    DopplerId(DOPPLER_ID, UseFirstColumnHandler, i32),
+    EffectiveBw(EFFECTIVE_BW, ConcatVectorColumnHandler, f64),
+    FlagRow(FLAG_ROW, MustMatchColumnHandler, bool),
+    FreqGroup(FREQ_GROUP, MustMatchColumnHandler, i32),
+    FreqGroupName(FREQ_GROUP_NAME, MustMatchColumnHandler, String),
+    IfConvChain(IF_CONV_CHAIN, MustMatchColumnHandler, i32),
+    MeasFreqRef(MEAS_FREQ_REF, MustMatchColumnHandler, i32),
+    Name(NAME, UseFirstColumnHandler, String),
+    NetSideband(NET_SIDEBAND, MustMatchColumnHandler, i32),
+    NumChan(NUM_CHAN, SumScalarColumnHandler, i32),
+    RefFrequency(REF_FREQUENCY, UseFirstColumnHandler, f64),
+    Resolution(RESOLUTION, ConcatVectorColumnHandler, f64),
+    TotalBandwidth(TOTAL_BANDWIDTH, SumScalarColumnHandler, f64)
 }
 
 
