@@ -263,7 +263,7 @@ trait CheckApproximateMatch {
     fn approx_match_tol() -> Self::Element {
         // This is kind of ridiculous, but I can't figure out a way to get a
         // literal constant that's agnostic as to the type T ...
-        Self::Element::one().exp2().powi(20).recip()
+        Self::Element::one().exp2().powi(-20)
     }
 
     fn is_approximately_same(&self, other: &Self) -> bool;
@@ -450,15 +450,7 @@ impl<T: CasaScalarData + Default + std::fmt::Debug> VisPolConcatColumn<T> where 
 }
 
 
-// Now we use a macro to create the enum type that handles all of the possible
-// columns that might appear in the main visibility data table. The enum type
-// is kind of awkward, but once you work out the macro magic it becomes fairly
-// straightforward to use.
-//
-// Because macros work on an AST level, we can't capture the "state type" of
-// each column as a genuine type (e.g. VisIdentityColumn<i32>) because we are
-// then unable to refer to that type in expression contexts. Therefore we have
-// to put our macros all in terms of "ident" typed captures.
+// Now the same sort of macro stuff, for the main visibility data columns.
 macro_rules! vis_data_columns {
     {$($variant_name:ident($col_name:ident, $state_type:ident, $data_type:ty)),+} => {
         /// This enumeration type represents a column that may appear in the
