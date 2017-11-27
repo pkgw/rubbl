@@ -2,11 +2,13 @@
 // Licensed under the MIT License.
 
 #[macro_use] extern crate ndarray;
+extern crate num_traits;
 extern crate rubbl_casatables;
 #[macro_use] extern crate rubbl_core;
 extern crate clap;
 
 use clap::{App, Arg};
+use num_traits::{Float, One, Signed, Zero};
 use rubbl_casatables::{CasaDataType, CasaScalarData, Table, TableOpenMode, TableRow};
 use rubbl_casatables::errors::{Error, Result};
 use rubbl_core::{Array, Complex, Ix2};
@@ -290,7 +292,7 @@ impl<T: CasaScalarData> VisIdentityColumn<T> {
         Self { value: None }
     }
 
-    pub fn process(&mut self, col_name: &str, in_spw: &InputSpwInfo, out_spw: &OutputSpwInfo, row: &mut TableRow) -> Result<()> {
+    pub fn process(&mut self, col_name: &str, _in_spw: &InputSpwInfo, _out_spw: &OutputSpwInfo, row: &mut TableRow) -> Result<()> {
         // Since this column helps define the record's identity, subsequent rows match the
         // first row by definition.
         if self.value.is_none() {
@@ -300,7 +302,7 @@ impl<T: CasaScalarData> VisIdentityColumn<T> {
         Ok(())
     }
 
-    pub fn emit(&self, col_name: &str, out_spw: &OutputSpwInfo, table: &mut Table, row: u64) -> Result<()> {
+    pub fn emit(&self, col_name: &str, table: &mut Table, row: u64) -> Result<()> {
         if let Some(ref v) = self.value {
             table.put_cell(col_name, row, v)?;
         }
@@ -314,21 +316,87 @@ impl<T: CasaScalarData> VisIdentityColumn<T> {
 }
 
 
+trait CheckApproximateMatch {
+    type Element: Float + One + PartialOrd + Signed;
+
+    fn approx_match_tol() -> Self::Element {
+        // This is kind of ridiculous, but I can't figure out a way to get a
+        // literal constant that's agnostic as to the type T ...
+        Self::Element::one().exp2().powi(20).recip()
+    }
+
+    fn is_approximately_same(&self, other: &Self) -> bool;
+}
+
+/// Without the following, the typechecker considers our impls to not be
+/// mutually exclusive because num_traits could in principle impl Float, etc,
+/// for Vec<T>.
+trait NeverImpledForVec {}
+impl NeverImpledForVec for f32 {}
+impl NeverImpledForVec for f64 {}
+
+impl<T: Float + One + NeverImpledForVec + PartialOrd + Signed + std::ops::Sub + Zero> CheckApproximateMatch for T {
+    type Element = T;
+
+    fn is_approximately_same(&self, other: &Self) -> bool {
+        if *self == Zero::zero() {
+            other.abs() < Self::approx_match_tol()
+        } else if *other == Zero::zero() {
+            self.abs() < Self::approx_match_tol()
+        } else {
+            let diff = *self - *other;
+            diff.abs() / self.abs() < Self::approx_match_tol()
+        }
+    }
+}
+
+impl<T: std::fmt::Debug + Float + One + PartialOrd + Signed + std::ops::Sub + Zero> CheckApproximateMatch for Vec<T> {
+    type Element = T;
+
+    fn is_approximately_same(&self, other: &Self) -> bool {
+        assert_eq!(self.len(), other.len());
+
+        let tol = Self::approx_match_tol();
+
+        for (v1, v2) in self.iter().zip(other.iter()) {
+            if *v1 == Zero::zero() {
+                if Signed::abs(v2) > tol {
+                    return false;
+                }
+            } else if *v2 == Zero::zero() {
+                if Signed::abs(v1) > tol {
+                    return false;
+                }
+            } else {
+                let diff = *v1 - *v2;
+                if Signed::abs(&diff) / Signed::abs(v1) > tol {
+                    return false;
+                }
+            }
+        }
+
+        true
+    }
+}
+
+
 #[derive(Clone, Debug, PartialEq)]
 struct VisApproxMatchColumn<T: CasaDataType> {
     value: Option<T>,
 }
 
-impl<T: CasaDataType> VisApproxMatchColumn<T> {
+impl<T: CasaDataType + CheckApproximateMatch> VisApproxMatchColumn<T> {
     pub fn new() -> Self {
         Self { value: None }
     }
 
-    pub fn process(&mut self, col_name: &str, in_spw: &InputSpwInfo, out_spw: &OutputSpwInfo, row: &mut TableRow) -> Result<()> {
+    pub fn process(&mut self, col_name: &str, _in_spw: &InputSpwInfo, _out_spw: &OutputSpwInfo, row: &mut TableRow) -> Result<()> {
         let cur = row.get_cell(col_name)?;
 
         if let Some(ref prev) = self.value {
-            // TODO: check!!!
+            if !prev.is_approximately_same(&cur) {
+                return err_msg!("column {} should be approximately constant across spws, but values changed", col_name);
+            }
         } else {
             self.value =  Some(cur);
         }
@@ -338,7 +406,7 @@ impl<T: CasaDataType> VisApproxMatchColumn<T> {
 
     // I tried to use a writeable output row for this, but I couldn't find a
     // way to leave the FLAG_CATEGORY column undefined.
-    pub fn emit(&self, col_name: &str, _out_spw: &OutputSpwInfo, table: &mut Table, row: u64) -> Result<()> {
+    pub fn emit(&self, col_name: &str, table: &mut Table, row: u64) -> Result<()> {
         if let Some(ref v) = self.value {
             table.put_cell(col_name, row, v)?;
         }
@@ -362,11 +430,11 @@ impl<T> VisEmptyColumn<Vec<T>> where Vec<T>: CasaDataType {
         Self { _nope: PhantomData }
     }
 
-    pub fn process(&mut self, col_name: &str, in_spw: &InputSpwInfo, out_spw: &OutputSpwInfo, row: &mut TableRow) -> Result<()> {
+    pub fn process(&mut self, _col_name: &str, _in_spw: &InputSpwInfo, _out_spw: &OutputSpwInfo, _row: &mut TableRow) -> Result<()> {
         Ok(())
     }
 
-    pub fn emit(&self, col_name: &str, _out_spw: &OutputSpwInfo, table: &mut Table, row: u64) -> Result<()> {
+    pub fn emit(&self, _col_name: &str, _table: &mut Table, _row: u64) -> Result<()> {
         Ok(())
     }
 
@@ -385,13 +453,13 @@ impl<T: CasaDataType + Default + std::ops::BitOrAssign> VisLogicalOrColumn<T> {
         Self { value: T::default() }
     }
 
-    pub fn process(&mut self, col_name: &str, in_spw: &InputSpwInfo, out_spw: &OutputSpwInfo, row: &mut TableRow) -> Result<()> {
+    pub fn process(&mut self, col_name: &str, _in_spw: &InputSpwInfo, _out_spw: &OutputSpwInfo, row: &mut TableRow) -> Result<()> {
         let cur = row.get_cell(col_name)?;
         self.value |= cur;
         Ok(())
     }
 
-    pub fn emit(&self, col_name: &str, _out_spw: &OutputSpwInfo, table: &mut Table, row: u64) -> Result<()> {
+    pub fn emit(&self, col_name: &str, table: &mut Table, row: u64) -> Result<()> {
         table.put_cell(col_name, row, &self.value)
     }
 
@@ -431,7 +499,7 @@ impl<T: CasaScalarData + Default + std::fmt::Debug> VisPolConcatColumn<T> where 
         Ok(())
     }
 
-    pub fn emit(&self, col_name: &str, _out_spw: &OutputSpwInfo, table: &mut Table, row: u64) -> Result<()> {
+    pub fn emit(&self, col_name: &str, table: &mut Table, row: u64) -> Result<()> {
         table.put_cell(col_name, row, &self.buf)
     }
 
@@ -594,35 +662,35 @@ impl VisDataColumnHandler {
         }; "problem processing column {}", col_name))
     }
 
-    pub fn emit(&self, out_spw: &OutputSpwInfo, table: &mut Table, row: u64) -> Result<()> {
+    pub fn emit(&self, table: &mut Table, row: u64) -> Result<()> {
         let col_name = self.col_name();
 
         Ok(ctry!(match self {
-            &VisDataColumnHandler::Antenna1(ref s) => s.emit(col_name, out_spw, table, row),
-            &VisDataColumnHandler::Antenna2(ref s) => s.emit(col_name, out_spw, table, row),
-            &VisDataColumnHandler::ArrayId(ref s) => s.emit(col_name, out_spw, table, row),
-            &VisDataColumnHandler::CorrectedData(ref s) => s.emit(col_name, out_spw, table, row),
-            &VisDataColumnHandler::DataDescId(ref s) => s.emit(col_name, out_spw, table, row),
-            &VisDataColumnHandler::Data(ref s) => s.emit(col_name, out_spw, table, row),
-            &VisDataColumnHandler::Exposure(ref s) => s.emit(col_name, out_spw, table, row),
-            &VisDataColumnHandler::Feed1(ref s) => s.emit(col_name, out_spw, table, row),
-            &VisDataColumnHandler::Feed2(ref s) => s.emit(col_name, out_spw, table, row),
-            &VisDataColumnHandler::FieldId(ref s) => s.emit(col_name, out_spw, table, row),
-            &VisDataColumnHandler::FlagCategory(ref s) => s.emit(col_name, out_spw, table, row),
-            &VisDataColumnHandler::FlagRow(ref s) => s.emit(col_name, out_spw, table, row),
-            &VisDataColumnHandler::Flag(ref s) => s.emit(col_name, out_spw, table, row),
-            &VisDataColumnHandler::Interval(ref s) => s.emit(col_name, out_spw, table, row),
-            &VisDataColumnHandler::ModelData(ref s) => s.emit(col_name, out_spw, table, row),
-            &VisDataColumnHandler::ObservationId(ref s) => s.emit(col_name, out_spw, table, row),
-            &VisDataColumnHandler::ProcessorId(ref s) => s.emit(col_name, out_spw, table, row),
-            &VisDataColumnHandler::ScanNumber(ref s) => s.emit(col_name, out_spw, table, row),
-            &VisDataColumnHandler::Sigma(ref s) => s.emit(col_name, out_spw, table, row),
-            &VisDataColumnHandler::StateId(ref s) => s.emit(col_name, out_spw, table, row),
-            &VisDataColumnHandler::TimeCentroid(ref s) => s.emit(col_name, out_spw, table, row),
-            &VisDataColumnHandler::Time(ref s) => s.emit(col_name, out_spw, table, row),
-            &VisDataColumnHandler::Uvw(ref s) => s.emit(col_name, out_spw, table, row),
-            &VisDataColumnHandler::WeightSpectrum(ref s) => s.emit(col_name, out_spw, table, row),
-            &VisDataColumnHandler::Weight(ref s) => s.emit(col_name, out_spw, table, row),
+            &VisDataColumnHandler::Antenna1(ref s) => s.emit(col_name, table, row),
+            &VisDataColumnHandler::Antenna2(ref s) => s.emit(col_name, table, row),
+            &VisDataColumnHandler::ArrayId(ref s) => s.emit(col_name, table, row),
+            &VisDataColumnHandler::CorrectedData(ref s) => s.emit(col_name, table, row),
+            &VisDataColumnHandler::DataDescId(ref s) => s.emit(col_name, table, row),
+            &VisDataColumnHandler::Data(ref s) => s.emit(col_name, table, row),
+            &VisDataColumnHandler::Exposure(ref s) => s.emit(col_name, table, row),
+            &VisDataColumnHandler::Feed1(ref s) => s.emit(col_name, table, row),
+            &VisDataColumnHandler::Feed2(ref s) => s.emit(col_name, table, row),
+            &VisDataColumnHandler::FieldId(ref s) => s.emit(col_name, table, row),
+            &VisDataColumnHandler::FlagCategory(ref s) => s.emit(col_name, table, row),
+            &VisDataColumnHandler::FlagRow(ref s) => s.emit(col_name, table, row),
+            &VisDataColumnHandler::Flag(ref s) => s.emit(col_name, table, row),
+            &VisDataColumnHandler::Interval(ref s) => s.emit(col_name, table, row),
+            &VisDataColumnHandler::ModelData(ref s) => s.emit(col_name, table, row),
+            &VisDataColumnHandler::ObservationId(ref s) => s.emit(col_name, table, row),
+            &VisDataColumnHandler::ProcessorId(ref s) => s.emit(col_name, table, row),
+            &VisDataColumnHandler::ScanNumber(ref s) => s.emit(col_name, table, row),
+            &VisDataColumnHandler::Sigma(ref s) => s.emit(col_name, table, row),
+            &VisDataColumnHandler::StateId(ref s) => s.emit(col_name, table, row),
+            &VisDataColumnHandler::TimeCentroid(ref s) => s.emit(col_name, table, row),
+            &VisDataColumnHandler::Time(ref s) => s.emit(col_name, table, row),
+            &VisDataColumnHandler::Uvw(ref s) => s.emit(col_name, table, row),
+            &VisDataColumnHandler::WeightSpectrum(ref s) => s.emit(col_name, table, row),
+            &VisDataColumnHandler::Weight(ref s) => s.emit(col_name, table, row),
         }; "problem emitting column {}", col_name))
     }
 
@@ -827,9 +895,9 @@ impl<'a> OutputRecordState<'a> {
 
     pub fn emit(&self, table: &mut Table, row: u64) -> Result<()> {
         for col in &self.columns {
-            col.emit(self.spw_info, table, row)?;
+            col.emit(table, row)?;
         }
-        
+
         Ok(())
     }
 
@@ -904,9 +972,11 @@ zero-based.")
         // Copy POLARIZATION. We currently require that there be only one
         // polarization type in the input file. This tool *could* work with
         // multiple pol types, but it would be more of a hassle and my data
-        // don't currently have that structure.
+        // don't currently have that structure. But I've separated out the
+        // relevant code here rather than grouped it in with the rest of
+        // the miscellaneous tables Just In Case.
 
-        let n_corrs = {
+        {
             let mut in_pol_path = inpath.clone();
             in_pol_path.push("POLARIZATION");
             let mut in_pol_table = ctry!(Table::open(&in_pol_path, TableOpenMode::Read);
@@ -918,17 +988,12 @@ zero-based.")
                 return err_msg!("input data set has {} \"POLARIZATION\" rows; I require exactly 1", n_pol_types);
             }
 
-            let n_corrs = ctry!(in_pol_table.get_cell::<i32>("NUM_CORR", 0);
-                                "failed to get NUM_CORR[0] in input sub-table \"{}\"", in_pol_path.display());
-
             let mut out_pol_path = outpath.clone();
             out_pol_path.push("POLARIZATION");
             let mut out_pol_table = ctry!(Table::open(&out_pol_path, TableOpenMode::ReadWrite);
                                           "failed to open output sub-table \"{}\"", out_pol_path.display());
 
             in_pol_table.copy_rows_to(&mut out_pol_table)?;
-
-            n_corrs
         };
 
         // Process the SPECTRAL_WINDOW table, building up our database of
@@ -1176,7 +1241,7 @@ zero-based.")
                 ctry!(out_main_table.add_rows(1); "failed to add row to \"{}\"", outpath.display());
                 state.emit(&mut out_main_table, out_row_num)?;
                 // Rewriting this is kind of lame, but eh.
-                out_main_table.put_cell("DATA_DESC_ID", out_row_num, &(out_spw_id as i32));
+                out_main_table.put_cell("DATA_DESC_ID", out_row_num, &(out_spw_id as i32))?;
                 out_row_num += 1;
                 state_pool.push(state);
             }

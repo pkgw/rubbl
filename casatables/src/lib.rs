@@ -327,6 +327,10 @@ impl CasaScalarData for String {
 }
 
 
+// Vec<T> mappings. Unfortunately trait specialization is not yet stable, so
+// we have to implement each type separately because Strings need special
+// handling.
+
 impl CasaDataType for Vec<bool> {
     const DATA_TYPE: glue::GlueDataType = glue::GlueDataType::TpArrayBool;
 
@@ -496,6 +500,7 @@ impl DimFromShapeSlice for Ix4 {
 }
 
 
+// Blanket implementation of n-dimensional array mappings.
 impl<I: CasaScalarData + Copy, D: Dimension + DimFromShapeSlice> CasaDataType for Array<I, D> {
     const DATA_TYPE: glue::GlueDataType = I::VECTOR_TYPE;
 
