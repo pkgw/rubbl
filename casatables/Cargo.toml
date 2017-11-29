@@ -7,9 +7,11 @@ version = "0.1.0"
 authors = ["Peter Williams <peter@newton.cx>"]
 
 [dependencies]
+byteorder = "^1.1"
 clap = "^2.26"
 error-chain = "^0.11"
 ndarray = "^0.10"
+nom = "^3.2"
 num-traits = "^0.1"
 pbr = "^1.0"
 rubbl_casatables_impl = { version = "0.1.0", path = "../casatables_impl" }

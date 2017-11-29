@@ -11,6 +11,7 @@ extend those provided in rubbl_core.
 */
 
 use rubbl_core;
+use std::io::Error as IoError;
 use std::num::ParseIntError;
 
 use glue;
@@ -53,6 +54,14 @@ impl From<rubbl_core::errors::ErrorKind> for Error {
 
 impl From<ParseIntError> for Error {
     fn from(err: ParseIntError) -> Error {
+        let tmp: rubbl_core::errors::Error = err.into();
+        Error::from(tmp)
+    }
+}
+
+
+impl From<IoError> for Error {
+    fn from(err: IoError) -> Error {
         let tmp: rubbl_core::errors::Error = err.into();
         Error::from(tmp)
     }

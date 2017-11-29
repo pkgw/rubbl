@@ -1,27 +1,208 @@
 // Copyright 2017 Peter Williams <peter@newton.cx> and collaborators
 // Licensed under the MIT License.
 
+extern crate byteorder;
 extern crate clap;
 #[macro_use] extern crate ndarray;
+#[macro_use] extern crate nom;
 extern crate num_traits;
 extern crate pbr;
 extern crate rubbl_casatables;
 #[macro_use] extern crate rubbl_core;
 
+use byteorder::{ByteOrder, LittleEndian, ReadBytesExt};
 use clap::{App, Arg};
+use ndarray::{Array, Dimension, Ix1, Ix2};
 use num_traits::{Float, One, Signed, Zero};
-use rubbl_casatables::{CasaDataType, CasaScalarData, Table, TableOpenMode, TableRow};
+use rubbl_casatables::{CasaDataType, CasaScalarData, DimFromShapeSlice, Table, TableOpenMode, TableRow};
 use rubbl_casatables::errors::{Error, Result};
-use rubbl_core::{Array, Complex, Ix2};
+use rubbl_core::Complex;
 use rubbl_core::notify::ClapNotificationArgsExt;
 use std::collections::HashMap;
 use std::default::Default;
 use std::fmt::Display;
+use std::fs::File;
+use std::io::Read;
 use std::marker::PhantomData;
 use std::ops::{AddAssign, BitOrAssign, Range, Sub};
 use std::path::Path;
 use std::process;
 use std::str::FromStr;
+
+
+// Quick .npy file parsing stealing work from the `npy` crate version 0.3.2.
+
+#[derive(PartialEq, Eq, Debug)]
+pub enum LimitedPyLiteral {
+    String(String),
+    Integer(i64),
+    Bool(bool),
+    List(Vec<LimitedPyLiteral>),
+    Map(HashMap<String,LimitedPyLiteral>),
+}
+
+fn npy_stream_to_ndarray<R: Read, D: Dimension + DimFromShapeSlice>(stream: &mut R) -> Result<Array<f64, D>> {
+    let mut preamble = [0u8; 10];
+
+    stream.read_exact(&mut preamble)?;
+
+    if &preamble[..8] != b"\x93NUMPY\x01\x00" {
+        return err_msg!("stream does not appear to be NPY-format save data");
+    }
+
+    let header_len = LittleEndian::read_u16(&preamble[8..]);
+    let aligned_len = ((header_len as usize + 10 + 15) / 16) * 16 - 10;
+
+    let mut header = Vec::with_capacity(aligned_len);
+    unsafe { header.set_len(aligned_len); }
+    stream.read_exact(&mut header[..])?;
+
+    let pyinfo = match python_literal_parser::map(&header) {
+        nom::IResult::Done(_, info) => info,
+        nom::IResult::Error(e) => {
+            return err_msg!("failed to parse NPY Python header: {}", e);
+        },
+        nom::IResult::Incomplete(_) => {
+            return err_msg!("failed to parse NPY Python header: incomplete data");
+        },
+    };
+
+    let pyinfo = match pyinfo {
+        LimitedPyLiteral::Map(m) => m,
+        other => {
+            return err_msg!("bad NPY Python header: expected toplevel map but got {:?}", other);
+        },
+    };
+
+    let descr = match pyinfo.get("descr") {
+        Some(&LimitedPyLiteral::String(ref s)) => s,
+        other => {
+            return err_msg!("bad NPY Python header: expected string item \"descr\" but got {:?}", other);
+        },
+    };
+
+    let fortran_order = match pyinfo.get("fortran_order") {
+        Some(&LimitedPyLiteral::Bool(b)) => b,
+        other => {
+            return err_msg!("bad NPY Python header: expected bool item \"fortran_order\" but got {:?}", other);
+        },
+    };
+
+    let py_shape = match pyinfo.get("shape") {
+        Some(&LimitedPyLiteral::List(ref ell)) => ell,
+        other => {
+            return err_msg!("bad NPY Python header: expected list item \"shape\" but got {:?}", other);
+        },
+    };
+
+    // We could support more choices here ...
+    if descr != "<f8" {
+        return err_msg!("unsupported NPY file: data type must be little-endian \
+                         f64 (\"<f8\") but got \"{}\"", descr);
+    }
+
+    // ... and here.
+    if fortran_order {
+        return err_msg!("unsupported NPY file: data ordering must be C, but got Fortran");
+    }
+
+    let mut shape = Vec::new();
+
+    for py_shape_item in py_shape {
+        match py_shape_item {
+            &LimitedPyLiteral::Integer(i) => {
+                shape.push(i as u64);
+            },
+            other => {
+                return err_msg!("bad NPY Python header: expected \"shape\" to be all integers but got {:?}", other);
+            },
+        }
+    }
+
+    let mut arr = unsafe { Array::uninitialized(D::from_shape_slice(&shape)) };
+
+    for item in arr.iter_mut() {
+        *item = stream.read_f64::<LittleEndian>()?;
+    }
+
+    Ok(arr)
+}
+
+mod python_literal_parser {
+    use super::LimitedPyLiteral;
+    use nom::*;
+
+    named!(pub item<LimitedPyLiteral>, alt!(integer | boolean | string | list | map));
+
+    named!(pub integer<LimitedPyLiteral>,
+        map!(
+            map_res!(
+                map_res!(
+                    ws!(digit),
+                    ::std::str::from_utf8
+                ),
+                ::std::str::FromStr::from_str
+            ),
+            LimitedPyLiteral::Integer
+        )
+    );
+
+    named!(pub boolean<LimitedPyLiteral>,
+        ws!(alt!(
+            tag!("True") => { |_| LimitedPyLiteral::Bool(true) } |
+            tag!("False") => { |_| LimitedPyLiteral::Bool(false) }
+        ))
+    );
+
+    named!(pub string<LimitedPyLiteral>,
+        map!(
+            map!(
+                map_res!(
+                    ws!(alt!(
+                        delimited!(tag!("\""),
+                            is_not_s!("\""),
+                            tag!("\"")) |
+                        delimited!(tag!("\'"),
+                            is_not_s!("\'"),
+                            tag!("\'"))
+                        )),
+                    ::std::str::from_utf8
+                ),
+                |s: &str| s.to_string()
+            ),
+            LimitedPyLiteral::String
+        )
+    );
+
+    // Note that we do not distriguish between tuples and lists.
+    named!(pub list<LimitedPyLiteral>,
+        map!(
+            ws!(alt!(
+                delimited!(tag!("["),
+                    terminated!(separated_list!(tag!(","), item), alt!(tag!(",") | tag!(""))),
+                    tag!("]")) |
+                delimited!(tag!("("),
+                    terminated!(separated_list!(tag!(","), item), alt!(tag!(",") | tag!(""))),
+                    tag!(")"))
+            )),
+            LimitedPyLiteral::List
+        )
+    );
+
+    // Note that we only allow string keys.
+    named!(pub map<LimitedPyLiteral>,
+        map!(
+            ws!(
+                delimited!(tag!("{"),
+                    terminated!(separated_list!(tag!(","),
+                        separated_pair!(map_opt!(string, |it| match it { LimitedPyLiteral::String(s) => Some(s), _ => None }), tag!(":"), item)
+                    ), alt!(tag!(",") | tag!(""))),
+                    tag!("}"))
+            ),
+            |v: Vec<_>| LimitedPyLiteral::Map(v.into_iter().collect())
+        )
+    );
+}
 
 
 // Types for combining spw-associated quantities. We have to implement these
@@ -752,6 +933,12 @@ zero-based.")
              .number_of_values(1)
              .required(true)
              .multiple(true))
+        .arg(Arg::with_name("meanbp")
+             .long("meanbp")
+             .help("Path a .npy save file with mean bandpass")
+             .value_name("PATH")
+             .takes_value(true)
+             .number_of_values(1))
         .arg(Arg::with_name("IN-TABLE")
              .help("The path of the input data set")
              .required(true)
@@ -780,6 +967,15 @@ zero-based.")
                            and N are numbers, but I got \"{}\"", descr);
             out_spws.push(m);
         }
+
+        let _meanbp = match matches.value_of_os("meanbp") {
+            None => None,
+            Some(meanbp_path) => {
+                let mut meanbp = File::open(meanbp_path)?;
+                let arr: Array<f64, Ix1> = npy_stream_to_ndarray(&mut meanbp)?;
+                Some(arr)
+            },
+        };
 
         // Copy the basic table structure.
 
