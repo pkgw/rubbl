@@ -939,25 +939,86 @@ zero-based.")
              .value_name("PATH")
              .takes_value(true)
              .number_of_values(1))
+        .arg(Arg::with_name("out_field")
+             .short("f")
+             .long("field")
+             .long_help("Output data from field FIELDNUM into file OUTPATH")
+             .value_name("FIELDNUM OUTPATH")
+             .takes_value(true)
+             .number_of_values(2)
+             .multiple(true))
+        .arg(Arg::with_name("out_default")
+             .short("D")
+             .long("default")
+             .long_help("Output any data not associated with a `-f` argument into file OUTPATH")
+             .value_name("OUTPATH")
+             .takes_value(true)
+             .number_of_values(1))
         .arg(Arg::with_name("IN-TABLE")
              .help("The path of the input data set")
              .required(true)
              .index(1))
-        .arg(Arg::with_name("OUT-TABLE")
-             .help("The path of the output data set")
-             .required(true)
-             .index(2))
         .get_matches();
 
     process::exit(rubbl_core::notify::run_with_notifications(matches, |matches, _nbe| -> Result<i32> {
-        // Deal with args.
+        // Deal with args. The field mapping is awkward because clap doesn't
+        // distinguish between multiple appearances of the same option; `-f A
+        // B C -f D` is just returned to us as a list [A B C D]. Therefore to
+        // enable the "field hack" mode we have to pay attention for when
+        // multiple `-f` options specify the same output path. I think there's
+        // some Iterator interface to bunch the items into groups of two but I
+        // can't find it right now.
 
         let inpath_os = matches.value_of_os("IN-TABLE").unwrap();
         let inpath_str = inpath_os.to_string_lossy();
         let inpath = Path::new(inpath_os).to_owned();
-        let outpath_os = matches.value_of_os("OUT-TABLE").unwrap();
-        let outpath_str = outpath_os.to_string_lossy();
-        let outpath = Path::new(outpath_os).to_owned();
+
+        let mut destinations = Vec::new();
+        let mut field_id_to_dest_index = HashMap::new();
+        let mut dest_path_to_dest_index = HashMap::new();
+        let mut field_item_is_id = true;
+        let mut last_field_id = 0i32;
+
+        for info in matches.values_of("out_field").unwrap() {
+            if field_item_is_id {
+                last_field_id = ctry!(info.parse();
+                                      "bad field ID \"{}\" in field output arguments", info);
+            } else {
+                let dest = Path::new(info).to_owned();
+                let mut idx = destinations.len();
+
+                if let Some(prev_idx) = dest_path_to_dest_index.insert(dest.clone(), idx) {
+                    // This dest path already appeared; re-use its entry. This lets us
+                    // write multiple fields to the same output file.
+                    idx = prev_idx;
+                } else {
+                    destinations.push(dest);
+                }
+
+                if field_id_to_dest_index.insert(last_field_id, idx).is_some() {
+                    return err_msg!("field ID {} appears multiple times in field output arguments", last_field_id);
+                }
+            }
+
+            field_item_is_id = !field_item_is_id;
+        }
+
+        let default_dest_index = matches.value_of_os("out_default").map(|info| {
+            let dest = Path::new(info).to_owned();
+            let mut idx = destinations.len();
+
+            if let Some(prev_idx) = dest_path_to_dest_index.insert(dest.clone(), idx) {
+                idx = prev_idx;
+            } else {
+                destinations.push(dest);
+            }
+
+            idx
+        });
+
+        if destinations.len() == 0 {
+            return err_msg!("must specify at least one destination path with `-f` or `-D`");
+        }
 
         let mut out_spws = Vec::new();
 
@@ -982,9 +1043,11 @@ zero-based.")
         let mut in_main_table = ctry!(Table::open(&inpath, TableOpenMode::Read);
                                       "failed to open input table \"{}\"", inpath_str);
 
-        ctry!(in_main_table.deep_copy_no_rows(&outpath_str);
-              "failed to copy the structure of table \"{}\" to new table \"{}\"",
-              inpath_str, outpath_str);
+        for dest in &destinations {
+            ctry!(in_main_table.deep_copy_no_rows(&dest.to_string_lossy());
+                  "failed to copy the structure of table \"{}\" to new table \"{}\"",
+                  inpath_str, dest.display());
+        }
 
         // Copy POLARIZATION. We currently require that there be only one
         // polarization type in the input file. This tool *could* work with
@@ -1005,12 +1068,14 @@ zero-based.")
                 return err_msg!("input data set has {} \"POLARIZATION\" rows; I require exactly 1", n_pol_types);
             }
 
-            let mut out_pol_path = outpath.clone();
-            out_pol_path.push("POLARIZATION");
-            let mut out_pol_table = ctry!(Table::open(&out_pol_path, TableOpenMode::ReadWrite);
-                                          "failed to open output sub-table \"{}\"", out_pol_path.display());
+            for dest in &destinations {
+                let mut out_pol_path = dest.clone();
+                out_pol_path.push("POLARIZATION");
+                let mut out_pol_table = ctry!(Table::open(&out_pol_path, TableOpenMode::ReadWrite);
+                                              "failed to open output sub-table \"{}\"", out_pol_path.display());
 
-            in_pol_table.copy_rows_to(&mut out_pol_table)?;
+                in_pol_table.copy_rows_to(&mut out_pol_table)?;
+            }
         };
 
         // Process the SPECTRAL_WINDOW table, building up our database of
@@ -1037,7 +1102,9 @@ zero-based.")
             let col_names = ctry!(in_spw_table.column_names();
                                   "failed to get names of columns in \"{}\"", in_spw_path.display());
 
-            let mut out_spw_path = outpath.clone();
+            // Process everything into the first destination.
+
+            let mut out_spw_path = destinations[0].clone();
             out_spw_path.push("SPECTRAL_WINDOW");
             let mut out_spw_table = ctry!(Table::open(&out_spw_path, TableOpenMode::ReadWrite);
                                           "failed to open output sub-table \"{}\"", out_spw_path.display());
@@ -1066,6 +1133,17 @@ zero-based.")
                     }
                 }
             }
+
+            // Now propagate into remaining destinations (if any).
+
+            for more_dest in &destinations[1..] {
+                let mut more_spw_path = more_dest.clone();
+                more_spw_path.push("SPECTRAL_WINDOW");
+                let mut more_spw_table = ctry!(Table::open(&more_spw_path, TableOpenMode::ReadWrite);
+                                               "failed to open output sub-table \"{}\"",
+                                               more_spw_path.display());
+                out_spw_table.copy_rows_to(&mut more_spw_table)?;
+            }
         }
 
         // Now process DATA_DESCRIPTION. By the restriction to one
@@ -1091,7 +1169,9 @@ zero-based.")
             let pol_id = in_ddid_table.get_col_as_vec::<i32>("POLARIZATION_ID")?;
             let spw_id = in_ddid_table.get_col_as_vec::<i32>("SPECTRAL_WINDOW_ID")?;
 
-            let mut out_ddid_path = outpath.clone();
+            // Process everything into first destination.
+
+            let mut out_ddid_path = destinations[0].clone();
             out_ddid_path.push("DATA_DESCRIPTION");
             let mut out_ddid_table = ctry!(Table::open(&out_ddid_path, TableOpenMode::ReadWrite);
                                            "failed to open output sub-table \"{}\"", out_ddid_path.display());
@@ -1136,6 +1216,17 @@ zero-based.")
                 out_ddid_table.put_cell("POLARIZATION_ID", out_spw_idx as u64, &0i32)?;
                 out_ddid_table.put_cell("SPECTRAL_WINDOW_ID", out_spw_idx as u64, &(out_spw_idx as i32))?;
             }
+
+            // Now propagate into remaining destinations (if any).
+
+            for more_dest in &destinations[1..] {
+                let mut more_ddid_path = more_dest.clone();
+                more_ddid_path.push("DATA_DESCRIPTION");
+                let mut more_ddid_table = ctry!(Table::open(&more_ddid_path, TableOpenMode::ReadWrite);
+                                               "failed to open output sub-table \"{}\"",
+                                               more_ddid_path.display());
+                out_ddid_table.copy_rows_to(&mut more_ddid_table)?;
+            }
         }
 
         // SOURCE table also needs some custom processing.
@@ -1154,7 +1245,9 @@ zero-based.")
                                 n_sources * in_spws.len(), in_src_path.display(), n_source_rows);
             }
 
-            let mut out_src_path = outpath.clone();
+            // First destination ...
+
+            let mut out_src_path = destinations[0].clone();
             out_src_path.push("SOURCE");
             let mut out_src_table = ctry!(Table::open(&out_src_path, TableOpenMode::ReadWrite);
                                            "failed to open output sub-table \"{}\"", out_src_path.display());
@@ -1180,6 +1273,17 @@ zero-based.")
 
                 Ok(())
             })?;
+
+            // The rest.
+
+            for more_dest in &destinations[1..] {
+                let mut more_src_path = more_dest.clone();
+                more_src_path.push("SOURCE");
+                let mut more_src_table = ctry!(Table::open(&more_src_path, TableOpenMode::ReadWrite);
+                                               "failed to open output sub-table \"{}\"",
+                                               more_src_path.display());
+                out_src_table.copy_rows_to(&mut more_src_table)?;
+            }
         }
 
         // Copy over the remaining sub-tables as-is.
@@ -1200,12 +1304,14 @@ zero-based.")
                     let mut in_misc_table = ctry!(Table::open(&in_misc_path, TableOpenMode::Read);
                                                  "failed to open input sub-table \"{}\"", in_misc_path.display());
 
-                    let mut out_misc_path = outpath.clone();
-                    out_misc_path.push(n);
-                    let mut out_misc_table = ctry!(Table::open(&out_misc_path, TableOpenMode::ReadWrite);
-                                                  "failed to open output sub-table \"{}\"", out_misc_path.display());
+                    for dest in &destinations {
+                        let mut out_misc_path = dest.clone();
+                        out_misc_path.push(n);
+                        let mut out_misc_table = ctry!(Table::open(&out_misc_path, TableOpenMode::ReadWrite);
+                                                       "failed to open output sub-table \"{}\"", out_misc_path.display());
 
-                    in_misc_table.copy_rows_to(&mut out_misc_table)?;
+                        in_misc_table.copy_rows_to(&mut out_misc_table)?;
+                    }
                 },
             }
         }
@@ -1229,12 +1335,27 @@ zero-based.")
         let mut pb = pbr::ProgressBar::new(in_main_table.n_rows());
         pb.set_max_refresh_rate(Some(std::time::Duration::from_millis(500)));
 
-        let mut out_main_table = ctry!(Table::open(&outpath, TableOpenMode::ReadWrite);
-                                      "failed to open output \"{}\"", outpath.display());
-        let mut out_row_num = 0;
+        struct DestinationRecord<'a> {
+            path: &'a Path,
+            table: Table,
+            num_rows: u64,
+        }
+
+        let mut out_tables = Vec::with_capacity(destinations.len());
+
+        for dest in &destinations {
+            let t = ctry!(Table::open(dest, TableOpenMode::ReadWrite);
+                          "failed to open output \"{}\"", dest.display());
+            out_tables.push(DestinationRecord {
+                path: dest,
+                table: t,
+                num_rows: 0
+            });
+        }
 
         in_main_table.for_each_row(|mut in_row| {
             let ddid = in_row.get_cell::<i32>("DATA_DESC_ID")?;
+            let fieldid = in_row.get_cell::<i32>("FIELD_ID")?;
             let in_spw_id = *ddid_to_in_spw_id.get(&(ddid as usize)).unwrap();
             let in_spw_info = in_spws.get(&in_spw_id).unwrap();
             let out_spw_id = in_spw_info.out_spw_id();
@@ -1257,11 +1378,23 @@ zero-based.")
 
             if record_complete {
                 let state = records_in_progress.remove(&row_ident).unwrap();
-                ctry!(out_main_table.add_rows(1); "failed to add row to \"{}\"", outpath.display());
-                state.emit(&mut out_main_table, out_row_num)?;
-                // Rewriting this is kind of lame, but eh.
-                out_main_table.put_cell("DATA_DESC_ID", out_row_num, &(out_spw_id as i32))?;
-                out_row_num += 1;
+
+                let maybe_out_rec = if let Some(idx) = field_id_to_dest_index.get_mut(&fieldid) {
+                    Some(&mut out_tables[*idx])
+                } else if let Some(ddi) = default_dest_index {
+                    Some(&mut out_tables[ddi])
+                } else {
+                    None
+                };
+
+                if let Some(out_rec) = maybe_out_rec {
+                    ctry!(out_rec.table.add_rows(1); "failed to add row to \"{}\"", out_rec.path.display());
+                    state.emit(&mut out_rec.table, out_rec.num_rows)?;
+                    // Rewriting this is kind of lame, but eh.
+                    out_rec.table.put_cell("DATA_DESC_ID", out_rec.num_rows, &(out_spw_id as i32))?;
+                    out_rec.num_rows += 1;
+                }
+
                 state_pool.push(state);
             }
 
