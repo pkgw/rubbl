@@ -25,7 +25,7 @@ use std::fs::File;
 use std::io::Read;
 use std::marker::PhantomData;
 use std::ops::{AddAssign, BitOrAssign, Range, Sub};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process;
 use std::str::FromStr;
 
@@ -1040,8 +1040,26 @@ zero-based.")
 
         // Copy the basic table structure.
 
-        let mut in_main_table = ctry!(Table::open(&inpath, TableOpenMode::Read);
-                                      "failed to open input table \"{}\"", inpath_str);
+        fn open_table(base: &Path, extension: &str, is_input: bool) -> Result<(PathBuf, Table)> {
+            let mut p = base.to_owned();
+
+            if extension.len() > 0 {
+                p.push(extension);
+            }
+
+            let mode = if is_input { TableOpenMode::Read } else { TableOpenMode::ReadWrite };
+
+            let t = ctry!(Table::open(&p, mode);
+                          "failed to open {} {}table \"{}\"",
+                          if is_input { "input" } else { "output" },
+                          if extension.len() > 0 { "sub-" } else { "" },
+                          p.display()
+            );
+
+            Ok((p, t))
+        }
+
+        let (_, mut in_main_table) = open_table(&inpath, "", true)?;
 
         for dest in &destinations {
             ctry!(in_main_table.deep_copy_no_rows(&dest.to_string_lossy());
@@ -1057,10 +1075,7 @@ zero-based.")
         // the miscellaneous tables Just In Case.
 
         {
-            let mut in_pol_path = inpath.clone();
-            in_pol_path.push("POLARIZATION");
-            let mut in_pol_table = ctry!(Table::open(&in_pol_path, TableOpenMode::Read);
-                                         "failed to open input sub-table \"{}\"", in_pol_path.display());
+            let (_, mut in_pol_table) = open_table(&inpath, "POLARIZATION", true)?;
 
             let n_pol_types = in_pol_table.n_rows();
 
@@ -1069,11 +1084,7 @@ zero-based.")
             }
 
             for dest in &destinations {
-                let mut out_pol_path = dest.clone();
-                out_pol_path.push("POLARIZATION");
-                let mut out_pol_table = ctry!(Table::open(&out_pol_path, TableOpenMode::ReadWrite);
-                                              "failed to open output sub-table \"{}\"", out_pol_path.display());
-
+                let (_, mut out_pol_table) = open_table(dest, "POLARIZATION", false)?;
                 in_pol_table.copy_rows_to(&mut out_pol_table)?;
             }
         };
@@ -1085,10 +1096,7 @@ zero-based.")
         let mut in_spws: HashMap<usize, InputSpwInfo> = HashMap::new();
 
         {
-            let mut in_spw_path = inpath.clone();
-            in_spw_path.push("SPECTRAL_WINDOW");
-            let mut in_spw_table = ctry!(Table::open(&in_spw_path, TableOpenMode::Read);
-                                         "failed to open input sub-table \"{}\"", in_spw_path.display());
+            let (in_spw_path, mut in_spw_table) = open_table(&inpath, "SPECTRAL_WINDOW", true)?;
 
             let n_in_spws = in_spw_table.n_rows();
 
@@ -1104,10 +1112,7 @@ zero-based.")
 
             // Process everything into the first destination.
 
-            let mut out_spw_path = destinations[0].clone();
-            out_spw_path.push("SPECTRAL_WINDOW");
-            let mut out_spw_table = ctry!(Table::open(&out_spw_path, TableOpenMode::ReadWrite);
-                                          "failed to open output sub-table \"{}\"", out_spw_path.display());
+            let (out_spw_path, mut out_spw_table) = open_table(&destinations[0], "SPECTRAL_WINDOW", false)?;
 
             ctry!(out_spw_table.add_rows(out_spws.len());
                   "failed to add {} rows to \"{}\"", out_spws.len(), out_spw_path.display());
@@ -1137,11 +1142,7 @@ zero-based.")
             // Now propagate into remaining destinations (if any).
 
             for more_dest in &destinations[1..] {
-                let mut more_spw_path = more_dest.clone();
-                more_spw_path.push("SPECTRAL_WINDOW");
-                let mut more_spw_table = ctry!(Table::open(&more_spw_path, TableOpenMode::ReadWrite);
-                                               "failed to open output sub-table \"{}\"",
-                                               more_spw_path.display());
+                let (_, mut more_spw_table) = open_table(more_dest, "SPECTRAL_WINDOW", false)?;
                 out_spw_table.copy_rows_to(&mut more_spw_table)?;
             }
         }
@@ -1155,10 +1156,7 @@ zero-based.")
         let mut ddid_to_in_spw_id = HashMap::new();
 
         {
-            let mut in_ddid_path = inpath.clone();
-            in_ddid_path.push("DATA_DESCRIPTION");
-            let mut in_ddid_table = ctry!(Table::open(&in_ddid_path, TableOpenMode::Read);
-                                          "failed to open input sub-table \"{}\"", in_ddid_path.display());
+            let (in_ddid_path, mut in_ddid_table) = open_table(&inpath, "DATA_DESCRIPTION", true)?;
 
             if in_ddid_table.n_rows() != in_spws.len() as u64 {
                 return err_msg!("consistency failure: expected {} rows in input sub-table \"{}\"; got {}",
@@ -1171,10 +1169,7 @@ zero-based.")
 
             // Process everything into first destination.
 
-            let mut out_ddid_path = destinations[0].clone();
-            out_ddid_path.push("DATA_DESCRIPTION");
-            let mut out_ddid_table = ctry!(Table::open(&out_ddid_path, TableOpenMode::ReadWrite);
-                                           "failed to open output sub-table \"{}\"", out_ddid_path.display());
+            let (out_ddid_path, mut out_ddid_table) = open_table(&destinations[0], "DATA_DESCRIPTION", false)?;
 
             ctry!(out_ddid_table.add_rows(out_spws.len());
                   "failed to add {} rows to \"{}\"", out_spws.len(), out_ddid_path.display());
@@ -1220,11 +1215,7 @@ zero-based.")
             // Now propagate into remaining destinations (if any).
 
             for more_dest in &destinations[1..] {
-                let mut more_ddid_path = more_dest.clone();
-                more_ddid_path.push("DATA_DESCRIPTION");
-                let mut more_ddid_table = ctry!(Table::open(&more_ddid_path, TableOpenMode::ReadWrite);
-                                               "failed to open output sub-table \"{}\"",
-                                               more_ddid_path.display());
+                let (_, mut more_ddid_table) = open_table(more_dest, "DATA_DESCRIPTION", false)?;
                 out_ddid_table.copy_rows_to(&mut more_ddid_table)?;
             }
         }
@@ -1232,10 +1223,7 @@ zero-based.")
         // SOURCE table also needs some custom processing.
 
         {
-            let mut in_src_path = inpath.clone();
-            in_src_path.push("SOURCE");
-            let mut in_src_table = ctry!(Table::open(&in_src_path, TableOpenMode::Read);
-                                          "failed to open input sub-table \"{}\"", in_src_path.display());
+            let (in_src_path, mut in_src_table) = open_table(&inpath, "SOURCE", true)?;
 
             let n_source_rows = in_src_table.n_rows() as usize;
             let n_sources = n_source_rows / in_spws.len();
@@ -1247,10 +1235,7 @@ zero-based.")
 
             // First destination ...
 
-            let mut out_src_path = destinations[0].clone();
-            out_src_path.push("SOURCE");
-            let mut out_src_table = ctry!(Table::open(&out_src_path, TableOpenMode::ReadWrite);
-                                           "failed to open output sub-table \"{}\"", out_src_path.display());
+            let (out_src_path, mut out_src_table) = open_table(&destinations[0], "SOURCE", false)?;
 
             ctry!(out_src_table.add_rows(n_sources * out_spws.len());
                   "failed to add {} rows to \"{}\"", n_sources * out_spws.len(), out_src_path.display());
@@ -1277,11 +1262,7 @@ zero-based.")
             // The rest.
 
             for more_dest in &destinations[1..] {
-                let mut more_src_path = more_dest.clone();
-                more_src_path.push("SOURCE");
-                let mut more_src_table = ctry!(Table::open(&more_src_path, TableOpenMode::ReadWrite);
-                                               "failed to open output sub-table \"{}\"",
-                                               more_src_path.display());
+                let (_, mut more_src_table) = open_table(more_dest, "SOURCE", false)?;
                 out_src_table.copy_rows_to(&mut more_src_table)?;
             }
         }
@@ -1299,17 +1280,10 @@ zero-based.")
                 "SPECTRAL_WINDOW" => {},
                 "SYSPOWER" => {}, // large and my pipeline pre-applies it!
                 n => {
-                    let mut in_misc_path = inpath.clone();
-                    in_misc_path.push(n);
-                    let mut in_misc_table = ctry!(Table::open(&in_misc_path, TableOpenMode::Read);
-                                                 "failed to open input sub-table \"{}\"", in_misc_path.display());
+                    let (_, mut in_misc_table) = open_table(&inpath, n, true)?;
 
                     for dest in &destinations {
-                        let mut out_misc_path = dest.clone();
-                        out_misc_path.push(n);
-                        let mut out_misc_table = ctry!(Table::open(&out_misc_path, TableOpenMode::ReadWrite);
-                                                       "failed to open output sub-table \"{}\"", out_misc_path.display());
-
+                        let (_, mut out_misc_table) = open_table(dest, n, false)?;
                         in_misc_table.copy_rows_to(&mut out_misc_table)?;
                     }
                 },
@@ -1344,8 +1318,7 @@ zero-based.")
         let mut out_tables = Vec::with_capacity(destinations.len());
 
         for dest in &destinations {
-            let t = ctry!(Table::open(dest, TableOpenMode::ReadWrite);
-                          "failed to open output \"{}\"", dest.display());
+            let (_, t) = open_table(dest, "", false)?;
             out_tables.push(DestinationRecord {
                 path: dest,
                 table: t,
