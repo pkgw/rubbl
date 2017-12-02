@@ -10,19 +10,17 @@ extern crate pbr;
 extern crate rubbl_casatables;
 #[macro_use] extern crate rubbl_core;
 
-use byteorder::{ByteOrder, LittleEndian, ReadBytesExt};
 use clap::{App, Arg};
-use ndarray::{Array, Dimension, Ix1, Ix2};
+use ndarray::{Ix1, Ix2};
 use num_traits::{Float, One, Signed, Zero};
-use rubbl_casatables::{CasaDataType, CasaScalarData, DimFromShapeSlice, Table, TableOpenMode, TableRow};
+use rubbl_casatables::{CasaDataType, CasaScalarData, Table, TableOpenMode, TableRow};
 use rubbl_casatables::errors::{Error, Result};
-use rubbl_core::Complex;
+use rubbl_core::{Array, Complex};
 use rubbl_core::notify::ClapNotificationArgsExt;
 use std::collections::HashMap;
 use std::default::Default;
 use std::fmt::Display;
 use std::fs::File;
-use std::io::Read;
 use std::marker::PhantomData;
 use std::ops::{AddAssign, BitOrAssign, Range, Sub};
 use std::path::{Path, PathBuf};
@@ -30,111 +28,129 @@ use std::process;
 use std::str::FromStr;
 
 
-// Quick .npy file parsing stealing work from the `npy` crate version 0.3.2.
+// Quick .npy file parsing, stealing work from the `npy` crate version 0.3.2.
 
-#[derive(PartialEq, Eq, Debug)]
-pub enum LimitedPyLiteral {
-    String(String),
-    Integer(i64),
-    Bool(bool),
-    List(Vec<LimitedPyLiteral>),
-    Map(HashMap<String,LimitedPyLiteral>),
-}
-
-fn npy_stream_to_ndarray<R: Read, D: Dimension + DimFromShapeSlice>(stream: &mut R) -> Result<Array<f64, D>> {
-    let mut preamble = [0u8; 10];
-
-    stream.read_exact(&mut preamble)?;
-
-    if &preamble[..8] != b"\x93NUMPY\x01\x00" {
-        return err_msg!("stream does not appear to be NPY-format save data");
-    }
-
-    let header_len = LittleEndian::read_u16(&preamble[8..]);
-    let aligned_len = ((header_len as usize + 10 + 15) / 16) * 16 - 10;
-
-    let mut header = Vec::with_capacity(aligned_len);
-    unsafe { header.set_len(aligned_len); }
-    stream.read_exact(&mut header[..])?;
-
-    let pyinfo = match python_literal_parser::map(&header) {
-        nom::IResult::Done(_, info) => info,
-        nom::IResult::Error(e) => {
-            return err_msg!("failed to parse NPY Python header: {}", e);
-        },
-        nom::IResult::Incomplete(_) => {
-            return err_msg!("failed to parse NPY Python header: incomplete data");
-        },
-    };
-
-    let pyinfo = match pyinfo {
-        LimitedPyLiteral::Map(m) => m,
-        other => {
-            return err_msg!("bad NPY Python header: expected toplevel map but got {:?}", other);
-        },
-    };
-
-    let descr = match pyinfo.get("descr") {
-        Some(&LimitedPyLiteral::String(ref s)) => s,
-        other => {
-            return err_msg!("bad NPY Python header: expected string item \"descr\" but got {:?}", other);
-        },
-    };
-
-    let fortran_order = match pyinfo.get("fortran_order") {
-        Some(&LimitedPyLiteral::Bool(b)) => b,
-        other => {
-            return err_msg!("bad NPY Python header: expected bool item \"fortran_order\" but got {:?}", other);
-        },
-    };
-
-    let py_shape = match pyinfo.get("shape") {
-        Some(&LimitedPyLiteral::List(ref ell)) => ell,
-        other => {
-            return err_msg!("bad NPY Python header: expected list item \"shape\" but got {:?}", other);
-        },
-    };
-
-    // We could support more choices here ...
-    if descr != "<f8" {
-        return err_msg!("unsupported NPY file: data type must be little-endian \
-                         f64 (\"<f8\") but got \"{}\"", descr);
-    }
-
-    // ... and here.
-    if fortran_order {
-        return err_msg!("unsupported NPY file: data ordering must be C, but got Fortran");
-    }
-
-    let mut shape = Vec::new();
-
-    for py_shape_item in py_shape {
-        match py_shape_item {
-            &LimitedPyLiteral::Integer(i) => {
-                shape.push(i as u64);
-            },
-            other => {
-                return err_msg!("bad NPY Python header: expected \"shape\" to be all integers but got {:?}", other);
-            },
-        }
-    }
-
-    let mut arr = unsafe { Array::uninitialized(D::from_shape_slice(&shape)) };
-
-    for item in arr.iter_mut() {
-        *item = stream.read_f64::<LittleEndian>()?;
-    }
-
-    Ok(arr)
-}
-
-mod python_literal_parser {
-    use super::LimitedPyLiteral;
+mod mini_npy_parser {
+    use byteorder::{ByteOrder, LittleEndian, ReadBytesExt};
+    use ndarray::{Array, Dimension};
     use nom::*;
+    use rubbl_casatables::DimFromShapeSlice;
+    use rubbl_casatables::errors::Result;
+    use std::collections::HashMap;
+    use std::io::Read;
 
-    named!(pub item<LimitedPyLiteral>, alt!(integer | boolean | string | list | map));
+    #[derive(PartialEq, Eq, Debug)]
+    enum LimitedPyLiteral {
+        String(String),
+        Integer(i64),
+        Bool(bool),
+        List(Vec<LimitedPyLiteral>),
+        Map(HashMap<String,LimitedPyLiteral>),
+    }
 
-    named!(pub integer<LimitedPyLiteral>,
+    pub fn npy_stream_to_ndarray<R: Read, D: Dimension + DimFromShapeSlice>(stream: &mut R) -> Result<Array<f64, D>> {
+        let mut preamble = [0u8; 10];
+
+        stream.read_exact(&mut preamble)?;
+
+        if &preamble[..8] != b"\x93NUMPY\x01\x00" {
+            return err_msg!("stream does not appear to be NPY-format save data");
+        }
+
+        // Because header_len is only a u16, it can't be absurdly large even
+        // in a maliciously-constructed file.
+        //
+        // The Python header is padded such that the data start at a multiple
+        // of 16 bytes into the file. If the un-padded header length is a
+        // total of X bytes, we can calculate the padded length as ((X + 15) /
+        // 16) * 16 with standard truncating integer division. We've already
+        // read 10 bytes though, so we need to account for those in the total
+        // length as well as for the length that remains to be read.
+        let header_len = LittleEndian::read_u16(&preamble[8..]);
+        let aligned_len = ((header_len as usize + 10 + 15) / 16) * 16 - 10;
+
+        let mut header = Vec::with_capacity(aligned_len);
+        unsafe { header.set_len(aligned_len); }
+        stream.read_exact(&mut header[..])?;
+
+        let pyinfo = match map(&header) {
+            IResult::Done(_, info) => info,
+            IResult::Error(e) => {
+                return err_msg!("failed to parse NPY Python header: {}", e);
+            },
+            IResult::Incomplete(_) => {
+                return err_msg!("failed to parse NPY Python header: incomplete data");
+            },
+        };
+
+        let pyinfo = match pyinfo {
+            LimitedPyLiteral::Map(m) => m,
+            other => {
+                return err_msg!("bad NPY Python header: expected toplevel map but got {:?}", other);
+            },
+        };
+
+        let descr = match pyinfo.get("descr") {
+            Some(&LimitedPyLiteral::String(ref s)) => s,
+            other => {
+                return err_msg!("bad NPY Python header: expected string item \"descr\" but got {:?}", other);
+            },
+        };
+
+        let fortran_order = match pyinfo.get("fortran_order") {
+            Some(&LimitedPyLiteral::Bool(b)) => b,
+            other => {
+                return err_msg!("bad NPY Python header: expected bool item \"fortran_order\" but got {:?}", other);
+            },
+        };
+
+        let py_shape = match pyinfo.get("shape") {
+            Some(&LimitedPyLiteral::List(ref ell)) => ell,
+            other => {
+                return err_msg!("bad NPY Python header: expected list item \"shape\" but got {:?}", other);
+            },
+        };
+
+        // We could support more choices here ...
+        if descr != "<f8" {
+            return err_msg!("unsupported NPY file: data type must be little-endian \
+                             f64 (\"<f8\") but got \"{}\"", descr);
+        }
+
+        // ... and here.
+        if fortran_order {
+            return err_msg!("unsupported NPY file: data ordering must be C, but got Fortran");
+        }
+
+        let mut shape = Vec::new();
+
+        for py_shape_item in py_shape {
+            match py_shape_item {
+                &LimitedPyLiteral::Integer(i) => {
+                    shape.push(i as u64);
+                },
+                other => {
+                    return err_msg!("bad NPY Python header: expected \"shape\" to be all integers but got {:?}", other);
+                },
+            }
+        }
+
+        let mut arr = unsafe { Array::uninitialized(D::from_shape_slice(&shape)) };
+
+        // Note: we "should" probably use a BufReader here, but the
+        // performance of this bit is totally insignificant in the grand
+        // scheme of things.
+
+        for item in arr.iter_mut() {
+            *item = stream.read_f64::<LittleEndian>()?;
+        }
+
+        Ok(arr)
+    }
+
+    named!(item<LimitedPyLiteral>, alt!(integer | boolean | string | list | map));
+
+    named!(integer<LimitedPyLiteral>,
         map!(
             map_res!(
                 map_res!(
@@ -147,14 +163,14 @@ mod python_literal_parser {
         )
     );
 
-    named!(pub boolean<LimitedPyLiteral>,
+    named!(boolean<LimitedPyLiteral>,
         ws!(alt!(
             tag!("True") => { |_| LimitedPyLiteral::Bool(true) } |
             tag!("False") => { |_| LimitedPyLiteral::Bool(false) }
         ))
     );
 
-    named!(pub string<LimitedPyLiteral>,
+    named!(string<LimitedPyLiteral>,
         map!(
             map!(
                 map_res!(
@@ -175,7 +191,7 @@ mod python_literal_parser {
     );
 
     // Note that we do not distriguish between tuples and lists.
-    named!(pub list<LimitedPyLiteral>,
+    named!(list<LimitedPyLiteral>,
         map!(
             ws!(alt!(
                 delimited!(tag!("["),
@@ -190,7 +206,7 @@ mod python_literal_parser {
     );
 
     // Note that we only allow string keys.
-    named!(pub map<LimitedPyLiteral>,
+    named!(map<LimitedPyLiteral>,
         map!(
             ws!(
                 delimited!(tag!("{"),
@@ -203,6 +219,8 @@ mod python_literal_parser {
         )
     );
 }
+
+use mini_npy_parser::npy_stream_to_ndarray;
 
 
 // Types for combining spw-associated quantities. We have to implement these
