@@ -223,202 +223,227 @@ mod mini_npy_parser {
 use mini_npy_parser::npy_stream_to_ndarray;
 
 
-// Types for combining spw-associated quantities. We have to implement these
-// as discrete types so that we can leverage Rust's generics. It's a bit of a
-// shame that we can't handle the options purely with data tables, but
-// type-based column reading has a lot of advantages more generally.
+/// Code for combining spw-associated quantities. We have to implement these
+/// as discrete types so that we can leverage Rust's generics. It's a bit of a
+/// shame that we can't handle the options purely with data tables, but
+/// type-based column reading has a lot of advantages more generally.
+mod spw_table {
+    use super::*;
 
-/// Columns handled by this struct are simply ignored.
-struct SpwIgnoreColumn<T> { _nope: PhantomData<T> }
+    /// Columns handled by this struct are simply ignored.
+    struct IgnoreColumn<T> { _nope: PhantomData<T> }
 
-impl<T> SpwIgnoreColumn<T> {
-    pub fn new() -> Self { Self { _nope: PhantomData } }
+    impl<T> IgnoreColumn<T> {
+        pub fn new() -> Self { Self { _nope: PhantomData } }
 
-    pub fn process(&self, _src_table: &mut Table, _col_name: &str,
-                   _mappings: &[OutputSpwInfo], _dest_table: &mut Table) -> Result<()> {
-        Ok(())
-    }
-}
-
-
-/// Columns handled by this struct use the first value that appears.
-struct SpwUseFirstColumn<T: CasaScalarData> { _nope: PhantomData<T> }
-
-impl<T: CasaScalarData> SpwUseFirstColumn<T> {
-    pub fn new() -> Self { Self { _nope: PhantomData } }
-
-    pub fn process(&self, src_table: &mut Table, col_name: &str,
-                   mappings: &[OutputSpwInfo], dest_table: &mut Table) -> Result<()> {
-        let data = src_table.get_col_as_vec::<T>(col_name)?;
-
-        for (i, mapping) in mappings.iter().enumerate() {
-            let mut idx_iter = mapping.spw_indices();
-            let first_idx = idx_iter.next().unwrap(); // assume we have a nonzero number of spws
-            dest_table.put_cell(col_name, i as u64, &data[first_idx])?;
+        pub fn process(&self, _src_table: &mut Table, _col_name: &str,
+                       _mappings: &[OutputSpwInfo], _dest_table: &mut Table) -> Result<()> {
+            Ok(())
         }
-
-        Ok(())
     }
-}
 
 
-/// In columns handled by this struct, every value must be the same.
-struct SpwMustMatchColumn<T: CasaScalarData> { _nope: PhantomData<T> }
+    /// Columns handled by this struct use the first value that appears.
+    struct UseFirstColumn<T: CasaScalarData> { _nope: PhantomData<T> }
 
-impl<T: CasaScalarData + Display> SpwMustMatchColumn<T> {
-    pub fn new() -> Self { Self { _nope: PhantomData } }
+    impl<T: CasaScalarData> UseFirstColumn<T> {
+        pub fn new() -> Self { Self { _nope: PhantomData } }
 
-    pub fn process(&self, src_table: &mut Table, col_name: &str,
-                   mappings: &[OutputSpwInfo], dest_table: &mut Table) -> Result<()> {
-        let data = src_table.get_col_as_vec::<T>(col_name)?;
+        pub fn process(&self, src_table: &mut Table, col_name: &str,
+                       mappings: &[OutputSpwInfo], dest_table: &mut Table) -> Result<()> {
+            let data = src_table.get_col_as_vec::<T>(col_name)?;
 
-        for (i, mapping) in mappings.iter().enumerate() {
-            let mut idx_iter = mapping.spw_indices();
-            let first_idx = idx_iter.next().unwrap(); // assume we have a nonzero number of spws
-            let first_value = data[first_idx].clone();
+            for (i, mapping) in mappings.iter().enumerate() {
+                let mut idx_iter = mapping.spw_indices();
+                let first_idx = idx_iter.next().unwrap(); // assume we have a nonzero number of spws
+                dest_table.put_cell(col_name, i as u64, &data[first_idx])?;
+            }
 
-            for idx in idx_iter {
-                if data[idx] != first_value {
-                    return err_msg!("value changed from {} to {}", first_value, data[idx]);
+            Ok(())
+        }
+    }
+
+
+    /// In columns handled by this struct, every value must be the same.
+    struct MustMatchColumn<T: CasaScalarData> { _nope: PhantomData<T> }
+
+    impl<T: CasaScalarData + Display> MustMatchColumn<T> {
+        pub fn new() -> Self { Self { _nope: PhantomData } }
+
+        pub fn process(&self, src_table: &mut Table, col_name: &str,
+                       mappings: &[OutputSpwInfo], dest_table: &mut Table) -> Result<()> {
+            let data = src_table.get_col_as_vec::<T>(col_name)?;
+
+            for (i, mapping) in mappings.iter().enumerate() {
+                let mut idx_iter = mapping.spw_indices();
+                let first_idx = idx_iter.next().unwrap(); // assume we have a nonzero number of spws
+                let first_value = data[first_idx].clone();
+
+                for idx in idx_iter {
+                    if data[idx] != first_value {
+                        return err_msg!("value changed from {} to {}", first_value, data[idx]);
+                    }
+                }
+
+                dest_table.put_cell(col_name, i as u64, &first_value)?;
+            }
+
+            Ok(())
+        }
+    }
+
+
+    /// In columns handled by this struct, the cell values are scalars and the
+    /// output is the sum of the inputs.
+    struct SumScalarColumn<T> { _nope: PhantomData<T> }
+
+    impl<T: CasaScalarData + AddAssign + Copy + Default> SumScalarColumn<T> {
+        pub fn new() -> Self { Self { _nope: PhantomData } }
+
+        pub fn process(&self, src_table: &mut Table, col_name: &str,
+                       mappings: &[OutputSpwInfo], dest_table: &mut Table) -> Result<()> {
+            let data = src_table.get_col_as_vec::<T>(col_name)?;
+
+            for (i, mapping) in mappings.iter().enumerate() {
+                let mut value = T::default();
+
+                for idx in mapping.spw_indices() {
+                    value += data[idx];
+                }
+
+                dest_table.put_cell(col_name, i as u64, &value)?;
+            }
+
+            Ok(())
+        }
+    }
+
+
+    /// In columns handled by this struct, the cell values are 1D vectors, and the
+    /// output is the concatenation of all of the inputs.
+    struct ConcatVectorColumn<T: CasaScalarData> { _nope: PhantomData<T> }
+
+    impl<T: CasaScalarData> ConcatVectorColumn<T> where Vec<T>: CasaDataType {
+        pub fn new() -> Self { Self { _nope: PhantomData } }
+
+        pub fn process(&self, src_table: &mut Table, col_name: &str,
+                       mappings: &[OutputSpwInfo], dest_table: &mut Table) -> Result<()> {
+            for (i, mapping) in mappings.iter().enumerate() {
+                let mut vec = Vec::<T>::new();
+
+                for idx in mapping.spw_indices() {
+                    let mut item = src_table.get_cell_as_vec(col_name, idx as u64)?;
+                    vec.append(&mut item)
+                }
+
+                dest_table.put_cell(col_name, i as u64, &vec)?;
+            }
+
+            Ok(())
+        }
+    }
+
+
+    /// This macro creates the enum type that handles all of the possible
+    /// columns that might appear in the SPECTRAL_WINDOW table. The enum type
+    /// is kind of awkward, but once you work out the macro magic it becomes
+    /// fairly straightforward to use, and as mentioned before this approach
+    /// allows us to leverage Rust's type system nicely.
+    ///
+    /// Because macros work on an AST level, we can't capture the "state type"
+    /// of each column as a genuine type (e.g. UseFirstColumn<i32>) because we
+    /// are then unable to refer to that type in expression contexts.
+    /// Therefore we have to put that piece of info in terms of an "ident"
+    /// typed capture.
+    macro_rules! spectral_window_columns {
+        {$($variant_name:ident($col_name:ident, $state_type:ident, $data_type:ty)),+} => {
+            /// This enumeration type represents a column that may appear in the
+            /// SPECTRAL_WINDOW table of a visibility data measurement set. We
+            /// have to use an enumeration type so that we can leverage Rust's
+            /// generics to read in the data with strong, correct typing.
+            enum SpectralWindowColumn {
+                $(
+                    $variant_name($state_type<$data_type>),
+                )+
+            }
+
+            impl SpectralWindowColumn {
+                pub fn col_name(&self) -> &'static str {
+                    match self {
+                        $(
+                            &SpectralWindowColumn::$variant_name(_) => stringify!($col_name),
+                        )+
+                    }
+                }
+
+                pub fn process(&self, src_table: &mut Table, mappings: &[OutputSpwInfo], dest_table: &mut Table) -> Result<()> {
+                    match self {
+                        $(
+                            &SpectralWindowColumn::$variant_name(ref h) =>
+                                h.process(src_table, self.col_name(), mappings, dest_table),
+                        )+
+                    }
                 }
             }
 
-            dest_table.put_cell(col_name, i as u64, &first_value)?;
-        }
+            impl FromStr for SpectralWindowColumn {
+                type Err = Error;
 
-        Ok(())
+                fn from_str(s: &str) -> Result<Self> {
+                    match s {
+                        $(
+                            stringify!($col_name) => Ok(SpectralWindowColumn::$variant_name($state_type::new())),
+                        )+
+                            _ => err_msg!("unrecognized column in SPECTRAL_WINDOW table: \"{}\"", s)
+                    }
+                }
+            }
+        };
+    }
+
+
+    spectral_window_columns! {
+        AssocNature(ASSOC_NATURE, IgnoreColumn, ()),
+        AssocSpwId(ASSOC_SPW_ID, IgnoreColumn, ()),
+        BbcNo(BBC_NO, MustMatchColumn, i32),
+        ChanFreq(CHAN_FREQ, ConcatVectorColumn, f64),
+        ChanWidth(CHAN_WIDTH, ConcatVectorColumn, f64),
+        DopplerId(DOPPLER_ID, UseFirstColumn, i32),
+        EffectiveBw(EFFECTIVE_BW, ConcatVectorColumn, f64),
+        FlagRow(FLAG_ROW, MustMatchColumn, bool),
+        FreqGroup(FREQ_GROUP, MustMatchColumn, i32),
+        FreqGroupName(FREQ_GROUP_NAME, MustMatchColumn, String),
+        IfConvChain(IF_CONV_CHAIN, MustMatchColumn, i32),
+        MeasFreqRef(MEAS_FREQ_REF, MustMatchColumn, i32),
+        Name(NAME, UseFirstColumn, String),
+        NetSideband(NET_SIDEBAND, MustMatchColumn, i32),
+        NumChan(NUM_CHAN, SumScalarColumn, i32),
+        RefFrequency(REF_FREQUENCY, UseFirstColumn, f64),
+        Resolution(RESOLUTION, ConcatVectorColumn, f64),
+        TotalBandwidth(TOTAL_BANDWIDTH, SumScalarColumn, f64)
+    }
+
+
+    // Quick wrapper type to avoid type visibility complaints
+
+    pub struct WrappedSpectralWindowColumn(SpectralWindowColumn);
+
+    impl FromStr for WrappedSpectralWindowColumn {
+        type Err = Error;
+
+        fn from_str(s: &str) -> Result<Self> {
+            Ok(WrappedSpectralWindowColumn(s.parse()?))
+        }
+    }
+
+    impl WrappedSpectralWindowColumn {
+        pub fn process(&self, src_table: &mut Table, mappings: &[OutputSpwInfo], dest_table: &mut Table) -> Result<()> {
+            self.0.process(src_table, mappings, dest_table)
+        }
     }
 }
 
-
-/// In columns handled by this struct, the cell values are scalars and the
-/// output is the sum of the inputs.
-struct SpwSumScalarColumn<T> { _nope: PhantomData<T> }
-
-impl<T: CasaScalarData + AddAssign + Copy + Default> SpwSumScalarColumn<T> {
-    pub fn new() -> Self { Self { _nope: PhantomData } }
-
-    pub fn process(&self, src_table: &mut Table, col_name: &str,
-                   mappings: &[OutputSpwInfo], dest_table: &mut Table) -> Result<()> {
-        let data = src_table.get_col_as_vec::<T>(col_name)?;
-
-        for (i, mapping) in mappings.iter().enumerate() {
-            let mut value = T::default();
-
-            for idx in mapping.spw_indices() {
-                value += data[idx];
-            }
-
-            dest_table.put_cell(col_name, i as u64, &value)?;
-        }
-
-        Ok(())
-    }
-}
-
-
-/// In columns handled by this struct, the cell values are 1D vectors, and the
-/// output is the concatenation of all of the inputs.
-struct SpwConcatVectorColumn<T: CasaScalarData> { _nope: PhantomData<T> }
-
-impl<T: CasaScalarData> SpwConcatVectorColumn<T> where Vec<T>: CasaDataType {
-    pub fn new() -> Self { Self { _nope: PhantomData } }
-
-    pub fn process(&self, src_table: &mut Table, col_name: &str,
-                   mappings: &[OutputSpwInfo], dest_table: &mut Table) -> Result<()> {
-        for (i, mapping) in mappings.iter().enumerate() {
-            let mut vec = Vec::<T>::new();
-
-            for idx in mapping.spw_indices() {
-                let mut item = src_table.get_cell_as_vec(col_name, idx as u64)?;
-                vec.append(&mut item)
-            }
-
-            dest_table.put_cell(col_name, i as u64, &vec)?;
-        }
-
-        Ok(())
-    }
-}
-
-
-// Now we use a macro to create the enum type that handles all of the possible
-// columns that might appear in the SPECTRAL_WINDOW table. The enum type is
-// kind of awkward, but once you work out the macro magic it becomes fairly
-// straightforward to use, and as mentioned before this approach allows us to
-// leverage Rust's type system nicely.
-//
-// Because macros work on an AST level, we can't capture the "state type" of
-// each column as a genuine type (e.g. SpwUseFirstColumn<i32>) because we are
-// then unable to refer to that type in expression contexts. Therefore we have
-// to put our macros all in terms of "ident" typed captures.
-macro_rules! spectral_window_columns {
-    {$($variant_name:ident($col_name:ident, $state_type:ident, $data_type:ty)),+} => {
-        /// This enumeration type represents a column that may appear in the
-        /// SPECTRAL_WINDOW table of a visibility data measurement set. We
-        /// have to use an enumeration type so that we can leverage Rust's
-        /// generics to read in the data with strong, correct typing.
-        enum SpectralWindowColumn {
-            $(
-                $variant_name($state_type<$data_type>),
-            )+
-        }
-
-        impl SpectralWindowColumn {
-            pub fn col_name(&self) -> &'static str {
-                match self {
-                    $(
-                        &SpectralWindowColumn::$variant_name(_) => stringify!($col_name),
-                    )+
-                }
-            }
-
-            pub fn process(&self, src_table: &mut Table, mappings: &[OutputSpwInfo], dest_table: &mut Table) -> Result<()> {
-                match self {
-                    $(
-                        &SpectralWindowColumn::$variant_name(ref h) =>
-                            h.process(src_table, self.col_name(), mappings, dest_table),
-                    )+
-                }
-            }
-        }
-
-        impl FromStr for SpectralWindowColumn {
-            type Err = Error;
-
-            fn from_str(s: &str) -> Result<Self> {
-                match s {
-                    $(
-                        stringify!($col_name) => Ok(SpectralWindowColumn::$variant_name($state_type::new())),
-                    )+
-                    _ => err_msg!("unrecognized column in SPECTRAL_WINDOW table: \"{}\"", s)
-                }
-            }
-        }
-    };
-}
-
-
-spectral_window_columns! {
-    AssocNature(ASSOC_NATURE, SpwIgnoreColumn, ()),
-    AssocSpwId(ASSOC_SPW_ID, SpwIgnoreColumn, ()),
-    BbcNo(BBC_NO, SpwMustMatchColumn, i32),
-    ChanFreq(CHAN_FREQ, SpwConcatVectorColumn, f64),
-    ChanWidth(CHAN_WIDTH, SpwConcatVectorColumn, f64),
-    DopplerId(DOPPLER_ID, SpwUseFirstColumn, i32),
-    EffectiveBw(EFFECTIVE_BW, SpwConcatVectorColumn, f64),
-    FlagRow(FLAG_ROW, SpwMustMatchColumn, bool),
-    FreqGroup(FREQ_GROUP, SpwMustMatchColumn, i32),
-    FreqGroupName(FREQ_GROUP_NAME, SpwMustMatchColumn, String),
-    IfConvChain(IF_CONV_CHAIN, SpwMustMatchColumn, i32),
-    MeasFreqRef(MEAS_FREQ_REF, SpwMustMatchColumn, i32),
-    Name(NAME, SpwUseFirstColumn, String),
-    NetSideband(NET_SIDEBAND, SpwMustMatchColumn, i32),
-    NumChan(NUM_CHAN, SpwSumScalarColumn, i32),
-    RefFrequency(REF_FREQUENCY, SpwUseFirstColumn, f64),
-    Resolution(RESOLUTION, SpwConcatVectorColumn, f64),
-    TotalBandwidth(TOTAL_BANDWIDTH, SpwSumScalarColumn, f64)
-}
+use spw_table::WrappedSpectralWindowColumn as SpectralWindowColumn;
 
 
 // Now the same rigamarole for the main visbility data table.
@@ -801,7 +826,7 @@ impl<T: Clone + std::fmt::Debug + Eq + std::hash::Hash> VisRecordIdentity<T> {
 
 /// Information about an output spectral window.
 #[derive(Clone,Debug,Eq,PartialEq)]
-struct OutputSpwInfo {
+pub struct OutputSpwInfo {
     in_spw0: usize,
     in_spw1: usize,
     num_chans: usize,
@@ -862,7 +887,7 @@ impl FromStr for OutputSpwInfo {
 /// that each input spw can only appear in one output spw, which is something
 /// that we could in principle lift.
 #[derive(Clone,Debug,Eq,PartialEq)]
-struct InputSpwInfo {
+pub struct InputSpwInfo {
     out_spw: usize,
     offset: usize,
 }
