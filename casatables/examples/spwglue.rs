@@ -1019,31 +1019,34 @@ zero-based.")
         let mut destinations = Vec::new();
         let mut field_id_to_dest_index = HashMap::new();
         let mut dest_path_to_dest_index = HashMap::new();
-        let mut field_item_is_id = true;
-        let mut last_field_id = 0i32;
 
-        for info in matches.values_of("out_field").unwrap() {
-            if field_item_is_id {
-                last_field_id = ctry!(info.parse();
-                                      "bad field ID \"{}\" in field output arguments", info);
-            } else {
-                let dest = Path::new(info).to_owned();
-                let mut idx = destinations.len();
+        if let Some(out_field_items) = matches.values_of("out_field") {
+            let mut field_item_is_id = true;
+            let mut last_field_id = 0i32;
 
-                if let Some(prev_idx) = dest_path_to_dest_index.insert(dest.clone(), idx) {
-                    // This dest path already appeared; re-use its entry. This lets us
-                    // write multiple fields to the same output file.
-                    idx = prev_idx;
+            for info in out_field_items {
+                if field_item_is_id {
+                    last_field_id = ctry!(info.parse();
+                                          "bad field ID \"{}\" in field output arguments", info);
                 } else {
-                    destinations.push(dest);
+                    let dest = Path::new(info).to_owned();
+                    let mut idx = destinations.len();
+
+                    if let Some(prev_idx) = dest_path_to_dest_index.insert(dest.clone(), idx) {
+                        // This dest path already appeared; re-use its entry. This lets us
+                        // write multiple fields to the same output file.
+                        idx = prev_idx;
+                    } else {
+                        destinations.push(dest);
+                    }
+
+                    if field_id_to_dest_index.insert(last_field_id, idx).is_some() {
+                        return err_msg!("field ID {} appears multiple times in field output arguments", last_field_id);
+                    }
                 }
 
-                if field_id_to_dest_index.insert(last_field_id, idx).is_some() {
-                    return err_msg!("field ID {} appears multiple times in field output arguments", last_field_id);
-                }
+                field_item_is_id = !field_item_is_id;
             }
-
-            field_item_is_id = !field_item_is_id;
         }
 
         let default_dest_index = matches.value_of_os("out_default").map(|info| {
