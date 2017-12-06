@@ -3,6 +3,7 @@
 
 extern crate byteorder;
 extern crate clap;
+extern crate itertools;
 #[macro_use] extern crate ndarray;
 #[macro_use] extern crate nom;
 extern crate num_traits;
@@ -446,6 +447,8 @@ mod spw_table {
 use spw_table::WrappedSpectralWindowColumn as SpectralWindowColumn;
 
 
+type MaybeVisFactor = Option<Array<Complex<f32>, Ix1>>;
+
 /// This module goes through the same kind of rigamarole for the main
 /// visbility data table.
 mod main_table {
@@ -472,7 +475,9 @@ mod main_table {
             Ok(())
         }
 
-        fn emit(&self, col_name: &str, table: &mut Table, row: u64) -> Result<()> {
+        fn emit(&self, col_name: &str, _vis_factor: &MaybeVisFactor,
+                table: &mut Table, row: u64) -> Result<()>
+        {
             if let Some(ref v) = self.value {
                 table.put_cell(col_name, row, v)?;
             }
@@ -583,7 +588,9 @@ mod main_table {
 
         // I tried to use a writeable output row for this, but I couldn't find a
         // way to leave the FLAG_CATEGORY column undefined.
-        fn emit(&self, col_name: &str, table: &mut Table, row: u64) -> Result<()> {
+        fn emit(&self, col_name: &str, _vis_factor: &MaybeVisFactor,
+                table: &mut Table, row: u64) -> Result<()>
+        {
             if let Some(ref v) = self.value {
                 table.put_cell(col_name, row, v)?;
             }
@@ -612,7 +619,9 @@ mod main_table {
             Ok(())
         }
 
-        fn emit(&self, _col_name: &str, _table: &mut Table, _row: u64) -> Result<()> {
+        fn emit(&self, _col_name: &str, _vis_factor: &MaybeVisFactor,
+                _table: &mut Table, _row: u64) -> Result<()>
+        {
             Ok(())
         }
 
@@ -638,7 +647,9 @@ mod main_table {
             Ok(())
         }
 
-        fn emit(&self, col_name: &str, table: &mut Table, row: u64) -> Result<()> {
+        fn emit(&self, col_name: &str, _vis_factor: &MaybeVisFactor,
+                table: &mut Table, row: u64) -> Result<()>
+        {
             table.put_cell(col_name, row, &self.value)
         }
 
@@ -655,32 +666,87 @@ mod main_table {
         buf: Array<T, Ix2>
     }
 
-    impl<T: CasaScalarData + Default + std::fmt::Debug> PolConcatColumn<T> where Array<T, Ix2>: CasaDataType {
+    fn process_pol_concat_record<T>(col_name: &str, in_spw: &InputSpwInfo,
+                                    out_spw: &OutputSpwInfo, row: &mut TableRow,
+                                    buf: &mut Array<T, Ix2>) -> Result<()>
+        where T: CasaScalarData + Copy + Default + std::fmt::Debug
+    {
+        let chunk: Array<T, Ix2> = row.get_cell(col_name)?;
+
+        let n_chunk_chan = chunk.shape()[0];
+        let n_chunk_pol = chunk.shape()[1];
+        let n_buf_chan = buf.shape()[0];
+        let n_buf_pol = buf.shape()[1];
+
+        if n_buf_chan != out_spw.num_chans() || n_buf_pol != n_chunk_pol {
+            *buf = Array::default((out_spw.num_chans(), n_chunk_pol));
+        }
+
+        let c0 = in_spw.out_spw_offset() as isize;
+        buf.slice_mut(s![c0..c0+n_chunk_chan as isize, ..]).assign(&chunk);
+
+        Ok(())
+    }
+
+    impl<T: CasaScalarData + Copy + Default + std::fmt::Debug> PolConcatColumn<T>
+        where Array<T, Ix2>: CasaDataType
+    {
         fn new() -> Self {
             Self {
                 buf: Array::default((0, 0))
             }
         }
 
-        fn process(&mut self, col_name: &str, in_spw: &InputSpwInfo, out_spw: &OutputSpwInfo, row: &mut TableRow) -> Result<()> {
-            let chunk: Array<T, Ix2> = row.get_cell(col_name)?;
-
-            let n_chunk_chan = chunk.shape()[0];
-            let n_chunk_pol = chunk.shape()[1];
-            let n_buf_chan = self.buf.shape()[0];
-            let n_buf_pol = self.buf.shape()[1];
-
-            if n_buf_chan != out_spw.num_chans() || n_buf_pol != n_chunk_pol {
-                self.buf = Array::default((out_spw.num_chans(), n_chunk_pol));
-            }
-
-            let c0 = in_spw.out_spw_offset() as isize;
-            self.buf.slice_mut(s![c0..c0+n_chunk_chan as isize, ..]).assign(&chunk);
-
-            Ok(())
+        fn process(&mut self, col_name: &str, in_spw: &InputSpwInfo,
+                   out_spw: &OutputSpwInfo, row: &mut TableRow) -> Result<()>
+        {
+            process_pol_concat_record(col_name, in_spw, out_spw, row, &mut self.buf)
         }
 
-        fn emit(&self, col_name: &str, table: &mut Table, row: u64) -> Result<()> {
+        fn emit(&self, col_name: &str, _vis_factor: &MaybeVisFactor,
+                table: &mut Table, row: u64) -> Result<()>
+        {
+            table.put_cell(col_name, row, &self.buf)
+        }
+
+        fn reset(&mut self) {
+            // We live dangerously and don't de-initialize the buffer, for speed.
+        }
+    }
+
+
+    /// This is just like PolConcatColumn, except we might also multiply the
+    /// final result by the inverse squared mean bandpass before writing the
+    /// output.
+    #[derive(Clone, Debug, PartialEq)]
+    struct VisibilitiesColumn<T> {
+        buf: Array<Complex<f32>, Ix2>,
+
+        // Hack so that we still take a type parameter to make life easier
+        // with our macro system.
+        _nope: PhantomData<T>,
+    }
+
+    impl<T> VisibilitiesColumn<T> {
+        fn new() -> Self {
+            Self {
+                buf: Array::default((0, 0)),
+                _nope: PhantomData
+            }
+        }
+
+        fn process(&mut self, col_name: &str, in_spw: &InputSpwInfo,
+                   out_spw: &OutputSpwInfo, row: &mut TableRow) -> Result<()>
+        {
+            process_pol_concat_record(col_name, in_spw, out_spw, row, &mut self.buf)
+        }
+
+        fn emit(&mut self, col_name: &str, vis_factor: &MaybeVisFactor,
+                table: &mut Table, row: u64) -> Result<()> {
+            if let &Some(ref arr) = vis_factor {
+                self.buf *= &arr.view().into_shape((arr.len(), 1)).unwrap();
+            }
+
             table.put_cell(col_name, row, &self.buf)
         }
 
@@ -724,12 +790,12 @@ mod main_table {
                     }; "problem processing column {}", col_name))
                 }
 
-                fn emit(&self, table: &mut Table, row: u64) -> Result<()> {
+                fn emit(&mut self, vis_factor: &MaybeVisFactor, table: &mut Table, row: u64) -> Result<()> {
                     let col_name = self.col_name();
 
                     Ok(ctry!(match self {
                         $(
-                            &VisDataColumn::$variant_name(ref s) => s.emit(col_name, table, row),
+                            &mut VisDataColumn::$variant_name(ref mut s) => s.emit(col_name, vis_factor, table, row),
                         )+
                     }; "problem emitting column {}", col_name))
                 }
@@ -762,9 +828,9 @@ mod main_table {
         Antenna1(ANTENNA1, IdentityColumn, i32),
         Antenna2(ANTENNA2, IdentityColumn, i32),
         ArrayId(ARRAY_ID, IdentityColumn, i32),
-        CorrectedData(CORRECTED_DATA, PolConcatColumn, Complex<f32>),
+        CorrectedData(CORRECTED_DATA, VisibilitiesColumn, ()),
         DataDescId(DATA_DESC_ID, IdentityColumn, i32),
-        Data(DATA, PolConcatColumn, Complex<f32>),
+        Data(DATA, VisibilitiesColumn, ()),
         Exposure(EXPOSURE, ApproxMatchColumn, f64),
         Feed1(FEED1, IdentityColumn, i32),
         Feed2(FEED2, IdentityColumn, i32),
@@ -773,7 +839,7 @@ mod main_table {
         FlagRow(FLAG_ROW, LogicalOrColumn, bool),
         Flag(FLAG, PolConcatColumn, bool),
         Interval(INTERVAL, ApproxMatchColumn, f64),
-        ModelData(MODEL_DATA, PolConcatColumn, Complex<f32>),
+        ModelData(MODEL_DATA, VisibilitiesColumn, ()),
         ObservationId(OBSERVATION_ID, IdentityColumn, i32),
         ProcessorId(PROCESSOR_ID, IdentityColumn, i32),
         ScanNumber(SCAN_NUMBER, IdentityColumn, i32),
@@ -810,8 +876,8 @@ mod main_table {
         }
 
         #[inline(always)]
-        pub fn emit(&self, table: &mut Table, row: u64) -> Result<()> {
-            self.0.emit(table, row)
+        pub fn emit(&mut self, vis_factor: &MaybeVisFactor, table: &mut Table, row: u64) -> Result<()> {
+            self.0.emit(vis_factor, table, row)
         }
 
         #[inline(always)]
@@ -991,9 +1057,9 @@ impl<'a> OutputRecordState<'a> {
         Ok(self.n_input_spws_seen == self.spw_info.n_input_spws())
     }
 
-    pub fn emit(&self, table: &mut Table, row: u64) -> Result<()> {
-        for col in &self.columns {
-            col.emit(table, row)?;
+    pub fn emit(&mut self, vis_factor: &MaybeVisFactor, table: &mut Table, row: u64) -> Result<()> {
+        for col in &mut self.columns {
+            col.emit(vis_factor, table, row)?;
         }
 
         Ok(())
@@ -1128,12 +1194,28 @@ fn main() {
             out_spws.push(m);
         }
 
-        let _meanbp = match matches.value_of_os("meanbp") {
+        let inv_sq_mean_bp = match matches.value_of_os("meanbp") {
             None => None,
             Some(meanbp_path) => {
-                let mut meanbp = File::open(meanbp_path)?;
-                let arr: Array<f64, Ix1> = npy_stream_to_ndarray(&mut meanbp)?;
-                Some(arr)
+                use itertools::Itertools;
+                use itertools::FoldWhile::{Continue, Done};
+
+                let mut meanbp = File::open(&meanbp_path)?;
+                let mut arr: Array<f64, Ix1> = npy_stream_to_ndarray(&mut meanbp)?;
+
+                if arr.iter().fold_while(false, |_acc, x| {
+                    if *x <= 0. {
+                        Done(true)
+                    } else {
+                        Continue(false)
+                    }
+                }).into_inner() {
+                    return err_msg!("illegal bandpass file \"{}\": some values are nonpositive",
+                                    meanbp_path.to_string_lossy());
+                }
+
+                arr.mapv_inplace(|x| x.powi(-2));
+                Some(arr.map(|x| Complex::new(*x as f32, 0.)))
             },
         };
 
@@ -1234,6 +1316,17 @@ fn main() {
                                 return err_msg!("cannot (currently) include a single input spw in multiple output spws");
                             }
                         }
+                    }
+                }
+            }
+
+            // Consistency check.
+
+            if let Some(ref arr) = inv_sq_mean_bp {
+                for (i, out_spw) in out_spws.iter().enumerate() {
+                    if out_spw.num_chans != arr.len() {
+                        return err_msg!("all output spws must have {} channels to match the meanbp \
+                                         file, but #{} has {} channels", arr.len(), i, out_spw.num_chans);
                     }
                 }
             }
@@ -1449,7 +1542,7 @@ fn main() {
             };
 
             if record_complete {
-                let state = records_in_progress.remove(&row_ident).unwrap();
+                let mut state = records_in_progress.remove(&row_ident).unwrap();
 
                 let maybe_out_rec = if let Some(idx) = field_id_to_dest_index.get_mut(&fieldid) {
                     Some(&mut out_tables[*idx])
@@ -1461,7 +1554,7 @@ fn main() {
 
                 if let Some(out_rec) = maybe_out_rec {
                     ctry!(out_rec.table.add_rows(1); "failed to add row to \"{}\"", out_rec.path.display());
-                    state.emit(&mut out_rec.table, out_rec.num_rows)?;
+                    state.emit(&inv_sq_mean_bp, &mut out_rec.table, out_rec.num_rows)?;
                     // Rewriting this is kind of lame, but eh.
                     out_rec.table.put_cell("DATA_DESC_ID", out_rec.num_rows, &(out_spw_id as i32))?;
                     out_rec.num_rows += 1;
