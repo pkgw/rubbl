@@ -1227,7 +1227,7 @@ fn main() {
              .index(1))
         .get_matches();
 
-    process::exit(rubbl_core::notify::run_with_notifications(matches, |matches, _nbe| -> Result<i32> {
+    process::exit(rubbl_core::notify::run_with_notifications(matches, |matches, nbe| -> Result<i32> {
         // Deal with args. The field mapping is awkward because clap doesn't
         // distinguish between multiple appearances of the same option; `-f A
         // B C -f D` is just returned to us as a list [A B C D]. Therefore to
@@ -1704,6 +1704,11 @@ fn main() {
         })?;
 
         // All done!
+
+        if records_in_progress.len() != 0 {
+            rn_severe!(nbe, "there were {} unfinished records left over at the end",
+                       records_in_progress.len());
+        }
 
         pb.finish();
         Ok(0)
