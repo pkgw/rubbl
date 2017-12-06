@@ -617,6 +617,24 @@ impl Table {
         Ok(cnames.iter().map(|cstr| cstr.to_rust()).collect())
     }
 
+    pub fn remove_column(&mut self, col_name: &str) -> Result<()> {
+        let ccol_name = glue::GlueString::from_rust(col_name);
+
+        let rv = unsafe {
+            glue::table_remove_column(
+                self.handle,
+                &ccol_name,
+                &mut self.exc_info
+            )
+        };
+
+        if rv != 0 {
+            return self.exc_info.as_err();
+        }
+
+        Ok(())
+    }
+
     pub fn table_keyword_names(&mut self) -> Result<Vec<String>> {
         let n_kws = unsafe { glue::table_n_keywords(self.handle) } as usize;
         let mut cnames: Vec<glue::GlueString> = Vec::with_capacity(n_kws);

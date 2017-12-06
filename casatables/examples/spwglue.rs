@@ -1356,7 +1356,7 @@ fn main() {
         let mut col_state_template = Vec::new();
         let mut seen_corrected = false;
 
-        for n in col_names {
+        for n in &col_names {
             let handler = ctry!(n.parse::<VisDataColumn>();
                                 "unhandled column \"{}\" in input table \"{}\"", n, inpath.display());
             col_state_template.push(handler);
@@ -1429,7 +1429,7 @@ fn main() {
             ctry!(out_spw_table.add_rows(out_spws.len());
                   "failed to add {} rows to \"{}\"", out_spws.len(), out_spw_path.display());
 
-            for n in col_names {
+            for n in &col_names {
                 let handler = ctry!(n.parse::<SpectralWindowColumn>();
                                     "unhandled column \"{}\" in input sub-table \"{}\"",
                                     n, in_spw_path.display());
@@ -1637,6 +1637,19 @@ fn main() {
                 table: t,
                 num_rows: 0
             });
+        }
+
+        // This could be cleaner but meh.
+        if data_mapping == DataMappingKind::Correct {
+            for n in &col_names {
+                if n == "MODEL_DATA" || n == "CORRECTED_DATA" {
+                    for rec in &mut out_tables {
+                        ctry!(rec.table.remove_column(&n);
+                              "couldn\'t remove column {} from \"{}\"",
+                              n, rec.path.display());
+                    }
+                }
+            }
         }
 
         in_main_table.for_each_row(|mut in_row| {

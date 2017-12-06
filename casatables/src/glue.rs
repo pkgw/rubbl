@@ -185,6 +185,11 @@ extern "C" {
                                  exc: *mut ExcInfo) -> ::std::os::raw::c_int;
 }
 extern "C" {
+    pub fn table_remove_column(table: *mut GlueTable,
+                               col_name: *const GlueString, exc: *mut ExcInfo)
+     -> ::std::os::raw::c_int;
+}
+extern "C" {
     pub fn table_get_scalar_column_data(table: *const GlueTable,
                                         col_name: *const GlueString,
                                         data: *mut ::std::os::raw::c_void,

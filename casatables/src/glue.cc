@@ -175,6 +175,19 @@ extern "C" {
         return 0;
     }
 
+    int
+    table_remove_column(GlueTable &table, const GlueString &col_name, ExcInfo &exc)
+    {
+        try {
+            table.removeColumn(col_name);
+        } catch (...) {
+            handle_exception(exc);
+            return 1;
+        }
+
+        return 0;
+    }
+
     unsigned long
     table_n_keywords(const GlueTable &table)
     {
