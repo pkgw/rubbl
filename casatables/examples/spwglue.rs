@@ -446,329 +446,382 @@ mod spw_table {
 use spw_table::WrappedSpectralWindowColumn as SpectralWindowColumn;
 
 
-// Now the same rigamarole for the main visbility data table.
+/// This module goes through the same kind of rigamarole for the main
+/// visbility data table.
+mod main_table {
+    use super::*;
 
-#[derive(Clone, Debug, PartialEq)]
-struct VisIdentityColumn<T: CasaScalarData> {
-    value: Option<T>,
-}
-
-impl<T: CasaScalarData> VisIdentityColumn<T> {
-    pub fn new() -> Self {
-        Self { value: None }
+    /// These columns are passed through unmodified.
+    #[derive(Clone, Debug, PartialEq)]
+    struct IdentityColumn<T: CasaScalarData> {
+        value: Option<T>,
     }
 
-    pub fn process(&mut self, col_name: &str, _in_spw: &InputSpwInfo, _out_spw: &OutputSpwInfo, row: &mut TableRow) -> Result<()> {
-        // Since this column helps define the record's identity, subsequent rows match the
-        // first row by definition.
-        if self.value.is_none() {
-            self.value = Some(row.get_cell(col_name)?);
+    impl<T: CasaScalarData> IdentityColumn<T> {
+        fn new() -> Self {
+            Self { value: None }
         }
 
-        Ok(())
-    }
+        fn process(&mut self, col_name: &str, _in_spw: &InputSpwInfo, _out_spw: &OutputSpwInfo, row: &mut TableRow) -> Result<()> {
+            // Since this column helps define the record's identity, subsequent rows match the
+            // first row by definition.
+            if self.value.is_none() {
+                self.value = Some(row.get_cell(col_name)?);
+            }
 
-    pub fn emit(&self, col_name: &str, table: &mut Table, row: u64) -> Result<()> {
-        if let Some(ref v) = self.value {
-            table.put_cell(col_name, row, v)?;
+            Ok(())
         }
 
-        Ok(())
-    }
+        fn emit(&self, col_name: &str, table: &mut Table, row: u64) -> Result<()> {
+            if let Some(ref v) = self.value {
+                table.put_cell(col_name, row, v)?;
+            }
 
-    pub fn reset(&mut self) {
-        self.value = None;
-    }
-}
+            Ok(())
+        }
 
-
-trait CheckApproximateMatch {
-    type Element: Float + One + PartialOrd + Signed;
-
-    fn approx_match_tol() -> Self::Element {
-        // This is kind of ridiculous, but I can't figure out a way to get a
-        // literal constant that's agnostic as to the type T ...
-        Self::Element::one().exp2().powi(-20)
-    }
-
-    fn is_approximately_same(&self, other: &Self) -> bool;
-}
-
-/// Without the following, the typechecker considers our impls to not be
-/// mutually exclusive because num_traits could in principle impl Float, etc,
-/// for Vec<T>.
-trait NeverImpledForVec {}
-impl NeverImpledForVec for f32 {}
-impl NeverImpledForVec for f64 {}
-
-impl<T: Float + One + NeverImpledForVec + PartialOrd + Signed + Sub + Zero> CheckApproximateMatch for T {
-    type Element = T;
-
-    fn is_approximately_same(&self, other: &Self) -> bool {
-        if *self == Zero::zero() {
-            other.abs() < Self::approx_match_tol()
-        } else if *other == Zero::zero() {
-            self.abs() < Self::approx_match_tol()
-        } else {
-            let diff = *self - *other;
-            diff.abs() / self.abs() < Self::approx_match_tol()
+        fn reset(&mut self) {
+            self.value = None;
         }
     }
-}
 
-impl<T: Float + One + PartialOrd + Signed + Sub + Zero> CheckApproximateMatch for Vec<T> {
-    type Element = T;
 
-    fn is_approximately_same(&self, other: &Self) -> bool {
-        assert_eq!(self.len(), other.len());
+    /// This is kind of ridiculous, but I can't figure out a way to get a
+    /// literal constant that's agnostic as to floating types, which stymies a
+    /// type-agnostic implementation of the ApproxMatchColumn.
+    trait CheckApproximateMatch {
+        type Element: Float + One + PartialOrd + Signed;
 
-        let tol = Self::approx_match_tol();
+        fn approx_match_tol() -> Self::Element {
+            Self::Element::one().exp2().powi(-20)
+        }
 
-        for (v1, v2) in self.iter().zip(other.iter()) {
-            if *v1 == Zero::zero() {
-                if Signed::abs(v2) > tol {
-                    return false;
+        fn is_approximately_same(&self, other: &Self) -> bool;
+    }
+
+    /// Without the following, the typechecker considers our impls to not be
+    /// mutually exclusive because num_traits could in principle impl Float, etc,
+    /// for Vec<T>.
+    trait NeverImpledForVec {}
+    impl NeverImpledForVec for f32 {}
+    impl NeverImpledForVec for f64 {}
+
+    impl<T: Float + One + NeverImpledForVec + PartialOrd + Signed + Sub + Zero> CheckApproximateMatch for T {
+        type Element = T;
+
+        fn is_approximately_same(&self, other: &Self) -> bool {
+            if *self == Zero::zero() {
+                other.abs() < Self::approx_match_tol()
+            } else if *other == Zero::zero() {
+                self.abs() < Self::approx_match_tol()
+            } else {
+                let diff = *self - *other;
+                diff.abs() / self.abs() < Self::approx_match_tol()
+            }
+        }
+    }
+
+    impl<T: Float + One + PartialOrd + Signed + Sub + Zero> CheckApproximateMatch for Vec<T> {
+        type Element = T;
+
+        fn is_approximately_same(&self, other: &Self) -> bool {
+            assert_eq!(self.len(), other.len());
+
+            let tol = Self::approx_match_tol();
+
+            for (v1, v2) in self.iter().zip(other.iter()) {
+                if *v1 == Zero::zero() {
+                    if Signed::abs(v2) > tol {
+                        return false;
+                    }
+                } else if *v2 == Zero::zero() {
+                    if Signed::abs(v1) > tol {
+                        return false;
+                    }
+                } else {
+                    let diff = *v1 - *v2;
+                    if Signed::abs(&diff) / Signed::abs(v1) > tol {
+                        return false;
+                    }
                 }
-            } else if *v2 == Zero::zero() {
-                if Signed::abs(v1) > tol {
-                    return false;
+            }
+
+            true
+        }
+    }
+
+
+    /// Data in columns handled here must be *about* the same.
+    ///
+    /// This feature implemented since EVLA dataset
+    /// 11A-266.sb4865287.eb4875705.55772.08031621527.ms has 22 rows out of ~9
+    /// million that have an EXPOSURE value that differs from the others by 1
+    /// part in ~10^9.
+    #[derive(Clone, Debug, PartialEq)]
+    struct ApproxMatchColumn<T: CasaDataType> {
+        value: Option<T>,
+    }
+
+    impl<T: CasaDataType + CheckApproximateMatch> ApproxMatchColumn<T> {
+        fn new() -> Self {
+            Self { value: None }
+        }
+
+        fn process(&mut self, col_name: &str, _in_spw: &InputSpwInfo, _out_spw: &OutputSpwInfo, row: &mut TableRow) -> Result<()> {
+            let cur = row.get_cell(col_name)?;
+
+            if let Some(ref prev) = self.value {
+                if !prev.is_approximately_same(&cur) {
+                    return err_msg!("column {} should be approximately constant across spws, but values changed", col_name);
                 }
             } else {
-                let diff = *v1 - *v2;
-                if Signed::abs(&diff) / Signed::abs(v1) > tol {
-                    return false;
+                self.value =  Some(cur);
+            }
+
+            Ok(())
+        }
+
+        // I tried to use a writeable output row for this, but I couldn't find a
+        // way to leave the FLAG_CATEGORY column undefined.
+        fn emit(&self, col_name: &str, table: &mut Table, row: u64) -> Result<()> {
+            if let Some(ref v) = self.value {
+                table.put_cell(col_name, row, v)?;
+            }
+
+            Ok(())
+        }
+
+        fn reset(&mut self) {
+            self.value = None;
+        }
+    }
+
+
+    /// The cells in this column are ignored and left empty in the output.
+    #[derive(Clone, Debug, PartialEq)]
+    struct EmptyColumn<T: CasaDataType> {
+        _nope: PhantomData<T>
+    }
+
+    impl<T> EmptyColumn<Vec<T>> where Vec<T>: CasaDataType {
+        fn new() -> Self {
+            Self { _nope: PhantomData }
+        }
+
+        fn process(&mut self, _col_name: &str, _in_spw: &InputSpwInfo, _out_spw: &OutputSpwInfo, _row: &mut TableRow) -> Result<()> {
+            Ok(())
+        }
+
+        fn emit(&self, _col_name: &str, _table: &mut Table, _row: u64) -> Result<()> {
+            Ok(())
+        }
+
+        fn reset(&mut self) {
+        }
+    }
+
+
+    /// The cells in this column are logically OR-ed together.
+    #[derive(Clone, Debug, PartialEq)]
+    struct LogicalOrColumn<T: CasaDataType + Default> {
+        value: T,
+    }
+
+    impl<T: CasaDataType + Default + BitOrAssign> LogicalOrColumn<T> {
+        fn new() -> Self {
+            Self { value: T::default() }
+        }
+
+        fn process(&mut self, col_name: &str, _in_spw: &InputSpwInfo, _out_spw: &OutputSpwInfo, row: &mut TableRow) -> Result<()> {
+            let cur = row.get_cell(col_name)?;
+            self.value |= cur;
+            Ok(())
+        }
+
+        fn emit(&self, col_name: &str, table: &mut Table, row: u64) -> Result<()> {
+            table.put_cell(col_name, row, &self.value)
+        }
+
+        fn reset(&mut self) {
+            self.value = T::default();
+        }
+    }
+
+
+    /// The cells in this column are expected to be filled with 2D arrays that
+    /// have a polarization and frequency axis.
+    #[derive(Clone, Debug, PartialEq)]
+    struct PolConcatColumn<T: CasaScalarData> {
+        buf: Array<T, Ix2>
+    }
+
+    impl<T: CasaScalarData + Default + std::fmt::Debug> PolConcatColumn<T> where Array<T, Ix2>: CasaDataType {
+        fn new() -> Self {
+            Self {
+                buf: Array::default((0, 0))
+            }
+        }
+
+        fn process(&mut self, col_name: &str, in_spw: &InputSpwInfo, out_spw: &OutputSpwInfo, row: &mut TableRow) -> Result<()> {
+            let chunk: Array<T, Ix2> = row.get_cell(col_name)?;
+
+            let n_chunk_chan = chunk.shape()[0];
+            let n_chunk_pol = chunk.shape()[1];
+            let n_buf_chan = self.buf.shape()[0];
+            let n_buf_pol = self.buf.shape()[1];
+
+            if n_buf_chan != out_spw.num_chans() || n_buf_pol != n_chunk_pol {
+                self.buf = Array::default((out_spw.num_chans(), n_chunk_pol));
+            }
+
+            let c0 = in_spw.out_spw_offset() as isize;
+            self.buf.slice_mut(s![c0..c0+n_chunk_chan as isize, ..]).assign(&chunk);
+
+            Ok(())
+        }
+
+        fn emit(&self, col_name: &str, table: &mut Table, row: u64) -> Result<()> {
+            table.put_cell(col_name, row, &self.buf)
+        }
+
+        fn reset(&mut self) {
+            // We live dangerously and don't de-initialize the buffer, for speed.
+        }
+    }
+
+
+    /// This macro generates the column-handling enum for the main visibility
+    /// data columns.
+    macro_rules! vis_data_columns {
+        {$($variant_name:ident($col_name:ident, $state_type:ident, $data_type:ty)),+} => {
+            /// This enumeration type represents a column that may appear in the
+            /// main table of a visibility data measurement set. We have to use an
+            /// enumeration type so that we can leverage Rust's generics to read
+            /// in the data with strong, correct typing.
+            #[derive(Clone, Debug, PartialEq)]
+            enum VisDataColumn {
+                $(
+                    $variant_name($state_type<$data_type>),
+                )+
+            }
+
+            impl VisDataColumn {
+                fn col_name(&self) -> &'static str {
+                    match self {
+                        $(
+                            &VisDataColumn::$variant_name(_) => stringify!($col_name),
+                        )+
+                    }
+                }
+
+                fn process(&mut self, in_spw: &InputSpwInfo, out_spw: &OutputSpwInfo, row: &mut TableRow) -> Result<()> {
+                    let col_name = self.col_name();
+
+                    Ok(ctry!(match self {
+                        $(
+                            &mut VisDataColumn::$variant_name(ref mut s) => s.process(col_name, in_spw, out_spw, row),
+                        )+
+                    }; "problem processing column {}", col_name))
+                }
+
+                fn emit(&self, table: &mut Table, row: u64) -> Result<()> {
+                    let col_name = self.col_name();
+
+                    Ok(ctry!(match self {
+                        $(
+                            &VisDataColumn::$variant_name(ref s) => s.emit(col_name, table, row),
+                        )+
+                    }; "problem emitting column {}", col_name))
+                }
+
+                fn reset(&mut self) {
+                    match self {
+                        $(
+                            &mut VisDataColumn::$variant_name(ref mut s) => s.reset(),
+                        )+
+                    }
                 }
             }
-        }
 
-        true
-    }
-}
+            impl FromStr for VisDataColumn {
+                type Err = Error;
 
-
-#[derive(Clone, Debug, PartialEq)]
-struct VisApproxMatchColumn<T: CasaDataType> {
-    value: Option<T>,
-}
-
-impl<T: CasaDataType + CheckApproximateMatch> VisApproxMatchColumn<T> {
-    pub fn new() -> Self {
-        Self { value: None }
-    }
-
-    pub fn process(&mut self, col_name: &str, _in_spw: &InputSpwInfo, _out_spw: &OutputSpwInfo, row: &mut TableRow) -> Result<()> {
-        let cur = row.get_cell(col_name)?;
-
-        if let Some(ref prev) = self.value {
-            if !prev.is_approximately_same(&cur) {
-                return err_msg!("column {} should be approximately constant across spws, but values changed", col_name);
-            }
-        } else {
-            self.value =  Some(cur);
-        }
-
-        Ok(())
-    }
-
-    // I tried to use a writeable output row for this, but I couldn't find a
-    // way to leave the FLAG_CATEGORY column undefined.
-    pub fn emit(&self, col_name: &str, table: &mut Table, row: u64) -> Result<()> {
-        if let Some(ref v) = self.value {
-            table.put_cell(col_name, row, v)?;
-        }
-
-        Ok(())
-    }
-
-    pub fn reset(&mut self) {
-        self.value = None;
-    }
-}
-
-
-#[derive(Clone, Debug, PartialEq)]
-struct VisEmptyColumn<T: CasaDataType> {
-    _nope: PhantomData<T>
-}
-
-impl<T> VisEmptyColumn<Vec<T>> where Vec<T>: CasaDataType {
-    pub fn new() -> Self {
-        Self { _nope: PhantomData }
-    }
-
-    pub fn process(&mut self, _col_name: &str, _in_spw: &InputSpwInfo, _out_spw: &OutputSpwInfo, _row: &mut TableRow) -> Result<()> {
-        Ok(())
-    }
-
-    pub fn emit(&self, _col_name: &str, _table: &mut Table, _row: u64) -> Result<()> {
-        Ok(())
-    }
-
-    pub fn reset(&mut self) {
-    }
-}
-
-
-#[derive(Clone, Debug, PartialEq)]
-struct VisLogicalOrColumn<T: CasaDataType + Default> {
-    value: T,
-}
-
-impl<T: CasaDataType + Default + BitOrAssign> VisLogicalOrColumn<T> {
-    pub fn new() -> Self {
-        Self { value: T::default() }
-    }
-
-    pub fn process(&mut self, col_name: &str, _in_spw: &InputSpwInfo, _out_spw: &OutputSpwInfo, row: &mut TableRow) -> Result<()> {
-        let cur = row.get_cell(col_name)?;
-        self.value |= cur;
-        Ok(())
-    }
-
-    pub fn emit(&self, col_name: &str, table: &mut Table, row: u64) -> Result<()> {
-        table.put_cell(col_name, row, &self.value)
-    }
-
-    pub fn reset(&mut self) {
-        self.value = T::default();
-    }
-}
-
-
-#[derive(Clone, Debug, PartialEq)]
-struct VisPolConcatColumn<T: CasaScalarData> {
-    buf: Array<T, Ix2>
-}
-
-impl<T: CasaScalarData + Default + std::fmt::Debug> VisPolConcatColumn<T> where Array<T, Ix2>: CasaDataType {
-    pub fn new() -> Self {
-        Self {
-            buf: Array::default((0, 0))
-        }
-    }
-
-    pub fn process(&mut self, col_name: &str, in_spw: &InputSpwInfo, out_spw: &OutputSpwInfo, row: &mut TableRow) -> Result<()> {
-        let chunk: Array<T, Ix2> = row.get_cell(col_name)?;
-
-        let n_chunk_chan = chunk.shape()[0];
-        let n_chunk_pol = chunk.shape()[1];
-        let n_buf_chan = self.buf.shape()[0];
-        let n_buf_pol = self.buf.shape()[1];
-
-        if n_buf_chan != out_spw.num_chans() || n_buf_pol != n_chunk_pol {
-            self.buf = Array::default((out_spw.num_chans(), n_chunk_pol));
-        }
-
-        let c0 = in_spw.out_spw_offset() as isize;
-        self.buf.slice_mut(s![c0..c0+n_chunk_chan as isize, ..]).assign(&chunk);
-
-        Ok(())
-    }
-
-    pub fn emit(&self, col_name: &str, table: &mut Table, row: u64) -> Result<()> {
-        table.put_cell(col_name, row, &self.buf)
-    }
-
-    pub fn reset(&mut self) {
-        // We live dangerously and don't de-initialize the buffer, for speed.
-    }
-}
-
-
-// Now the same sort of macro stuff, for the main visibility data columns.
-macro_rules! vis_data_columns {
-    {$($variant_name:ident($col_name:ident, $state_type:ident, $data_type:ty)),+} => {
-        /// This enumeration type represents a column that may appear in the
-        /// main table of a visibility data measurement set. We have to use an
-        /// enumeration type so that we can leverage Rust's generics to read
-        /// in the data with strong, correct typing.
-        #[derive(Clone, Debug, PartialEq)]
-        enum VisDataColumnHandler {
-            $(
-                $variant_name($state_type<$data_type>),
-            )+
-        }
-
-        impl VisDataColumnHandler {
-            pub fn col_name(&self) -> &'static str {
-                match self {
-                    $(
-                        &VisDataColumnHandler::$variant_name(_) => stringify!($col_name),
-                    )+
+                fn from_str(s: &str) -> Result<Self> {
+                    match s {
+                        $(
+                            stringify!($col_name) => Ok(VisDataColumn::$variant_name($state_type::new())),
+                        )+
+                            _ => err_msg!("unrecognized column in visibility data table: \"{}\"", s)
+                    }
                 }
             }
+        };
+    }
 
-            pub fn process(&mut self, in_spw: &InputSpwInfo, out_spw: &OutputSpwInfo, row: &mut TableRow) -> Result<()> {
-                let col_name = self.col_name();
+    vis_data_columns! {
+        Antenna1(ANTENNA1, IdentityColumn, i32),
+        Antenna2(ANTENNA2, IdentityColumn, i32),
+        ArrayId(ARRAY_ID, IdentityColumn, i32),
+        CorrectedData(CORRECTED_DATA, PolConcatColumn, Complex<f32>),
+        DataDescId(DATA_DESC_ID, IdentityColumn, i32),
+        Data(DATA, PolConcatColumn, Complex<f32>),
+        Exposure(EXPOSURE, ApproxMatchColumn, f64),
+        Feed1(FEED1, IdentityColumn, i32),
+        Feed2(FEED2, IdentityColumn, i32),
+        FieldId(FIELD_ID, IdentityColumn, i32),
+        FlagCategory(FLAG_CATEGORY, EmptyColumn, Vec<bool>),
+        FlagRow(FLAG_ROW, LogicalOrColumn, bool),
+        Flag(FLAG, PolConcatColumn, bool),
+        Interval(INTERVAL, ApproxMatchColumn, f64),
+        ModelData(MODEL_DATA, PolConcatColumn, Complex<f32>),
+        ObservationId(OBSERVATION_ID, IdentityColumn, i32),
+        ProcessorId(PROCESSOR_ID, IdentityColumn, i32),
+        ScanNumber(SCAN_NUMBER, IdentityColumn, i32),
+        Sigma(SIGMA, ApproxMatchColumn, Vec<f32>),
+        StateId(STATE_ID, IdentityColumn, i32),
+        TimeCentroid(TIME_CENTROID, ApproxMatchColumn, f64),
+        Time(TIME, IdentityColumn, f64),
+        Uvw(UVW, ApproxMatchColumn, Vec<f64>),
+        WeightSpectrum(WEIGHT_SPECTRUM, PolConcatColumn, f32),
+        Weight(WEIGHT, ApproxMatchColumn, Vec<f32>)
+    }
 
-                Ok(ctry!(match self {
-                    $(
-                        &mut VisDataColumnHandler::$variant_name(ref mut s) => s.process(col_name, in_spw, out_spw, row),
-                    )+
-                }; "problem processing column {}", col_name))
-            }
 
-            pub fn emit(&self, table: &mut Table, row: u64) -> Result<()> {
-                let col_name = self.col_name();
+    // Quick wrapper type to avoid type visibility complaints
 
-                Ok(ctry!(match self {
-                    $(
-                        &VisDataColumnHandler::$variant_name(ref s) => s.emit(col_name, table, row),
-                    )+
-                }; "problem emitting column {}", col_name))
-            }
+    #[derive(Clone, Debug, PartialEq)]
+    pub struct WrappedVisDataColumn(VisDataColumn);
 
-            pub fn reset(&mut self) {
-                match self {
-                    $(
-                        &mut VisDataColumnHandler::$variant_name(ref mut s) => s.reset(),
-                    )+
-                }
-            }
+    impl FromStr for WrappedVisDataColumn {
+        type Err = Error;
+
+        #[inline(always)]
+        fn from_str(s: &str) -> Result<Self> {
+            Ok(WrappedVisDataColumn(s.parse()?))
+        }
+    }
+
+    impl WrappedVisDataColumn {
+        #[inline(always)]
+        pub fn process(&mut self, in_spw: &InputSpwInfo, out_spw: &OutputSpwInfo,
+                       row: &mut TableRow) -> Result<()>
+        {
+            self.0.process(in_spw, out_spw, row)
         }
 
-        impl FromStr for VisDataColumnHandler {
-            type Err = Error;
-
-            fn from_str(s: &str) -> Result<Self> {
-                match s {
-                    $(
-                        stringify!($col_name) => Ok(VisDataColumnHandler::$variant_name($state_type::new())),
-                    )+
-                    _ => err_msg!("unrecognized column in visibility data table: \"{}\"", s)
-                }
-            }
+        #[inline(always)]
+        pub fn emit(&self, table: &mut Table, row: u64) -> Result<()> {
+            self.0.emit(table, row)
         }
-    };
+
+        #[inline(always)]
+        pub fn reset(&mut self) {
+            self.0.reset()
+        }
+    }
 }
 
-vis_data_columns! {
-    Antenna1(ANTENNA1, VisIdentityColumn, i32),
-    Antenna2(ANTENNA2, VisIdentityColumn, i32),
-    ArrayId(ARRAY_ID, VisIdentityColumn, i32),
-    CorrectedData(CORRECTED_DATA, VisPolConcatColumn, Complex<f32>),
-    DataDescId(DATA_DESC_ID, VisIdentityColumn, i32),
-    Data(DATA, VisPolConcatColumn, Complex<f32>),
-    Exposure(EXPOSURE, VisApproxMatchColumn, f64),
-    Feed1(FEED1, VisIdentityColumn, i32),
-    Feed2(FEED2, VisIdentityColumn, i32),
-    FieldId(FIELD_ID, VisIdentityColumn, i32),
-    FlagCategory(FLAG_CATEGORY, VisEmptyColumn, Vec<bool>),
-    FlagRow(FLAG_ROW, VisLogicalOrColumn, bool),
-    Flag(FLAG, VisPolConcatColumn, bool),
-    Interval(INTERVAL, VisApproxMatchColumn, f64),
-    ModelData(MODEL_DATA, VisPolConcatColumn, Complex<f32>),
-    ObservationId(OBSERVATION_ID, VisIdentityColumn, i32),
-    ProcessorId(PROCESSOR_ID, VisIdentityColumn, i32),
-    ScanNumber(SCAN_NUMBER, VisIdentityColumn, i32),
-    Sigma(SIGMA, VisApproxMatchColumn, Vec<f32>),
-    StateId(STATE_ID, VisIdentityColumn, i32),
-    TimeCentroid(TIME_CENTROID, VisApproxMatchColumn, f64),
-    Time(TIME, VisIdentityColumn, f64),
-    Uvw(UVW, VisApproxMatchColumn, Vec<f64>),
-    WeightSpectrum(WEIGHT_SPECTRUM, VisPolConcatColumn, f32),
-    Weight(WEIGHT, VisApproxMatchColumn, Vec<f32>)
-}
+use main_table::WrappedVisDataColumn as VisDataColumn;
 
 
 // DATA_DESC_ID is the one that we ignore because that encodes the SPW
@@ -915,11 +968,11 @@ impl InputSpwInfo {
 struct OutputRecordState<'a> {
     spw_info: &'a OutputSpwInfo,
     n_input_spws_seen: usize,
-    columns: Vec<VisDataColumnHandler>,
+    columns: Vec<VisDataColumn>,
 }
 
 impl<'a> OutputRecordState<'a> {
-    pub fn new(spw_info: &'a OutputSpwInfo, columns: Vec<VisDataColumnHandler>) -> Self {
+    pub fn new(spw_info: &'a OutputSpwInfo, columns: Vec<VisDataColumn>) -> Self {
         Self {
             spw_info: spw_info,
             n_input_spws_seen: 0,
@@ -1343,7 +1396,7 @@ zero-based.")
         let mut col_state_template = Vec::new();
 
         for n in col_names {
-            let handler = ctry!(n.parse::<VisDataColumnHandler>();
+            let handler = ctry!(n.parse::<VisDataColumn>();
                                 "unhandled column \"{}\" in input table \"{}\"", n, inpath.display());
             col_state_template.push(handler);
         }
