@@ -1021,9 +1021,9 @@ fn main() {
         .arg(Arg::with_name("window")
              .short("w")
              .long("window")
-             .long_help("Define a glued spectral window that concatenates
-input windows numbers N through M, inclusive. The numbers are
-zero-based.")
+             .long_help("Define a glued spectral window that concatenates \
+                         input windows numbers N through M, inclusive. The \
+                         numbers are zero-based.")
              .value_name("N-M")
              .takes_value(true)
              .number_of_values(1)
