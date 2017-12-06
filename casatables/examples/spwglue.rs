@@ -465,7 +465,9 @@ mod main_table {
             Self { value: None }
         }
 
-        fn process(&mut self, col_name: &str, _in_spw: &InputSpwInfo, _out_spw: &OutputSpwInfo, row: &mut TableRow) -> Result<()> {
+        fn process(&mut self, col_name: &str, _data_mapping: DataMappingKind,
+                   _in_spw: &InputSpwInfo, _out_spw: &OutputSpwInfo, row: &mut TableRow) -> Result<()>
+        {
             // Since this column helps define the record's identity, subsequent rows match the
             // first row by definition.
             if self.value.is_none() {
@@ -475,7 +477,7 @@ mod main_table {
             Ok(())
         }
 
-        fn emit(&self, col_name: &str, _vis_factor: &MaybeVisFactor,
+        fn emit(&self, col_name: &str, _data_mapping: DataMappingKind, _vis_factor: &MaybeVisFactor,
                 table: &mut Table, row: u64) -> Result<()>
         {
             if let Some(ref v) = self.value {
@@ -572,7 +574,9 @@ mod main_table {
             Self { value: None }
         }
 
-        fn process(&mut self, col_name: &str, _in_spw: &InputSpwInfo, _out_spw: &OutputSpwInfo, row: &mut TableRow) -> Result<()> {
+        fn process(&mut self, col_name: &str, _data_mapping: DataMappingKind,
+                   _in_spw: &InputSpwInfo, _out_spw: &OutputSpwInfo, row: &mut TableRow) -> Result<()>
+        {
             let cur = row.get_cell(col_name)?;
 
             if let Some(ref prev) = self.value {
@@ -588,7 +592,7 @@ mod main_table {
 
         // I tried to use a writeable output row for this, but I couldn't find a
         // way to leave the FLAG_CATEGORY column undefined.
-        fn emit(&self, col_name: &str, _vis_factor: &MaybeVisFactor,
+        fn emit(&self, col_name: &str, _data_mapping: DataMappingKind, _vis_factor: &MaybeVisFactor,
                 table: &mut Table, row: u64) -> Result<()>
         {
             if let Some(ref v) = self.value {
@@ -615,11 +619,13 @@ mod main_table {
             Self { _nope: PhantomData }
         }
 
-        fn process(&mut self, _col_name: &str, _in_spw: &InputSpwInfo, _out_spw: &OutputSpwInfo, _row: &mut TableRow) -> Result<()> {
+        fn process(&mut self, _col_name: &str, _data_mapping: DataMappingKind,
+                   _in_spw: &InputSpwInfo, _out_spw: &OutputSpwInfo, _row: &mut TableRow) -> Result<()>
+        {
             Ok(())
         }
 
-        fn emit(&self, _col_name: &str, _vis_factor: &MaybeVisFactor,
+        fn emit(&self, _col_name: &str, _data_mapping: DataMappingKind, _vis_factor: &MaybeVisFactor,
                 _table: &mut Table, _row: u64) -> Result<()>
         {
             Ok(())
@@ -641,13 +647,15 @@ mod main_table {
             Self { value: T::default() }
         }
 
-        fn process(&mut self, col_name: &str, _in_spw: &InputSpwInfo, _out_spw: &OutputSpwInfo, row: &mut TableRow) -> Result<()> {
+        fn process(&mut self, col_name: &str, _data_mapping: DataMappingKind,
+                   _in_spw: &InputSpwInfo, _out_spw: &OutputSpwInfo, row: &mut TableRow) -> Result<()>
+        {
             let cur = row.get_cell(col_name)?;
             self.value |= cur;
             Ok(())
         }
 
-        fn emit(&self, col_name: &str, _vis_factor: &MaybeVisFactor,
+        fn emit(&self, col_name: &str, _data_mapping: DataMappingKind, _vis_factor: &MaybeVisFactor,
                 table: &mut Table, row: u64) -> Result<()>
         {
             table.put_cell(col_name, row, &self.value)
@@ -660,7 +668,8 @@ mod main_table {
 
 
     /// The cells in this column are expected to be filled with 2D arrays that
-    /// have a polarization and frequency axis.
+    /// have a polarization and frequency axis. They are concatenated along
+    /// the frequency axis.
     #[derive(Clone, Debug, PartialEq)]
     struct PolConcatColumn<T: CasaScalarData> {
         buf: Array<T, Ix2>
@@ -697,13 +706,13 @@ mod main_table {
             }
         }
 
-        fn process(&mut self, col_name: &str, in_spw: &InputSpwInfo,
+        fn process(&mut self, col_name: &str, _data_mapping: DataMappingKind, in_spw: &InputSpwInfo,
                    out_spw: &OutputSpwInfo, row: &mut TableRow) -> Result<()>
         {
             process_pol_concat_record(col_name, in_spw, out_spw, row, &mut self.buf)
         }
 
-        fn emit(&self, col_name: &str, _vis_factor: &MaybeVisFactor,
+        fn emit(&self, col_name: &str, _data_mapping: DataMappingKind, _vis_factor: &MaybeVisFactor,
                 table: &mut Table, row: u64) -> Result<()>
         {
             table.put_cell(col_name, row, &self.buf)
@@ -715,11 +724,12 @@ mod main_table {
     }
 
 
-    /// This is just like PolConcatColumn, except we might also multiply the
-    /// final result by the inverse squared mean bandpass before writing the
-    /// output.
+    /// This is just like PolConcatColumn, except for the DATA and MODEL_DATA
+    /// columns. We ignore the contents if we're remapping CORRECTED_DATA to
+    /// DATA. If we're not, we might also multiply the final result by a
+    /// bandpass correction before writing the output.
     #[derive(Clone, Debug, PartialEq)]
-    struct VisibilitiesColumn<T> {
+    struct NotCorrectedVisDataColumn<T> {
         buf: Array<Complex<f32>, Ix2>,
 
         // Hack so that we still take a type parameter to make life easier
@@ -727,7 +737,7 @@ mod main_table {
         _nope: PhantomData<T>,
     }
 
-    impl<T> VisibilitiesColumn<T> {
+    impl<T> NotCorrectedVisDataColumn<T> {
         fn new() -> Self {
             Self {
                 buf: Array::default((0, 0)),
@@ -735,14 +745,22 @@ mod main_table {
             }
         }
 
-        fn process(&mut self, col_name: &str, in_spw: &InputSpwInfo,
+        fn process(&mut self, col_name: &str, data_mapping: DataMappingKind, in_spw: &InputSpwInfo,
                    out_spw: &OutputSpwInfo, row: &mut TableRow) -> Result<()>
         {
+            if let DataMappingKind::Correct = data_mapping {
+                return Ok(());
+            }
+
             process_pol_concat_record(col_name, in_spw, out_spw, row, &mut self.buf)
         }
 
-        fn emit(&mut self, col_name: &str, vis_factor: &MaybeVisFactor,
+        fn emit(&mut self, col_name: &str, data_mapping: DataMappingKind, vis_factor: &MaybeVisFactor,
                 table: &mut Table, row: u64) -> Result<()> {
+            if let DataMappingKind::Correct = data_mapping {
+                return Ok(());
+            }
+
             if let &Some(ref arr) = vis_factor {
                 self.buf *= &arr.view().into_shape((arr.len(), 1)).unwrap();
             }
@@ -751,7 +769,52 @@ mod main_table {
         }
 
         fn reset(&mut self) {
-            // We live dangerously and don't de-initialize the buffer, for speed.
+        }
+    }
+
+
+    /// This is just like PolConcatColumn, except for the CORRECTED_DATA
+    /// column. If we're in "correct" mapping mode, we might write our
+    /// contents as the DATA column. We might also multiply the final result
+    /// by a bandpass correction before writing the output.
+    #[derive(Clone, Debug, PartialEq)]
+    struct CorrectedVisDataColumn<T> {
+        buf: Array<Complex<f32>, Ix2>,
+
+        // Hack so that we still take a type parameter to make life easier
+        // with our macro system.
+        _nope: PhantomData<T>,
+    }
+
+    impl<T> CorrectedVisDataColumn<T> {
+        fn new() -> Self {
+            Self {
+                buf: Array::default((0, 0)),
+                _nope: PhantomData
+            }
+        }
+
+        fn process(&mut self, col_name: &str, _data_mapping: DataMappingKind, in_spw: &InputSpwInfo,
+                   out_spw: &OutputSpwInfo, row: &mut TableRow) -> Result<()>
+        {
+            process_pol_concat_record(col_name, in_spw, out_spw, row, &mut self.buf)
+        }
+
+        fn emit(&mut self, col_name: &str, data_mapping: DataMappingKind, vis_factor: &MaybeVisFactor,
+                table: &mut Table, row: u64) -> Result<()> {
+            let final_col_name = match data_mapping {
+                DataMappingKind::Correct => "DATA",
+                _ => col_name,
+            };
+
+            if let &Some(ref arr) = vis_factor {
+                self.buf *= &arr.view().into_shape((arr.len(), 1)).unwrap();
+            }
+
+            table.put_cell(final_col_name, row, &self.buf)
+        }
+
+        fn reset(&mut self) {
         }
     }
 
@@ -780,22 +843,28 @@ mod main_table {
                     }
                 }
 
-                fn process(&mut self, in_spw: &InputSpwInfo, out_spw: &OutputSpwInfo, row: &mut TableRow) -> Result<()> {
+                fn process(&mut self, data_mapping: DataMappingKind, in_spw: &InputSpwInfo,
+                           out_spw: &OutputSpwInfo, row: &mut TableRow) -> Result<()>
+                {
                     let col_name = self.col_name();
 
                     Ok(ctry!(match self {
                         $(
-                            &mut VisDataColumn::$variant_name(ref mut s) => s.process(col_name, in_spw, out_spw, row),
+                            &mut VisDataColumn::$variant_name(ref mut s) =>
+                                s.process(col_name, data_mapping, in_spw, out_spw, row),
                         )+
                     }; "problem processing column {}", col_name))
                 }
 
-                fn emit(&mut self, vis_factor: &MaybeVisFactor, table: &mut Table, row: u64) -> Result<()> {
+                fn emit(&mut self, data_mapping: DataMappingKind, vis_factor: &MaybeVisFactor,
+                        table: &mut Table, row: u64) -> Result<()>
+                {
                     let col_name = self.col_name();
 
                     Ok(ctry!(match self {
                         $(
-                            &mut VisDataColumn::$variant_name(ref mut s) => s.emit(col_name, vis_factor, table, row),
+                            &mut VisDataColumn::$variant_name(ref mut s) =>
+                                s.emit(col_name, data_mapping, vis_factor, table, row),
                         )+
                     }; "problem emitting column {}", col_name))
                 }
@@ -828,9 +897,9 @@ mod main_table {
         Antenna1(ANTENNA1, IdentityColumn, i32),
         Antenna2(ANTENNA2, IdentityColumn, i32),
         ArrayId(ARRAY_ID, IdentityColumn, i32),
-        CorrectedData(CORRECTED_DATA, VisibilitiesColumn, ()),
+        CorrectedData(CORRECTED_DATA, CorrectedVisDataColumn, ()),
         DataDescId(DATA_DESC_ID, IdentityColumn, i32),
-        Data(DATA, VisibilitiesColumn, ()),
+        Data(DATA, NotCorrectedVisDataColumn, ()),
         Exposure(EXPOSURE, ApproxMatchColumn, f64),
         Feed1(FEED1, IdentityColumn, i32),
         Feed2(FEED2, IdentityColumn, i32),
@@ -839,7 +908,7 @@ mod main_table {
         FlagRow(FLAG_ROW, LogicalOrColumn, bool),
         Flag(FLAG, PolConcatColumn, bool),
         Interval(INTERVAL, ApproxMatchColumn, f64),
-        ModelData(MODEL_DATA, VisibilitiesColumn, ()),
+        ModelData(MODEL_DATA, NotCorrectedVisDataColumn, ()),
         ObservationId(OBSERVATION_ID, IdentityColumn, i32),
         ProcessorId(PROCESSOR_ID, IdentityColumn, i32),
         ScanNumber(SCAN_NUMBER, IdentityColumn, i32),
@@ -869,15 +938,17 @@ mod main_table {
 
     impl WrappedVisDataColumn {
         #[inline(always)]
-        pub fn process(&mut self, in_spw: &InputSpwInfo, out_spw: &OutputSpwInfo,
-                       row: &mut TableRow) -> Result<()>
+        pub fn process(&mut self, data_mapping: DataMappingKind, in_spw: &InputSpwInfo,
+                       out_spw: &OutputSpwInfo, row: &mut TableRow) -> Result<()>
         {
-            self.0.process(in_spw, out_spw, row)
+            self.0.process(data_mapping, in_spw, out_spw, row)
         }
 
         #[inline(always)]
-        pub fn emit(&mut self, vis_factor: &MaybeVisFactor, table: &mut Table, row: u64) -> Result<()> {
-            self.0.emit(vis_factor, table, row)
+        pub fn emit(&mut self, data_mapping: DataMappingKind, vis_factor: &MaybeVisFactor,
+                    table: &mut Table, row: u64) -> Result<()>
+        {
+            self.0.emit(data_mapping, vis_factor, table, row)
         }
 
         #[inline(always)]
@@ -1048,18 +1119,22 @@ impl<'a> OutputRecordState<'a> {
 
     /// Returns true if this row represents the final spectral window needed
     /// to complete this record.
-    pub fn process(&mut self, in_spw: &InputSpwInfo, row: &mut TableRow) -> Result<bool> {
+    pub fn process(&mut self, data_mapping: DataMappingKind,
+                   in_spw: &InputSpwInfo, row: &mut TableRow) -> Result<bool>
+    {
         for col in &mut self.columns {
-            col.process(in_spw, self.spw_info, row)?;
+            col.process(data_mapping, in_spw, self.spw_info, row)?;
         }
 
         self.n_input_spws_seen += 1;
         Ok(self.n_input_spws_seen == self.spw_info.n_input_spws())
     }
 
-    pub fn emit(&mut self, vis_factor: &MaybeVisFactor, table: &mut Table, row: u64) -> Result<()> {
+    pub fn emit(&mut self, data_mapping: DataMappingKind, vis_factor: &MaybeVisFactor,
+                table: &mut Table, row: u64) -> Result<()>
+    {
         for col in &mut self.columns {
-            col.emit(vis_factor, table, row)?;
+            col.emit(data_mapping, vis_factor, table, row)?;
         }
 
         Ok(())
@@ -1074,6 +1149,30 @@ impl<'a> OutputRecordState<'a> {
         }
 
         self
+    }
+}
+
+
+/// Special mapping that we might apply to the three visibility data columns
+/// that might be present.
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+pub enum DataMappingKind {
+    /// Pass columns through as in the original data set.
+    Passthrough,
+
+    /// Remap CORRECTED_DATA to DATA; drop input DATA and MODEL_DATA.
+    Correct,
+}
+
+impl FromStr for DataMappingKind {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self> {
+        match s {
+            "passthrough" => Ok(DataMappingKind::Passthrough),
+            "correct" => Ok(DataMappingKind::Correct),
+            other => err_msg!("unrecognized data column mapping name \"{}\"", other),
+        }
     }
 }
 
@@ -1101,6 +1200,12 @@ fn main() {
              .value_name("PATH")
              .takes_value(true)
              .number_of_values(1))
+        .arg(Arg::with_name("data_mapping")
+             .long("mapping")
+             .help("How to map the DATA/MODEL_DATA/CORRECTED_DATA columns in the output.")
+             .value_name("MAPPING")
+             .possible_values(&["passthrough", "correct"])
+             .default_value("passthrough"))
         .arg(Arg::with_name("out_field")
              .short("f")
              .long("field")
@@ -1218,6 +1323,8 @@ fn main() {
                 Some(arr.map(|x| Complex::new(*x as f32, 0.)))
             },
         };
+
+        let data_mapping: DataMappingKind = matches.value_of("data_mapping").unwrap().parse()?;
 
         // Copy the basic table structure.
 
@@ -1537,7 +1644,7 @@ fn main() {
 
             let record_complete = {
                 let state = records_in_progress.get_mut(&row_ident).unwrap();
-                ctry!(state.process(in_spw_info, &mut in_row);
+                ctry!(state.process(data_mapping, in_spw_info, &mut in_row);
                       "problem processing input row #{}", in_row_num)
             };
 
@@ -1554,7 +1661,7 @@ fn main() {
 
                 if let Some(out_rec) = maybe_out_rec {
                     ctry!(out_rec.table.add_rows(1); "failed to add row to \"{}\"", out_rec.path.display());
-                    state.emit(&inv_sq_mean_bp, &mut out_rec.table, out_rec.num_rows)?;
+                    state.emit(data_mapping, &inv_sq_mean_bp, &mut out_rec.table, out_rec.num_rows)?;
                     // Rewriting this is kind of lame, but eh.
                     out_rec.table.put_cell("DATA_DESC_ID", out_rec.num_rows, &(out_spw_id as i32))?;
                     out_rec.num_rows += 1;
