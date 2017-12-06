@@ -1326,7 +1326,9 @@ fn main() {
 
         let data_mapping: DataMappingKind = matches.value_of("data_mapping").unwrap().parse()?;
 
-        // Copy the basic table structure.
+        // Open up the input table and do some prep work. We do this up here
+        // so that we can validate some of the program configuration before
+        // creating the output tables.
 
         fn open_table(base: &Path, extension: &str, is_input: bool) -> Result<(PathBuf, Table)> {
             let mut p = base.to_owned();
@@ -1348,6 +1350,28 @@ fn main() {
         }
 
         let (_, mut in_main_table) = open_table(&inpath, "", true)?;
+
+        let col_names = ctry!(in_main_table.column_names();
+                              "failed to get names of columns in \"{}\"", inpath.display());
+        let mut col_state_template = Vec::new();
+        let mut seen_corrected = false;
+
+        for n in col_names {
+            let handler = ctry!(n.parse::<VisDataColumn>();
+                                "unhandled column \"{}\" in input table \"{}\"", n, inpath.display());
+            col_state_template.push(handler);
+
+            if n == "CORRECTED_DATA" {
+                seen_corrected = true;
+            }
+        }
+
+        if data_mapping == DataMappingKind::Correct && !seen_corrected {
+            return err_msg!("you asked to map CORRECTED_DATA to DATA, but \"{}\" \
+                             has no CORRECTED_DATA column", inpath.display());
+        }
+
+        // Copy the basic table structure.
 
         for dest in &destinations {
             ctry!(in_main_table.deep_copy_no_rows(&dest.to_string_lossy());
@@ -1590,16 +1614,6 @@ fn main() {
         }
 
         // Finally, the main visibility data.
-
-        let col_names = ctry!(in_main_table.column_names();
-                              "failed to get names of columns in \"{}\"", inpath.display());
-        let mut col_state_template = Vec::new();
-
-        for n in col_names {
-            let handler = ctry!(n.parse::<VisDataColumn>();
-                                "unhandled column \"{}\" in input table \"{}\"", n, inpath.display());
-            col_state_template.push(handler);
-        }
 
         let mut records_in_progress = HashMap::new();
         let mut state_pool: Vec<OutputRecordState> = Vec::new();
