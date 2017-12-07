@@ -57,8 +57,13 @@ typedef enum _GlueDataType {
 
 /**
  * <div rustbindgen nocopy></div>
+ *
+ * Here, "55555" is a magic number that we hope is vanishingly unlikely to
+ * show up in the output of bindgen besides this one context. It is replaced
+ * by a symbolic constant in `gen-bindings.sh`, for reasons explained in
+ * build.sh. Keep the value synchronized with that script.
  */
-typedef struct _GlueString { void *a, *b, *c, *d; } GlueString;
+typedef struct _GlueString { char opaque[55555]; } GlueString;
 typedef struct _GlueTable GlueTable;
 typedef struct _GlueTableRow GlueTableRow;
 #endif
