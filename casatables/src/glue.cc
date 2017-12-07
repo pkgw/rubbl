@@ -289,9 +289,9 @@ extern "C" {
             switch (desc.dataType()) {
 
 #define CASE(DTYPE, CPPTYPE) \
-            case GlueDataType::DTYPE: { \
+            case casa::DTYPE: { \
                 casa::ScalarColumn<CPPTYPE> col(table, col_name); \
-                casa::Vector<CPPTYPE> vec(shape, (CPPTYPE *) data, casa::StorageInitPolicy::SHARE); \
+                casa::Vector<CPPTYPE> vec(shape, (CPPTYPE *) data, casa::SHARE); \
                 col.getColumn(vec); \
                 break; \
             }
@@ -371,16 +371,16 @@ extern "C" {
             switch (desc.trueDataType()) {
 
 #define SCALAR_CASE(DTYPE, CPPTYPE) \
-            case GlueDataType::DTYPE: { \
+            case casa::DTYPE: { \
                 casa::ScalarColumn<CPPTYPE> col(table, col_name); \
                 *((CPPTYPE *) data) = col.get(row_number); \
                 break; \
             }
 
 #define VECTOR_CASE(DTYPE, CPPTYPE) \
-            case GlueDataType::DTYPE: { \
+            case casa::DTYPE: { \
                 casa::ArrayColumn<CPPTYPE> col(table, col_name); \
-                casa::Array<CPPTYPE> array(shape, (CPPTYPE *) data, casa::StorageInitPolicy::SHARE); \
+                casa::Array<CPPTYPE> array(shape, (CPPTYPE *) data, casa::SHARE); \
                 col.get(row_number, array, casa::False); \
                 break; \
             }
@@ -435,19 +435,19 @@ extern "C" {
             switch (data_type) {
 
 #define SCALAR_CASE(DTYPE, CPPTYPE) \
-            case GlueDataType::DTYPE: { \
+            case casa::DTYPE: { \
                 casa::ScalarColumn<CPPTYPE> col(table, col_name); \
                 col.put(row_number, *(CPPTYPE *) data); \
                 break; \
             }
 
 #define VECTOR_CASE(DTYPE, CPPTYPE) \
-            case GlueDataType::DTYPE: { \
+            case casa::DTYPE: { \
                 casa::ArrayColumn<CPPTYPE> col(table, col_name); \
                 casa::IPosition shape(n_dims); \
                 for (casa::uInt i = 0; i < n_dims; i++) \
                     shape[i] = dims[n_dims - 1 - i]; \
-                casa::Array<CPPTYPE> array(shape, (CPPTYPE *) data, casa::StorageInitPolicy::SHARE); \
+                casa::Array<CPPTYPE> array(shape, (CPPTYPE *) data, casa::SHARE); \
                 col.put(row_number, array); \
                 break; \
             }
@@ -623,7 +623,7 @@ extern "C" {
             switch (rec.type(field_num)) {
 
 #define SCALAR_CASE(DTYPE, CPPTYPE) \
-            case GlueDataType::DTYPE: { \
+            case casa::DTYPE: { \
                 CPPTYPE datum; \
                 rec.get(field_num, datum); \
                 *((CPPTYPE *) data) = datum; \
@@ -631,8 +631,8 @@ extern "C" {
             }
 
 #define VECTOR_CASE(DTYPE, CPPTYPE) \
-            case GlueDataType::DTYPE: { \
-                casa::Array<CPPTYPE> array(shape, (CPPTYPE *) data, casa::StorageInitPolicy::SHARE); \
+            case casa::DTYPE: { \
+                casa::Array<CPPTYPE> array(shape, (CPPTYPE *) data, casa::SHARE); \
                 rec.get(field_num, array); \
                 break; \
             }
@@ -691,17 +691,17 @@ extern "C" {
             switch (data_type) {
 
 #define SCALAR_CASE(DTYPE, CPPTYPE) \
-            case GlueDataType::DTYPE: { \
+            case casa::DTYPE: { \
                 rec.define(field_num, *(CPPTYPE *) data); \
                 break; \
             }
 
 #define VECTOR_CASE(DTYPE, CPPTYPE) \
-            case GlueDataType::DTYPE: { \
+            case casa::DTYPE: { \
                 casa::IPosition shape(n_dims); \
                 for (casa::uInt i = 0; i < n_dims; i++) \
                     shape[i] = dims[n_dims - 1 - i]; \
-                casa::Array<CPPTYPE> array(shape, (CPPTYPE *) data, casa::StorageInitPolicy::SHARE); \
+                casa::Array<CPPTYPE> array(shape, (CPPTYPE *) data, casa::SHARE); \
                 rec.define(field_num, array); \
                 break; \
             }
