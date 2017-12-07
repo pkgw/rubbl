@@ -819,6 +819,52 @@ mod main_table {
     }
 
 
+    /// The cells in this column contain 1D vectors that are averaged.
+    #[derive(Clone, Debug, PartialEq)]
+    struct VecAverageColumn<T: CasaScalarData> {
+        buf: Array<T, Ix1>,
+        n_contrib: usize,
+    }
+
+    impl VecAverageColumn<f32> {
+        fn new() -> Self {
+            Self {
+                buf: Array::default(0),
+                n_contrib: 0,
+            }
+        }
+
+        fn process(&mut self, col_name: &str, _data_mapping: DataMappingKind,
+                   _in_spw: &InputSpwInfo, _out_spw: &OutputSpwInfo, row: &mut TableRow) -> Result<()>
+        {
+            let chunk: Array<f32, Ix1> = row.get_cell(col_name)?;
+
+            let n_chunk_pol = chunk.len();
+            let n_buf_pol = self.buf.len();
+
+            if n_buf_pol != n_chunk_pol {
+                self.buf = Array::default(n_chunk_pol);
+            }
+
+            self.buf += &chunk;
+            self.n_contrib += 1;
+            Ok(())
+        }
+
+        fn emit(&mut self, col_name: &str, _data_mapping: DataMappingKind, _vis_factor: &MaybeVisFactor,
+                table: &mut Table, row: u64) -> Result<()>
+        {
+            self.buf /= self.n_contrib as f32;
+            table.put_cell(col_name, row, &self.buf)
+        }
+
+        fn reset(&mut self) {
+            self.buf.fill(0.);
+            self.n_contrib = 0;
+        }
+    }
+
+
     /// This macro generates the column-handling enum for the main visibility
     /// data columns.
     macro_rules! vis_data_columns {
@@ -918,7 +964,7 @@ mod main_table {
         Time(TIME, IdentityColumn, f64),
         Uvw(UVW, ApproxMatchColumn, Vec<f64>),
         WeightSpectrum(WEIGHT_SPECTRUM, PolConcatColumn, f32),
-        Weight(WEIGHT, ApproxMatchColumn, Vec<f32>)
+        Weight(WEIGHT, VecAverageColumn, f32)
     }
 
 
