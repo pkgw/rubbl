@@ -6,6 +6,7 @@
 // C ordering instead. So we must take care to reverse array shapes when
 // translating from C++-land to Rust-land.
 
+#include <stdexcept>
 #include <casacore/casa/BasicSL.h>
 #include <casacore/tables/Tables.h>
 
