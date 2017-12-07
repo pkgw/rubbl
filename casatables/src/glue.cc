@@ -36,6 +36,8 @@ extern "C" {
 
     // Strings
 
+    static GlueString empty_string_template = GlueString("");
+
     unsigned long
     string_check_size(void)
     {
@@ -45,17 +47,13 @@ extern "C" {
     void
     string_init(GlueString &str, const void *data, const unsigned long n_bytes)
     {
-        // Empirically, n_bytes = 0 can make us segfault without special
-        // handling. std.assign() seems to barf with zero size inputs, but
-        // other functions assume that the struct is reasonably initialized,
-        // which isn't guaranteed to be the case for us. The code below
-        // achieves the n_bytes = 0 outcome without crashing.
+        // We assume that std::string can express empty strings without
+        // allocating memory. Empirically, str.assign() with n_bytes = 0
+        // segfaults, so we avoid that.
+        memcpy(&str, &empty_string_template, sizeof(empty_string_template));
+
         if (n_bytes != 0)
             str.assign((const char *) data, n_bytes);
-        else {
-            str.assign(" ", 1);
-            str = std::string();
-        }
     }
 
     void
