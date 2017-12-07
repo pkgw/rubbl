@@ -11,7 +11,6 @@
 #include <casacore/tables/Tables.h>
 
 #define CASA_TYPES_ALREADY_DECLARED
-#define GlueString casacore::String
 #define GlueTable casacore::Table
 #define GlueTableRow casacore::ROTableRow
 #define GlueDataType casacore::DataType
@@ -34,40 +33,46 @@ extern "C" {
         }
     }
 
-    // Strings
+    // StringBridge
 
-    static GlueString empty_string_template = GlueString("");
-
-    unsigned long
-    string_check_size(void)
+    casa::String
+    bridge_string(const StringBridge &input)
     {
-        return sizeof(GlueString);
+        casa::String result((const char *) input.data, input.n_bytes);
+        return result;
     }
 
     void
-    string_init(GlueString &str, const void *data, const unsigned long n_bytes)
+    unbridge_string(const casa::String &input, StringBridge &dest)
     {
-        // We assume that std::string can express empty strings without
-        // allocating memory. Empirically, str.assign() with n_bytes = 0
-        // segfaults, so we avoid that.
-        memcpy(&str, &empty_string_template, sizeof(empty_string_template));
-
-        if (n_bytes != 0)
-            str.assign((const char *) data, n_bytes);
+        dest.data = input.data();
+        dest.n_bytes = input.length();
     }
 
-    void
-    string_get_buf(const GlueString &str, void const **data_ptr, unsigned long *n_bytes_ptr)
+    casa::Array<casa::String>
+    bridge_string_array(const StringBridge *source, const casa::IPosition &shape)
     {
-        (*data_ptr) = str.data();
-        (*n_bytes_ptr) = str.length();
+        casa::Array<casa::String> array(shape);
+        unsigned int n = 0;
+        casa::Array<casa::String>::iterator end = array.end();
+
+        for (casa::Array<casa::String>::iterator i = array.begin(); i != end; i++, n++)
+            *i = bridge_string(source[n]);
+
+        return array;
     }
 
+    // We have to assume that destination has enough space.
     void
-    string_deinit(GlueString &str)
+    unbridge_string_array(const casa::Array<casa::String> &input, StringBridge *dest)
     {
-        // See https://stackoverflow.com/questions/10978864/free-memory-used-by-a-stdstring
-        std::string().swap(str);
+        unsigned int n = 0;
+        casa::Array<casa::String>::const_iterator end = input.end();
+
+        for (casa::Array<casa::String>::const_iterator i = input.begin(); i != end; i++, n++) {
+            dest[n].data = (*i).data();
+            dest[n].n_bytes = (*i).length();
+        }
     }
 
     // Data Types
@@ -116,7 +121,7 @@ extern "C" {
     // Tables
 
     GlueTable *
-    table_alloc_and_open(const GlueString &path, const TableOpenMode mode, ExcInfo &exc)
+    table_alloc_and_open(const StringBridge &path, const TableOpenMode mode, ExcInfo &exc)
     {
         GlueTable::TableOption option = GlueTable::Old;
 
@@ -126,7 +131,7 @@ extern "C" {
             option = GlueTable::NewNoReplace;
 
         try {
-            return new GlueTable(path, option, casacore::TSMOption());
+            return new GlueTable(bridge_string(path), option, casacore::TSMOption());
         } catch (...) {
             handle_exception(exc);
             return NULL;
@@ -159,13 +164,13 @@ extern "C" {
 
     // We assume the caller has allocated col_names of sufficient size.
     int
-    table_get_column_names(const GlueTable &table, GlueString *col_names, ExcInfo &exc)
+    table_get_column_names(const GlueTable &table, StringBridge *col_names, ExcInfo &exc)
     {
         try {
             casa::Vector<casa::String> cnames = table.actualTableDesc().columnNames();
 
             for (size_t i = 0; i < cnames.size(); i++)
-                col_names[i] = cnames[i];
+                unbridge_string(cnames[i], col_names[i]);
         } catch (...) {
             handle_exception(exc);
             return 1;
@@ -175,10 +180,10 @@ extern "C" {
     }
 
     int
-    table_remove_column(GlueTable &table, const GlueString &col_name, ExcInfo &exc)
+    table_remove_column(GlueTable &table, const StringBridge &col_name, ExcInfo &exc)
     {
         try {
-            table.removeColumn(col_name);
+            table.removeColumn(bridge_string(col_name));
         } catch (...) {
             handle_exception(exc);
             return 1;
@@ -194,15 +199,16 @@ extern "C" {
     }
 
     int
-    table_get_keyword_info(const GlueTable &table, GlueString *names, GlueDataType *types, ExcInfo &exc)
+    table_get_keyword_info(const GlueTable &table, KeywordInfoCallback callback, void *ctxt, ExcInfo &exc)
     {
         try {
+            StringBridge name;
             const casa::TableRecord &rec = table.keywordSet();
             casa::uInt n_kws = rec.nfields();
 
             for (casa::uInt i = 0; i < n_kws; i++) {
-                types[i] = rec.type(i);
-                names[i] = rec.name(i);
+                unbridge_string(rec.name(i), name);
+                callback(&name, rec.type(i), ctxt);
             }
         } catch (...) {
             handle_exception(exc);
@@ -226,11 +232,11 @@ extern "C" {
     }
 
     int
-    table_deep_copy_no_rows(const GlueTable &table, const GlueString &dest_path, ExcInfo &exc)
+    table_deep_copy_no_rows(const GlueTable &table, const StringBridge &dest_path, ExcInfo &exc)
     {
         try {
             table.deepCopy(
-                dest_path,
+                bridge_string(dest_path),
                 GlueTable::NewNoReplace,
                 casacore::True, // "valueCopy"
                 GlueTable::LocalEndian,
@@ -245,13 +251,13 @@ extern "C" {
     }
 
     int
-    table_get_column_info(const GlueTable &table, const GlueString &col_name,
+    table_get_column_info(const GlueTable &table, const StringBridge &col_name,
                           unsigned long *n_rows, GlueDataType *data_type,
                           int *is_scalar, int *is_fixed_shape, int *n_dim,
                           unsigned long dims[8], ExcInfo &exc)
     {
         try {
-            casa::TableColumn col(table, col_name);
+            casa::TableColumn col(table, bridge_string(col_name));
             const casa::ColumnDesc &desc = col.columnDesc();
             const casa::IPosition &shape = desc.shape();
 
@@ -277,18 +283,18 @@ extern "C" {
     // This function assumes that the caller has already vetted the types and
     // has figured how big `data` needs to be.
     int
-    table_get_scalar_column_data(const GlueTable &table, const GlueString &col_name,
+    table_get_scalar_column_data(const GlueTable &table, const StringBridge &col_name,
                                  void *data, ExcInfo &exc)
     {
         try {
-            const casa::ColumnDesc &desc = casa::TableColumn(table, col_name).columnDesc();
+            const casa::ColumnDesc &desc = casa::TableColumn(table, bridge_string(col_name)).columnDesc();
             casa::IPosition shape(1, table.nrow());
 
             switch (desc.dataType()) {
 
 #define CASE(DTYPE, CPPTYPE) \
             case casa::DTYPE: { \
-                casa::ScalarColumn<CPPTYPE> col(table, col_name); \
+                casa::ScalarColumn<CPPTYPE> col(table, bridge_string(col_name)); \
                 casa::Vector<CPPTYPE> vec(shape, (CPPTYPE *) data, casa::SHARE); \
                 col.getColumn(vec); \
                 break; \
@@ -305,9 +311,16 @@ extern "C" {
             CASE(TpDouble, double)
             CASE(TpComplex, casa::Complex)
             CASE(TpDComplex, casa::DComplex)
-            CASE(TpString, casa::String)
 
 #undef CASE
+
+            case casa::TpString: {                                         \
+                casa::ScalarColumn<casa::String> col(table, bridge_string(col_name));
+                casa::Vector<casa::String> vec(shape);
+                col.getColumn(vec);
+                unbridge_string_array(vec, (StringBridge *) data);
+                break;
+            }
 
             default:
                 throw std::runtime_error("unhandled scalar column data type");
@@ -321,12 +334,12 @@ extern "C" {
     }
 
     int
-    table_get_cell_info(const GlueTable &table, const GlueString &col_name,
+    table_get_cell_info(const GlueTable &table, const StringBridge &col_name,
                         unsigned long row_number, GlueDataType *data_type,
                         int *n_dim, unsigned long dims[8], ExcInfo &exc)
     {
         try {
-            casa::TableColumn col(table, col_name);
+            casa::TableColumn col(table, bridge_string(col_name));
             const casa::ColumnDesc &desc = col.columnDesc();
 
             *data_type = desc.dataType();
@@ -355,11 +368,11 @@ extern "C" {
     // This function assumes that the caller has already vetted the types and
     // has figured how big `data` needs to be.
     int
-    table_get_cell(const GlueTable &table, const GlueString &col_name,
+    table_get_cell(const GlueTable &table, const StringBridge &col_name,
                    const unsigned long row_number, void *data, ExcInfo &exc)
     {
         try {
-            casa::TableColumn col(table, col_name);
+            casa::TableColumn col(table, bridge_string(col_name));
             const casa::ColumnDesc &desc = col.columnDesc();
             casa::IPosition shape;
 
@@ -370,14 +383,14 @@ extern "C" {
 
 #define SCALAR_CASE(DTYPE, CPPTYPE) \
             case casa::DTYPE: { \
-                casa::ScalarColumn<CPPTYPE> col(table, col_name); \
+                casa::ScalarColumn<CPPTYPE> col(table, bridge_string(col_name)); \
                 *((CPPTYPE *) data) = col.get(row_number); \
                 break; \
             }
 
 #define VECTOR_CASE(DTYPE, CPPTYPE) \
             case casa::DTYPE: { \
-                casa::ArrayColumn<CPPTYPE> col(table, col_name); \
+                casa::ArrayColumn<CPPTYPE> col(table, bridge_string(col_name)); \
                 casa::Array<CPPTYPE> array(shape, (CPPTYPE *) data, casa::SHARE); \
                 col.get(row_number, array, casa::False); \
                 break; \
@@ -394,7 +407,6 @@ extern "C" {
             SCALAR_CASE(TpDouble, double)
             SCALAR_CASE(TpComplex, casa::Complex)
             SCALAR_CASE(TpDComplex, casa::DComplex)
-            SCALAR_CASE(TpString, casa::String)
 
             VECTOR_CASE(TpArrayBool, casa::Bool)
             VECTOR_CASE(TpArrayChar, casa::Char)
@@ -407,10 +419,23 @@ extern "C" {
             VECTOR_CASE(TpArrayDouble, double)
             VECTOR_CASE(TpArrayComplex, casa::Complex)
             VECTOR_CASE(TpArrayDComplex, casa::DComplex)
-            VECTOR_CASE(TpArrayString, casa::String)
 
 #undef SCALAR_CASE
 #undef VECTOR_CASE
+
+            case casa::TpString: {                                         \
+                casa::ScalarColumn<casa::String> col(table, bridge_string(col_name));
+                unbridge_string(col.get(row_number), *((StringBridge *) data));
+                break;
+            }
+
+            case casa::TpArrayString: {
+                casa::ArrayColumn<casa::String> col(table, bridge_string(col_name));
+                casa::Array<casa::String> array(shape);
+                col.get(row_number, array, casa::False);
+                unbridge_string_array(array, (StringBridge *) data);
+                break;
+            }
 
             default:
                 throw std::runtime_error("unhandled cell data type");
@@ -424,7 +449,7 @@ extern "C" {
     }
 
     int
-    table_put_cell(GlueTable &table, const GlueString &col_name,
+    table_put_cell(GlueTable &table, const StringBridge &col_name,
                    const unsigned long row_number, const GlueDataType data_type,
                    const unsigned long n_dims, const unsigned long *dims,
                    void *data, ExcInfo &exc)
@@ -434,14 +459,14 @@ extern "C" {
 
 #define SCALAR_CASE(DTYPE, CPPTYPE) \
             case casa::DTYPE: { \
-                casa::ScalarColumn<CPPTYPE> col(table, col_name); \
+                casa::ScalarColumn<CPPTYPE> col(table, bridge_string(col_name)); \
                 col.put(row_number, *(CPPTYPE *) data); \
                 break; \
             }
 
 #define VECTOR_CASE(DTYPE, CPPTYPE) \
             case casa::DTYPE: { \
-                casa::ArrayColumn<CPPTYPE> col(table, col_name); \
+                casa::ArrayColumn<CPPTYPE> col(table, bridge_string(col_name)); \
                 casa::IPosition shape(n_dims); \
                 for (casa::uInt i = 0; i < n_dims; i++) \
                     shape[i] = dims[n_dims - 1 - i]; \
@@ -461,7 +486,6 @@ extern "C" {
             SCALAR_CASE(TpDouble, double)
             SCALAR_CASE(TpComplex, casa::Complex)
             SCALAR_CASE(TpDComplex, casa::DComplex)
-            SCALAR_CASE(TpString, casa::String)
 
             VECTOR_CASE(TpArrayBool, casa::Bool)
             VECTOR_CASE(TpArrayChar, casa::Char)
@@ -474,10 +498,24 @@ extern "C" {
             VECTOR_CASE(TpArrayDouble, double)
             VECTOR_CASE(TpArrayComplex, casa::Complex)
             VECTOR_CASE(TpArrayDComplex, casa::DComplex)
-            VECTOR_CASE(TpArrayString, casa::String)
 
 #undef SCALAR_CASE
 #undef VECTOR_CASE
+
+            case casa::TpString: {
+                casa::ScalarColumn<casa::String> col(table, bridge_string(col_name));
+                col.put(row_number, bridge_string(*((StringBridge *) data)));
+                break;
+            }
+
+            case casa::TpArrayString: {
+                casa::ArrayColumn<casa::String> col(table, bridge_string(col_name));
+                casa::IPosition shape(n_dims);
+                for (casa::uInt i = 0; i < n_dims; i++)
+                    shape[i] = dims[n_dims - 1 - i];
+                col.put(row_number, bridge_string_array((const StringBridge *) data, shape));
+                break;
+            }
 
             default:
                 throw std::runtime_error("unhandled cell data type");
@@ -559,14 +597,14 @@ extern "C" {
     }
 
     int
-    table_row_get_cell_info(const GlueTableRow &row, const GlueString &col_name,
+    table_row_get_cell_info(const GlueTableRow &row, const StringBridge &col_name,
                             GlueDataType *data_type, int *n_dim,
                             unsigned long dims[8], ExcInfo &exc)
     {
         try {
             const casa::TableRecord &rec = row.record();
             const casa::RecordDesc &desc = rec.description();
-            casa::Int field_num = rec.fieldNumber(col_name);
+            casa::Int field_num = rec.fieldNumber(bridge_string(col_name));
 
             if (field_num < 0)
                 throw std::runtime_error("unrecognized column name");
@@ -579,7 +617,7 @@ extern "C" {
                 // desc.shape() is generic, not specific to the row we're
                 // looking at, so we have to create a TableColumn to get the
                 // cell's shape.
-                casa::TableColumn col(row.table(), col_name);
+                casa::TableColumn col(row.table(), bridge_string(col_name));
                 *n_dim = (int) col.ndim(row.rowNumber());
 
                 if (*n_dim > 8)
@@ -601,20 +639,20 @@ extern "C" {
     // This function assumes that the caller has already vetted the types and
     // has figured how big `data` needs to be.
     int
-    table_row_get_cell(const GlueTableRow &row, const GlueString &col_name,
+    table_row_get_cell(const GlueTableRow &row, const StringBridge &col_name,
                        void *data, ExcInfo &exc)
     {
         try {
             const casa::TableRecord &rec = row.record();
             const casa::RecordDesc &desc = rec.description();
-            casa::Int field_num = rec.fieldNumber(col_name);
+            casa::Int field_num = rec.fieldNumber(bridge_string(col_name));
             casa::IPosition shape;
 
             if (field_num < 0)
                 throw std::runtime_error("unrecognized column name");
 
             if (!desc.isScalar(field_num)) {
-                casa::TableColumn col(row.table(), col_name);
+                casa::TableColumn col(row.table(), bridge_string(col_name));
                 shape = col.shape(row.rowNumber());
             }
 
@@ -646,7 +684,6 @@ extern "C" {
             SCALAR_CASE(TpDouble, double)
             SCALAR_CASE(TpComplex, casa::Complex)
             SCALAR_CASE(TpDComplex, casa::DComplex)
-            SCALAR_CASE(TpString, casa::String)
 
             VECTOR_CASE(TpArrayBool, casa::Bool)
             //VECTOR_CASE(TpArrayChar, casa::Char)
@@ -659,10 +696,23 @@ extern "C" {
             VECTOR_CASE(TpArrayDouble, double)
             VECTOR_CASE(TpArrayComplex, casa::Complex)
             VECTOR_CASE(TpArrayDComplex, casa::DComplex)
-            VECTOR_CASE(TpArrayString, casa::String)
 
 #undef SCALAR_CASE
 #undef VECTOR_CASE
+
+            case casa::TpString: {
+                casa::String datum;
+                rec.get(field_num, datum);
+                unbridge_string(datum, *(StringBridge *) data);
+                break;
+            }
+
+            case casa::TpArrayString: {
+                casa::Array<casa::String> array(shape);
+                rec.get(field_num, array);
+                unbridge_string_array(array, (StringBridge *) data);
+                break;
+            }
 
             default:
                 throw std::runtime_error("unhandled cell data type");
@@ -676,7 +726,7 @@ extern "C" {
     }
 
     int
-    table_row_put_cell(GlueTableRow &wrap_row, const GlueString &col_name,
+    table_row_put_cell(GlueTableRow &wrap_row, const StringBridge &col_name,
                        const GlueDataType data_type, const unsigned long n_dims,
                        const unsigned long *dims, void *data, ExcInfo &exc)
     {
@@ -684,7 +734,7 @@ extern "C" {
 
         try {
             casa::TableRecord &rec = row.record();
-            casa::Int field_num = rec.fieldNumber(col_name);
+            casa::Int field_num = rec.fieldNumber(bridge_string(col_name));
 
             switch (data_type) {
 
@@ -715,7 +765,6 @@ extern "C" {
             SCALAR_CASE(TpDouble, double)
             SCALAR_CASE(TpComplex, casa::Complex)
             SCALAR_CASE(TpDComplex, casa::DComplex)
-            SCALAR_CASE(TpString, casa::String)
 
             VECTOR_CASE(TpArrayBool, casa::Bool)
             //VECTOR_CASE(TpArrayChar, casa::Char)
@@ -728,10 +777,22 @@ extern "C" {
             VECTOR_CASE(TpArrayDouble, double)
             VECTOR_CASE(TpArrayComplex, casa::Complex)
             VECTOR_CASE(TpArrayDComplex, casa::DComplex)
-            VECTOR_CASE(TpArrayString, casa::String)
 
 #undef SCALAR_CASE
 #undef VECTOR_CASE
+
+            case casa::TpString: {
+                rec.define(field_num, bridge_string(*(StringBridge *) data));
+                break;
+            }
+
+            case casa::TpArrayString: {
+                casa::IPosition shape(n_dims);
+                for (casa::uInt i = 0; i < n_dims; i++)
+                    shape[i] = dims[n_dims - 1 - i];
+                rec.define(field_num, bridge_string_array((const StringBridge *) data, shape));
+                break;
+            }
 
             default:
                 throw std::runtime_error("unhandled cell data type");

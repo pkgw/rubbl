@@ -13,59 +13,7 @@ use std::path::Path;
 #[macro_use] pub mod errors; // most come first to provide macros for other modules
 use errors::{Error, ErrorKind, Result};
 
-#[allow(non_camel_case_types, unused)] mod glue;
-
-/// OMG. Strings were incredibly painful.
-///
-/// One important piece of context: `casacore::String` is a subclass of C++'s
-/// `std::string`. Rust strings can contain interior NUL bytes. Fortunately,
-/// `std::string` can as well, so we don't need to worry about the C string
-/// convention.
-///
-/// My understanding is that C++'s `std::string` always allocates its own
-/// buffer. So we can't try to be clever about lifetimes and borrowing: every
-/// time we bridge to C++ there's going to be a copy.
-///
-/// Then I ran into problems essentially because of the following bindgen
-/// problem: https://github.com/rust-lang-nursery/rust-bindgen/issues/778 . On
-/// Linux small classes, such as String, have special ABI conventions, and
-/// bindgen does not represent them properly to Rust at the moment (Sep 2017).
-/// The String class is a victim of this problem, which led to completely
-/// bizarre failures in my code when the small-string optimization was kicking
-/// in. It seems that if we only interact with the C++ through pointers and
-/// references to Strings, things remain OK.
-///
-/// Finally, as best I understand it, we need to manually ensure that the C++
-/// destructor for the String class is run. I have done this with a little
-/// trick off of StackExchange.
-
-impl glue::GlueString {
-    fn from_rust(s: &str) -> Self {
-        unsafe {
-            let mut cs = std::mem::zeroed::<glue::GlueString>();
-            glue::string_init(&mut cs, s.as_ptr() as _, s.len() as u64);
-            cs
-        }
-    }
-
-    fn to_rust(&self) -> String {
-        let mut ptr: *const std::os::raw::c_void = 0 as _;
-        let mut n_bytes: u64 = 0;
-
-        let buf = unsafe {
-            glue::string_get_buf(self, &mut ptr, &mut n_bytes);
-            std::slice::from_raw_parts(ptr as *const u8, n_bytes as usize)
-        };
-
-        String::from_utf8_lossy(buf).into_owned()
-    }
-}
-
-impl Drop for glue::GlueString {
-    fn drop(&mut self) {
-        unsafe { glue::string_deinit(self) };
-    }
-}
+mod glue;
 
 // Exceptions
 
@@ -123,7 +71,7 @@ pub trait CasaDataType: Clone + PartialEq + Sized {
 
     /// A hack that lets us properly special-case string vectors
     #[doc(hidden)]
-    fn casatables_stringvec_pass_through_out(_s: &Self) -> Vec<glue::GlueString> {
+    fn casatables_stringvec_pass_through_out(_s: &Self) -> Vec<glue::StringBridge> {
         unreachable!();
     }
 
@@ -427,8 +375,8 @@ impl CasaDataType for Vec<String> {
         rv
     }
 
-    fn casatables_stringvec_pass_through_out(svec: &Self) -> Vec<glue::GlueString> {
-        svec.iter().map(|s| glue::GlueString::from_rust(s)).collect()
+    fn casatables_stringvec_pass_through_out(svec: &Self) -> Vec<glue::StringBridge> {
+        svec.iter().map(|s| glue::StringBridge::from_rust(s)).collect()
     }
 
     fn casatables_as_buf(&self) -> *const () {
@@ -547,6 +495,33 @@ mod data_type_tests {
 }
 
 
+// String bridge
+
+impl glue::StringBridge {
+    fn zeroed() -> Self {
+        Self {
+            data: 0 as _,
+            n_bytes: 0,
+        }
+    }
+
+    fn from_rust(s: &str) -> Self {
+        Self {
+            data: s.as_ptr() as _,
+            n_bytes: s.len() as std::os::raw::c_ulong,
+        }
+    }
+
+    fn to_rust(&self) -> String {
+        let buf = unsafe {
+            std::slice::from_raw_parts(self.data as *const u8, self.n_bytes as usize)
+        };
+
+        String::from_utf8_lossy(buf).into_owned()
+    }
+}
+
+
 // Tables
 
 pub struct Table {
@@ -566,7 +541,7 @@ impl Table {
             Some(s) => s,
             None => return Err("table paths must be representable as UTF-8 strings".into()),
         };
-        let cpath = glue::GlueString::from_rust(spath);
+        let cpath = glue::StringBridge::from_rust(spath);
         let mut exc_info = unsafe { std::mem::zeroed::<glue::ExcInfo>() };
 
         let cmode = match mode {
@@ -596,10 +571,10 @@ impl Table {
 
     pub fn column_names(&mut self) -> Result<Vec<String>> {
         let n_cols = self.n_columns();
-        let mut cnames: Vec<glue::GlueString> = Vec::with_capacity(n_cols);
+        let mut cnames: Vec<glue::StringBridge> = Vec::with_capacity(n_cols);
 
         for _ in 0..n_cols {
-            cnames.push(glue::GlueString::from_rust(""));
+            cnames.push(glue::StringBridge::zeroed());
         }
 
         let rv = unsafe {
@@ -618,7 +593,7 @@ impl Table {
     }
 
     pub fn remove_column(&mut self, col_name: &str) -> Result<()> {
-        let ccol_name = glue::GlueString::from_rust(col_name);
+        let ccol_name = glue::StringBridge::from_rust(col_name);
 
         let rv = unsafe {
             glue::table_remove_column(
@@ -636,37 +611,60 @@ impl Table {
     }
 
     pub fn table_keyword_names(&mut self) -> Result<Vec<String>> {
-        let n_kws = unsafe { glue::table_n_keywords(self.handle) } as usize;
-        let mut cnames: Vec<glue::GlueString> = Vec::with_capacity(n_kws);
-        let mut types: Vec<glue::GlueDataType> = Vec::with_capacity(n_kws);
+        // Oh man. So, the C++ code behind this functionality reports back a
+        // sequence of casa::String (<=> std::string) objects, but they are
+        // only temporary, so for each item we need to make a copy of its
+        // contents right then and there. Therefore we need a callback. It
+        // took me a long time to get this right but I think it's working now.
+        // We need an "extern C fn" callback that the C code can call
+        // explicitly, which then hands off to the actual Rust closure of
+        // interest.
 
-        for _ in 0..n_kws {
-            cnames.push(glue::GlueString::from_rust(""));
-            types.push(glue::GlueDataType::TpOther);
+        unsafe extern "C" fn casatables_cb_table_keyword_names<F>(
+            name: *const glue::StringBridge,
+            dtype: glue::GlueDataType,
+            ctxt: *mut std::os::raw::c_void
+        )
+            where F: FnMut(String, glue::GlueDataType)
+        {
+            let f: &mut F = &mut *(ctxt as *mut F);
+            f((&*name).to_rust(), dtype)
         }
 
-        let rv = unsafe {
+        // I think we need this wrapper to give us a way to name the type `F`
+        // of our closure.
+
+        unsafe fn invoke<F>(handle: *mut glue::GlueTable, exc_info: &mut glue::ExcInfo,
+                            mut f: F) -> std::os::raw::c_int
+            where F: FnMut(String, glue::GlueDataType)
+        {
             glue::table_get_keyword_info(
-                self.handle,
-                cnames.as_mut_ptr(),
-                types.as_mut_ptr(),
-                &mut self.exc_info
+                handle,
+                Some(casatables_cb_table_keyword_names::<F>),
+                &mut f as *mut _ as *mut std::os::raw::c_void,
+                exc_info
             )
-        };
+        }
+
+        // Here's where we actually do stuff.
+
+        let mut result = Vec::new();
+
+        let rv = unsafe { invoke(self.handle, &mut self.exc_info, |name, dtype| {
+            if dtype == glue::GlueDataType::TpTable {
+                result.push(name);
+            }
+        }) };
 
         if rv != 0 {
             return self.exc_info.as_err();
         }
 
-        Ok(cnames.iter()
-           .zip(types.iter())
-           .filter(|&(_n, t)| *t == glue::GlueDataType::TpTable)
-           .map(|(n, _t)| n.to_rust())
-           .collect())
+        Ok(result)
     }
 
     pub fn get_col_desc(&mut self, col_name: &str) -> Result<ColumnDescription> {
-        let ccol_name = glue::GlueString::from_rust(col_name);
+        let ccol_name = glue::StringBridge::from_rust(col_name);
         let mut n_rows = 0;
         let mut data_type = glue::GlueDataType::TpOther;
         let mut is_scalar = 0;
@@ -714,7 +712,7 @@ impl Table {
     }
 
     pub fn get_col_as_vec<T: CasaScalarData>(&mut self, col_name: &str) -> Result<Vec<T>> {
-        let ccol_name = glue::GlueString::from_rust(col_name);
+        let ccol_name = glue::StringBridge::from_rust(col_name);
         let mut n_rows = 0;
         let mut data_type = glue::GlueDataType::TpOther;
         let mut is_scalar = 0;
@@ -769,10 +767,10 @@ impl Table {
             // We are not given ownership of the String objects that are
             // returned, so we must std::mem::forget() them. Empirically, we
             // have to initialize our string structures.
-            let mut glue_strings = Vec::<glue::GlueString>::with_capacity(n_rows as usize);
+            let mut glue_strings = Vec::<glue::StringBridge>::with_capacity(n_rows as usize);
 
             for _ in 0..n_rows as usize {
-                glue_strings.push(glue::GlueString::from_rust(""));
+                glue_strings.push(glue::StringBridge::from_rust(""));
             }
 
             let rv = unsafe {
@@ -798,7 +796,7 @@ impl Table {
     }
 
     pub fn get_cell<T: CasaDataType>(&mut self, col_name: &str, row: u64) -> Result<T> {
-        let ccol_name = glue::GlueString::from_rust(col_name);
+        let ccol_name = glue::StringBridge::from_rust(col_name);
         let mut data_type = glue::GlueDataType::TpOther;
         let mut n_dim = 0;
         let mut dims = [0; 8];
@@ -844,14 +842,14 @@ impl Table {
         } else {
             // We are not given ownership of the String object that is
             // returned, so we must std::mem::forget() it.
-            let mut glue_string = glue::GlueString::from_rust("");
+            let mut glue_string = glue::StringBridge::from_rust("");
 
             let rv = unsafe {
                 glue::table_get_cell(
                     self.handle,
                     &ccol_name,
                     row,
-                    &mut glue_string as *mut glue::GlueString as _,
+                    &mut glue_string as *mut glue::StringBridge as _,
                     &mut self.exc_info
                 )
             };
@@ -870,7 +868,7 @@ impl Table {
 
     /// This function discards shape information but won't accept scalars.
     pub fn get_cell_as_vec<T: CasaScalarData>(&mut self, col_name: &str, row: u64) -> Result<Vec<T>> {
-        let ccol_name = glue::GlueString::from_rust(col_name);
+        let ccol_name = glue::StringBridge::from_rust(col_name);
         let mut data_type = glue::GlueDataType::TpOther;
         let mut n_dim = 0;
         let mut dims = [0; 8];
@@ -918,10 +916,10 @@ impl Table {
         } else {
             // We are not given ownership of the String objects that are
             // returned, so we must std::mem::forget() them.
-            let mut glue_strings = Vec::<glue::GlueString>::with_capacity(n_items as usize);
+            let mut glue_strings = Vec::<glue::StringBridge>::with_capacity(n_items as usize);
 
             for _ in 0..n_items as usize {
-                glue_strings.push(glue::GlueString::from_rust(""));
+                glue_strings.push(glue::StringBridge::from_rust(""));
             }
 
             let rv = unsafe {
@@ -948,14 +946,14 @@ impl Table {
     }
 
     pub fn put_cell<T: CasaDataType>(&mut self, col_name: &str, row: u64, value: &T) -> Result<()> {
-        let ccol_name = glue::GlueString::from_rust(col_name);
+        let ccol_name = glue::StringBridge::from_rust(col_name);
         let mut shape = Vec::new();
 
         value.casatables_put_shape(&mut shape);
 
         if T::DATA_TYPE == glue::GlueDataType::TpString {
             let as_string = T::casatables_string_pass_through_out(value);
-            let glue_string = glue::GlueString::from_rust(&as_string);
+            let glue_string = glue::StringBridge::from_rust(&as_string);
 
             let rv = unsafe {
                 glue::table_put_cell(
@@ -965,7 +963,7 @@ impl Table {
                     T::DATA_TYPE,
                     shape.len() as u64,
                     shape.as_ptr(),
-                    &glue_string as *const glue::GlueString as _,
+                    &glue_string as *const glue::StringBridge as _,
                     &mut self.exc_info
                 )
             };
@@ -1074,7 +1072,7 @@ impl Table {
 
 
     pub fn deep_copy_no_rows(&mut self, dest_path: &str) -> Result<()> {
-        let cdest_path = glue::GlueString::from_rust(dest_path);
+        let cdest_path = glue::StringBridge::from_rust(dest_path);
 
         if unsafe { glue::table_deep_copy_no_rows(self.handle, &cdest_path, &mut self.exc_info) != 0 } {
             self.exc_info.as_err()
@@ -1134,7 +1132,7 @@ pub struct TableRow {
 
 impl TableRow {
     pub fn get_cell<T: CasaDataType>(&mut self, col_name: &str) -> Result<T> {
-        let ccol_name = glue::GlueString::from_rust(col_name);
+        let ccol_name = glue::StringBridge::from_rust(col_name);
         let mut data_type = glue::GlueDataType::TpOther;
         let mut n_dim = 0;
         let mut dims = [0; 8];
@@ -1178,13 +1176,13 @@ impl TableRow {
         } else {
             // We are not given ownership of the String object that is
             // returned, so we must std::mem::forget() it.
-            let mut glue_string = glue::GlueString::from_rust("");
+            let mut glue_string = glue::StringBridge::from_rust("");
 
             let rv = unsafe {
                 glue::table_row_get_cell(
                     self.handle,
                     &ccol_name,
-                    &mut glue_string as *mut glue::GlueString as _,
+                    &mut glue_string as *mut glue::StringBridge as _,
                     &mut self.exc_info
                 )
             };
@@ -1202,14 +1200,14 @@ impl TableRow {
     }
 
     pub fn put_cell<T: CasaDataType>(&mut self, col_name: &str, value: &T) -> Result<()> {
-        let ccol_name = glue::GlueString::from_rust(col_name);
+        let ccol_name = glue::StringBridge::from_rust(col_name);
         let mut shape = Vec::new();
 
         value.casatables_put_shape(&mut shape);
 
         if T::DATA_TYPE == glue::GlueDataType::TpString {
             let as_string = T::casatables_string_pass_through_out(value);
-            let glue_string = glue::GlueString::from_rust(&as_string);
+            let glue_string = glue::StringBridge::from_rust(&as_string);
 
             let rv = unsafe {
                 glue::table_row_put_cell(
@@ -1218,7 +1216,7 @@ impl TableRow {
                     T::DATA_TYPE,
                     shape.len() as u64,
                     shape.as_ptr(),
-                    &glue_string as *const glue::GlueString as _,
+                    &glue_string as *const glue::StringBridge as _,
                     &mut self.exc_info
                 )
             };
@@ -1304,19 +1302,5 @@ impl Drop for TableRow {
         // FIXME: not sure if this function can actually produce useful
         // exceptions anyway, but we can't do anything if it does!
         unsafe { glue::table_row_free(self.handle, &mut self.exc_info); }
-    }
-}
-
-
-#[cfg(test)]
-mod tests {
-    use std::mem::size_of;
-    use super::glue;
-
-    #[test]
-    fn check_string_size() {
-        let cpp_size = unsafe { glue::string_check_size() } as usize;
-        let rust_size = size_of::<glue::GlueString>();
-        assert_eq!(cpp_size, rust_size);
     }
 }

@@ -11,11 +11,6 @@
  *
  * We use some silly preprocessor futzing so that the same prototypes can
  * either use opaque struct pointers or the actual C++ types known to glue.cc.
- * We further elaborate by stubbing out the GlueString type so that those
- * values can be stack-allocated by Rust, since it's common to pass strings
- * around and we want to be able to centralize the code that passes Rust
- * strings through without having to jump through the hoops needed for C
- * string conversion.
  */
 
 #ifndef CASA_TYPES_ALREADY_DECLARED
@@ -55,22 +50,28 @@ typedef enum GlueDataType {
     TpArrayInt64,
 } GlueDataType;
 
-/**
- * <div rustbindgen nocopy></div>
- *
- * Here, "55555" is a magic number that we hope is vanishingly unlikely to
- * show up in the output of bindgen besides this one context. It is replaced
- * by a symbolic constant in `gen-bindings.sh`, for reasons explained in
- * build.sh. Keep the value synchronized with that script.
- */
-typedef struct GlueString { char opaque[55555]; } GlueString;
 typedef struct GlueTable GlueTable;
 typedef struct GlueTableRow GlueTableRow;
 #endif
 
+// OMG, strings. I tried to map directly to std::string, but different
+// versions of the STL have different semantics that I could never make work
+// consistently.
+
+typedef struct StringBridge {
+    const void *data;
+    unsigned long n_bytes;
+} StringBridge;
+
 typedef struct ExcInfo {
     char message[512];
 } ExcInfo;
+
+// The C++ code behind table_get_keyword_info gives us string pointers that do
+// have lifetimes that are short compared to the table object, so we need to
+// copy out each string as we see it. Therefore we need a callback. Took me a
+// while to get this working but I think it's good now.
+typedef void (*KeywordInfoCallback)(const StringBridge *name, GlueDataType dtype, void *ctxt);
 
 typedef enum TableOpenMode {
     TOM_OPEN_READONLY = 1,
@@ -79,35 +80,31 @@ typedef enum TableOpenMode {
 } TableOpenMode;
 
 extern "C" {
-    unsigned long string_check_size(void);
-    void string_init(GlueString &str, const void *data, const unsigned long n_bytes);
-    void string_get_buf(const GlueString &str, void const **data_ptr, unsigned long *n_bytes_ptr);
-    void string_deinit(GlueString &str);
-
     int data_type_get_element_size(const GlueDataType ty);
 
-    GlueTable *table_alloc_and_open(const GlueString &path, const TableOpenMode mode, ExcInfo &exc);
+    GlueTable *table_alloc_and_open(const StringBridge &path, const TableOpenMode mode, ExcInfo &exc);
     void table_close_and_free(GlueTable *table, ExcInfo &exc);
     unsigned long table_n_rows(const GlueTable &table);
     unsigned long table_n_columns(const GlueTable &table);
-    int table_get_column_names(const GlueTable &table, GlueString *col_names, ExcInfo &exc);
+    int table_get_column_names(const GlueTable &table, StringBridge *col_names, ExcInfo &exc);
     unsigned long table_n_keywords(const GlueTable &table);
-    int table_get_keyword_info(const GlueTable &table, GlueString *names, GlueDataType *types, ExcInfo &exc);
+    int table_get_keyword_info(const GlueTable &table, KeywordInfoCallback callback,
+                               void *ctxt, ExcInfo &exc);
     int table_copy_rows(const GlueTable &source, GlueTable &dest, ExcInfo &exc);
-    int table_deep_copy_no_rows(const GlueTable &table, const GlueString &dest_path, ExcInfo &exc);
-    int table_get_column_info(const GlueTable &table, const GlueString &col_name,
+    int table_deep_copy_no_rows(const GlueTable &table, const StringBridge &dest_path, ExcInfo &exc);
+    int table_get_column_info(const GlueTable &table, const StringBridge &col_name,
                               unsigned long *n_rows, GlueDataType *data_type,
                               int *is_scalar, int *is_fixed_shape, int *n_dim,
                               unsigned long dims[8], ExcInfo &exc);
-    int table_remove_column(GlueTable &table, const GlueString &col_name, ExcInfo &exc);
-    int table_get_scalar_column_data(const GlueTable &table, const GlueString &col_name,
+    int table_remove_column(GlueTable &table, const StringBridge &col_name, ExcInfo &exc);
+    int table_get_scalar_column_data(const GlueTable &table, const StringBridge &col_name,
                                      void *data, ExcInfo &exc);
-    int table_get_cell_info(const GlueTable &table, const GlueString &col_name,
+    int table_get_cell_info(const GlueTable &table, const StringBridge &col_name,
                             unsigned long row_number, GlueDataType *data_type,
                             int *n_dim, unsigned long dims[8], ExcInfo &exc);
-    int table_get_cell(const GlueTable &table, const GlueString &col_name,
+    int table_get_cell(const GlueTable &table, const StringBridge &col_name,
                        const unsigned long row_number, void *data, ExcInfo &exc);
-    int table_put_cell(GlueTable &table, const GlueString &col_name,
+    int table_put_cell(GlueTable &table, const StringBridge &col_name,
                        const unsigned long row_number, const GlueDataType data_type,
                        const unsigned long n_dims, const unsigned long *dims,
                        void *data, ExcInfo &exc);
@@ -118,12 +115,12 @@ extern "C" {
     int table_row_read(GlueTableRow &row, const unsigned long row_number, ExcInfo &exc);
     int table_row_copy_and_put(GlueTableRow &src_row, const unsigned long dest_row_number,
                                GlueTableRow &dest_row, ExcInfo &exc);
-    int table_row_get_cell_info(const GlueTableRow &row, const GlueString &col_name,
+    int table_row_get_cell_info(const GlueTableRow &row, const StringBridge &col_name,
                                 GlueDataType *data_type, int *n_dim,
                                 unsigned long dims[8], ExcInfo &exc);
-    int table_row_get_cell(const GlueTableRow &row, const GlueString &col_name,
+    int table_row_get_cell(const GlueTableRow &row, const StringBridge &col_name,
                            void *data, ExcInfo &exc);
-    int table_row_put_cell(GlueTableRow &row, const GlueString &col_name,
+    int table_row_put_cell(GlueTableRow &row, const StringBridge &col_name,
                            const GlueDataType data_type, const unsigned long n_dims,
                            const unsigned long *dims, void *data, ExcInfo &exc);
     int table_row_write(GlueTableRow &row, const unsigned long dest_row_number, ExcInfo &exc);
