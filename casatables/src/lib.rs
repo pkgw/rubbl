@@ -1310,12 +1310,13 @@ impl Drop for TableRow {
 
 #[cfg(test)]
 mod tests {
+    use std::mem::size_of;
     use super::glue;
 
     #[test]
     fn check_string_size() {
         let cpp_size = unsafe { glue::string_check_size() } as usize;
-        let rust_size = std::mem::size_of::<glue::GlueString>();
+        let rust_size = size_of::<glue::GlueString>();
         assert_eq!(cpp_size, rust_size);
     }
 }
