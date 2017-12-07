@@ -4,7 +4,7 @@ const STRING_SIZE: usize = include!("casa_string_size.txt");
 
 #[repr(u32)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
-pub enum _GlueDataType {
+pub enum GlueDataType {
     TpBool = 0,
     TpChar = 1,
     TpUChar = 2,
@@ -37,70 +37,65 @@ pub enum _GlueDataType {
     TpInt64 = 29,
     TpArrayInt64 = 30,
 }
-pub use self::_GlueDataType as GlueDataType;
 /// <div rustbindgen nocopy></div>
 ///
 /// Here, "55555" is a magic number that we hope is vanishingly unlikely to
-/// show up in the output of bindgen besides this one context. It is replace by
-/// a symbolic constant in gen-bindings.sh, for reasons explained in build.sh.
+/// show up in the output of bindgen besides this one context. It is replaced
+/// by a symbolic constant in `gen-bindings.sh`, for reasons explained in
+/// build.sh. Keep the value synchronized with that script.
 #[repr(C)]
-pub struct _GlueString {
+pub struct GlueString {
     pub opaque: [::std::os::raw::c_char; STRING_SIZE],
 }
 #[test]
-fn bindgen_test_layout__GlueString() {
-    assert_eq!(::std::mem::size_of::<_GlueString>() , STRING_SIZE , concat ! (
-               "Size of: " , stringify ! ( _GlueString ) ));
-    assert_eq! (::std::mem::align_of::<_GlueString>() , 1usize , concat ! (
-                "Alignment of " , stringify ! ( _GlueString ) ));
+fn bindgen_test_layout_GlueString() {
+    assert_eq!(::std::mem::size_of::<GlueString>() , STRING_SIZE , concat ! (
+               "Size of: " , stringify ! ( GlueString ) ));
+    assert_eq! (::std::mem::align_of::<GlueString>() , 1usize , concat ! (
+                "Alignment of " , stringify ! ( GlueString ) ));
     assert_eq! (unsafe {
-                & ( * ( 0 as * const _GlueString ) ) . opaque as * const _ as
+                & ( * ( 0 as * const GlueString ) ) . opaque as * const _ as
                 usize } , 0usize , concat ! (
-                "Alignment of field: " , stringify ! ( _GlueString ) , "::" ,
+                "Alignment of field: " , stringify ! ( GlueString ) , "::" ,
                 stringify ! ( opaque ) ));
 }
-pub type GlueString = _GlueString;
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
-pub struct _GlueTable {
+pub struct GlueTable {
     _unused: [u8; 0],
 }
-pub type GlueTable = _GlueTable;
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
-pub struct _GlueTableRow {
+pub struct GlueTableRow {
     _unused: [u8; 0],
 }
-pub type GlueTableRow = _GlueTableRow;
 #[repr(C)]
 #[derive(Copy)]
-pub struct _ExcInfo {
+pub struct ExcInfo {
     pub message: [::std::os::raw::c_char; 512usize],
 }
 #[test]
-fn bindgen_test_layout__ExcInfo() {
-    assert_eq!(::std::mem::size_of::<_ExcInfo>() , 512usize , concat ! (
-               "Size of: " , stringify ! ( _ExcInfo ) ));
-    assert_eq! (::std::mem::align_of::<_ExcInfo>() , 1usize , concat ! (
-                "Alignment of " , stringify ! ( _ExcInfo ) ));
+fn bindgen_test_layout_ExcInfo() {
+    assert_eq!(::std::mem::size_of::<ExcInfo>() , 512usize , concat ! (
+               "Size of: " , stringify ! ( ExcInfo ) ));
+    assert_eq! (::std::mem::align_of::<ExcInfo>() , 1usize , concat ! (
+                "Alignment of " , stringify ! ( ExcInfo ) ));
     assert_eq! (unsafe {
-                & ( * ( 0 as * const _ExcInfo ) ) . message as * const _ as
+                & ( * ( 0 as * const ExcInfo ) ) . message as * const _ as
                 usize } , 0usize , concat ! (
-                "Alignment of field: " , stringify ! ( _ExcInfo ) , "::" ,
+                "Alignment of field: " , stringify ! ( ExcInfo ) , "::" ,
                 stringify ! ( message ) ));
 }
-impl Clone for _ExcInfo {
+impl Clone for ExcInfo {
     fn clone(&self) -> Self { *self }
 }
-pub type ExcInfo = _ExcInfo;
 #[repr(u32)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
-pub enum _TableOpenMode {
+pub enum TableOpenMode {
     TOM_OPEN_READONLY = 1,
     TOM_OPEN_RW = 2,
     TOM_CREATE = 3,
 }
-pub use self::_TableOpenMode as TableOpenMode;
 extern "C" {
     pub fn string_check_size() -> ::std::os::raw::c_ulong;
 }

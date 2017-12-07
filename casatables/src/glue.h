@@ -21,7 +21,7 @@
 #ifndef CASA_TYPES_ALREADY_DECLARED
 
 // copied from casa/Utilities/DataType.h:
-typedef enum _GlueDataType {
+typedef enum GlueDataType {
     TpBool,
     TpChar,
     TpUChar,
@@ -63,16 +63,16 @@ typedef enum _GlueDataType {
  * by a symbolic constant in `gen-bindings.sh`, for reasons explained in
  * build.sh. Keep the value synchronized with that script.
  */
-typedef struct _GlueString { char opaque[55555]; } GlueString;
-typedef struct _GlueTable GlueTable;
-typedef struct _GlueTableRow GlueTableRow;
+typedef struct GlueString { char opaque[55555]; } GlueString;
+typedef struct GlueTable GlueTable;
+typedef struct GlueTableRow GlueTableRow;
 #endif
 
-typedef struct _ExcInfo {
+typedef struct ExcInfo {
     char message[512];
 } ExcInfo;
 
-typedef enum _TableOpenMode {
+typedef enum TableOpenMode {
     TOM_OPEN_READONLY = 1,
     TOM_OPEN_RW = 2,
     TOM_CREATE = 3,
