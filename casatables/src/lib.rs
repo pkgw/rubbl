@@ -103,150 +103,34 @@ pub trait CasaScalarData: CasaDataType {
     const VECTOR_TYPE: glue::GlueDataType;
 }
 
+macro_rules! impl_scalar_data_type {
+    ($rust_type:ty, $casa_scalar_type:ident, $casa_vector_type:ident, $default:expr) => {
+        impl CasaDataType for $rust_type {
+            const DATA_TYPE: glue::GlueDataType = glue::GlueDataType::$casa_scalar_type;
 
-impl CasaDataType for bool {
-    const DATA_TYPE: glue::GlueDataType = glue::GlueDataType::TpBool;
+            fn casatables_alloc(_shape: &[u64]) -> Result<Self> {
+                Ok($default)
+            }
+        }
 
-    fn casatables_alloc(_shape: &[u64]) -> Result<Self> {
-        Ok(false)
+        impl CasaScalarData for $rust_type {
+            const VECTOR_TYPE: glue::GlueDataType = glue::GlueDataType::$casa_vector_type;
+        }
     }
 }
 
-impl CasaScalarData for bool {
-    const VECTOR_TYPE: glue::GlueDataType = glue::GlueDataType::TpArrayBool;
-}
-
-impl CasaDataType for i8 {
-    const DATA_TYPE: glue::GlueDataType = glue::GlueDataType::TpChar;
-
-    fn casatables_alloc(_shape: &[u64]) -> Result<Self> {
-        Ok(0)
-    }
-}
-
-impl CasaScalarData for i8 {
-    const VECTOR_TYPE: glue::GlueDataType = glue::GlueDataType::TpArrayChar;
-}
-
-impl CasaDataType for u8 {
-    const DATA_TYPE: glue::GlueDataType = glue::GlueDataType::TpUChar;
-
-    fn casatables_alloc(_shape: &[u64]) -> Result<Self> {
-        Ok(0)
-    }
-}
-
-impl CasaScalarData for u8 {
-    const VECTOR_TYPE: glue::GlueDataType = glue::GlueDataType::TpArrayUChar;
-}
-
-impl CasaDataType for i16 {
-    const DATA_TYPE: glue::GlueDataType = glue::GlueDataType::TpShort;
-
-    fn casatables_alloc(_shape: &[u64]) -> Result<Self> {
-        Ok(0)
-    }
-}
-
-impl CasaScalarData for i16 {
-    const VECTOR_TYPE: glue::GlueDataType = glue::GlueDataType::TpArrayShort;
-}
-
-impl CasaDataType for u16 {
-    const DATA_TYPE: glue::GlueDataType = glue::GlueDataType::TpUShort;
-
-    fn casatables_alloc(_shape: &[u64]) -> Result<Self> {
-        Ok(0)
-    }
-}
-
-impl CasaScalarData for u16 {
-    const VECTOR_TYPE: glue::GlueDataType = glue::GlueDataType::TpArrayUShort;
-}
-
-impl CasaDataType for i32 {
-    const DATA_TYPE: glue::GlueDataType = glue::GlueDataType::TpInt;
-
-    fn casatables_alloc(_shape: &[u64]) -> Result<Self> {
-        Ok(0)
-    }
-}
-
-impl CasaScalarData for i32 {
-    const VECTOR_TYPE: glue::GlueDataType = glue::GlueDataType::TpArrayInt;
-}
-
-impl CasaDataType for u32 {
-    const DATA_TYPE: glue::GlueDataType = glue::GlueDataType::TpUInt;
-
-    fn casatables_alloc(_shape: &[u64]) -> Result<Self> {
-        Ok(0)
-    }
-}
-
-impl CasaScalarData for u32 {
-    const VECTOR_TYPE: glue::GlueDataType = glue::GlueDataType::TpArrayUInt;
-}
-
-impl CasaDataType for i64 {
-    const DATA_TYPE: glue::GlueDataType = glue::GlueDataType::TpInt64;
-
-    fn casatables_alloc(_shape: &[u64]) -> Result<Self> {
-        Ok(0)
-    }
-}
-
-impl CasaScalarData for i64 {
-    const VECTOR_TYPE: glue::GlueDataType = glue::GlueDataType::TpArrayInt64;
-}
-
-impl CasaDataType for f32 {
-    const DATA_TYPE: glue::GlueDataType = glue::GlueDataType::TpFloat;
-
-    fn casatables_alloc(_shape: &[u64]) -> Result<Self> {
-        Ok(0.)
-    }
-}
-
-impl CasaScalarData for f32 {
-    const VECTOR_TYPE: glue::GlueDataType = glue::GlueDataType::TpArrayFloat;
-}
-
-impl CasaDataType for f64 {
-    const DATA_TYPE: glue::GlueDataType = glue::GlueDataType::TpDouble;
-
-    fn casatables_alloc(_shape: &[u64]) -> Result<Self> {
-        Ok(0.)
-    }
-}
-
-impl CasaScalarData for f64 {
-    const VECTOR_TYPE: glue::GlueDataType = glue::GlueDataType::TpArrayDouble;
-}
-
-impl CasaDataType for Complex<f32> {
-    const DATA_TYPE: glue::GlueDataType = glue::GlueDataType::TpComplex;
-
-    fn casatables_alloc(_shape: &[u64]) -> Result<Self> {
-        Ok(Complex::new(0., 0.))
-    }
-}
-
-impl CasaScalarData for Complex<f32> {
-    const VECTOR_TYPE: glue::GlueDataType = glue::GlueDataType::TpArrayComplex;
-}
-
-impl CasaDataType for Complex<f64> {
-    const DATA_TYPE: glue::GlueDataType = glue::GlueDataType::TpDComplex;
-
-    fn casatables_alloc(_shape: &[u64]) -> Result<Self> {
-        Ok(Complex::new(0., 0.))
-    }
-}
-
-impl CasaScalarData for Complex<f64> {
-    const VECTOR_TYPE: glue::GlueDataType = glue::GlueDataType::TpArrayDComplex;
-}
+impl_scalar_data_type! { bool, TpBool, TpArrayBool, false }
+impl_scalar_data_type! { i8, TpChar, TpArrayChar, 0 }
+impl_scalar_data_type! { u8, TpUChar, TpArrayUChar, 0 }
+impl_scalar_data_type! { i16, TpShort, TpArrayShort, 0 }
+impl_scalar_data_type! { u16, TpUShort, TpArrayUShort, 0 }
+impl_scalar_data_type! { i32, TpInt, TpArrayInt, 0 }
+impl_scalar_data_type! { u32, TpUInt, TpArrayUInt, 0 }
+impl_scalar_data_type! { i64, TpInt64, TpArrayInt64, 0 }
+impl_scalar_data_type! { f32, TpFloat, TpArrayFloat, 0. }
+impl_scalar_data_type! { f64, TpDouble, TpArrayDouble, 0. }
+impl_scalar_data_type! { Complex<f32>, TpComplex, TpArrayComplex, Complex::new(0., 0.) }
+impl_scalar_data_type! { Complex<f64>, TpDComplex, TpArrayDComplex, Complex::new(0., 0.) }
 
 impl CasaDataType for String {
     const DATA_TYPE: glue::GlueDataType = glue::GlueDataType::TpString;
@@ -281,88 +165,50 @@ impl CasaScalarData for String {
 // we have to implement each type separately because Strings need special
 // handling.
 
-impl CasaDataType for Vec<bool> {
-    const DATA_TYPE: glue::GlueDataType = glue::GlueDataType::TpArrayBool;
+macro_rules! impl_vec_data_type {
+    ($rust_type:ty, $casa_type:ident) => {
+        impl CasaDataType for Vec<$rust_type> {
+            const DATA_TYPE: glue::GlueDataType = glue::GlueDataType::$casa_type;
 
-    fn casatables_alloc(shape: &[u64]) -> Result<Self> {
-        if shape.len() != 1 {
-            Err(CoreErrorKind::DimensionMismatch(1, shape.len()).into())
-        } else {
-            let mut rv = Vec::with_capacity(shape[0] as usize);
-            unsafe { rv.set_len(shape[0] as usize); }
-            Ok(rv)
+            fn casatables_alloc(shape: &[u64]) -> Result<Self> {
+                if shape.len() != 1 {
+                    Err(CoreErrorKind::DimensionMismatch(1, shape.len()).into())
+                } else {
+                    let mut rv = Vec::with_capacity(shape[0] as usize);
+                    unsafe { rv.set_len(shape[0] as usize); }
+                    Ok(rv)
+                }
+            }
+
+            fn casatables_put_shape(&self, shape_dest: &mut Vec<u64>) {
+                shape_dest.truncate(0);
+                shape_dest.push(self.len() as u64);
+            }
+
+            fn casatables_as_buf(&self) -> *const () {
+                self.as_ptr() as _
+            }
+
+            fn casatables_as_mut_buf(&mut self) -> *mut () {
+                self.as_mut_ptr() as _
+            }
         }
-    }
-
-    fn casatables_put_shape(&self, shape_dest: &mut Vec<u64>) {
-        shape_dest.truncate(0);
-        shape_dest.push(self.len() as u64);
-    }
-
-    fn casatables_as_buf(&self) -> *const () {
-        self.as_ptr() as _
-    }
-
-    fn casatables_as_mut_buf(&mut self) -> *mut () {
-        self.as_mut_ptr() as _
     }
 }
 
+impl_vec_data_type! { bool, TpArrayBool }
+impl_vec_data_type! { i8, TpArrayChar }
+impl_vec_data_type! { u8, TpArrayUChar }
+impl_vec_data_type! { i16, TpArrayShort }
+impl_vec_data_type! { u16, TpArrayUShort }
+impl_vec_data_type! { i32, TpArrayInt }
+impl_vec_data_type! { u32, TpArrayUInt }
+impl_vec_data_type! { i64, TpArrayInt64 }
+impl_vec_data_type! { f32, TpArrayFloat }
+impl_vec_data_type! { f64, TpArrayDouble }
+impl_vec_data_type! { Complex<f32>, TpArrayComplex }
+impl_vec_data_type! { Complex<f64>, TpArrayDComplex }
 
-impl CasaDataType for Vec<f32> {
-    const DATA_TYPE: glue::GlueDataType = glue::GlueDataType::TpArrayFloat;
-
-    fn casatables_alloc(shape: &[u64]) -> Result<Self> {
-        if shape.len() != 1 {
-            Err(CoreErrorKind::DimensionMismatch(1, shape.len()).into())
-        } else {
-            let mut rv = Vec::with_capacity(shape[0] as usize);
-            unsafe { rv.set_len(shape[0] as usize); }
-            Ok(rv)
-        }
-    }
-
-    fn casatables_put_shape(&self, shape_dest: &mut Vec<u64>) {
-        shape_dest.truncate(0);
-        shape_dest.push(self.len() as u64);
-    }
-
-    fn casatables_as_buf(&self) -> *const () {
-        self.as_ptr() as _
-    }
-
-    fn casatables_as_mut_buf(&mut self) -> *mut () {
-        self.as_mut_ptr() as _
-    }
-}
-
-
-impl CasaDataType for Vec<f64> {
-    const DATA_TYPE: glue::GlueDataType = glue::GlueDataType::TpArrayDouble;
-
-    fn casatables_alloc(shape: &[u64]) -> Result<Self> {
-        if shape.len() != 1 {
-            Err(CoreErrorKind::DimensionMismatch(1, shape.len()).into())
-        } else {
-            let mut rv = Vec::with_capacity(shape[0] as usize);
-            unsafe { rv.set_len(shape[0] as usize); }
-            Ok(rv)
-        }
-    }
-
-    fn casatables_put_shape(&self, shape_dest: &mut Vec<u64>) {
-        shape_dest.truncate(0);
-        shape_dest.push(self.len() as u64);
-    }
-
-    fn casatables_as_buf(&self) -> *const () {
-        self.as_ptr() as _
-    }
-
-    fn casatables_as_mut_buf(&mut self) -> *mut () {
-        self.as_mut_ptr() as _
-    }
-}
 
 impl CasaDataType for Vec<String> {
     const DATA_TYPE: glue::GlueDataType = glue::GlueDataType::TpArrayString;
