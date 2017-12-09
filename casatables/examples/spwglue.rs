@@ -35,8 +35,8 @@ mod mini_npy_parser {
     use byteorder::{ByteOrder, LittleEndian, ReadBytesExt};
     use ndarray::{Array, Dimension};
     use nom::*;
-    use rubbl_casatables::DimFromShapeSlice;
     use rubbl_casatables::errors::Result;
+    use rubbl_core::num::DimFromShapeSlice;
     use std::collections::HashMap;
     use std::io::Read;
 
@@ -49,7 +49,7 @@ mod mini_npy_parser {
         Map(HashMap<String,LimitedPyLiteral>),
     }
 
-    pub fn npy_stream_to_ndarray<R: Read, D: Dimension + DimFromShapeSlice>(stream: &mut R) -> Result<Array<f64, D>> {
+    pub fn npy_stream_to_ndarray<R: Read, D: Dimension + DimFromShapeSlice<u64>>(stream: &mut R) -> Result<Array<f64, D>> {
         let mut preamble = [0u8; 10];
 
         stream.read_exact(&mut preamble)?;
@@ -136,7 +136,7 @@ mod mini_npy_parser {
             }
         }
 
-        let mut arr = unsafe { Array::uninitialized(D::from_shape_slice(&shape)) };
+        let mut arr = unsafe { Array::uninitialized(D::from_shape_slice(&shape)?) };
 
         // Note: we "should" probably use a BufReader here, but the
         // performance of this bit is totally insignificant in the grand

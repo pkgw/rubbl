@@ -26,6 +26,15 @@ error_chain! {
         ParseInt(num::ParseIntError) #[doc = "An error related to parsing integers."];
         Utf8(str::Utf8Error) #[doc = "An error related to UTF-8 conversion."];
     }
+
+    errors {
+        /// An Error that occurs when an array did not have the expected dimensionality.
+        DimensionMismatch(expected: usize, actual: usize) {
+            description("the dimensions of two multi-dimensional arrays did not match"),
+            display("expected {}-dimensional array but found one that was {}-dimensional",
+                    expected, actual),
+        }
+    }
 }
 
 

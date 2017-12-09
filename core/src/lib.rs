@@ -19,9 +19,11 @@ extern crate ndarray;
 extern crate num_complex;
 extern crate termcolor;
 
+// convenience re-exports:
+pub use ndarray::Array;
+pub use num_complex::Complex;
+
 #[macro_use] pub mod errors; // must come first to provide macros for other modules
 pub mod io;
 pub mod notify;
-
-pub use ndarray::Array;
-pub use num_complex::Complex; // convenience re-export
+pub mod num;
