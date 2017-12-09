@@ -12,5 +12,5 @@ extern crate termcolor;
 pub mod io;
 pub mod notify;
 
-pub use ndarray::{Array, Ix2};
+pub use ndarray::Array;
 pub use num_complex::Complex; // convenience re-export
