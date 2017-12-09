@@ -8,7 +8,7 @@ General helpers for numerics.
 */
 
 use errors::{ErrorKind, Result};
-use ndarray::{IntoDimension, Ix0, Ix1, Ix2, Ix3, Ix4};
+use ndarray::{IntoDimension, Ix0, Ix1, Ix2, Ix3, Ix4, Ix5, Ix6};
 
 
 /// Adapt a slice representing an array shape into an `ndarray::Dimension` type.
@@ -28,52 +28,34 @@ pub trait DimFromShapeSlice<T> : Sized {
     fn from_shape_slice(shape: &[T]) -> Result<Self>;
 }
 
-impl DimFromShapeSlice<u64> for Ix0 {
-    fn from_shape_slice(shape: &[u64]) -> Result<Self> {
-        if shape.len() == 0 {
-            Ok([].into_dimension())
-        } else {
-            Err(ErrorKind::DimensionMismatch(0, shape.len()).into())
+macro_rules! impl_dim_from_shape_slice {
+    ($dimtype:ty; $ndim:expr; $($numbers:expr);*) => {
+        impl DimFromShapeSlice<u64> for $dimtype {
+            fn from_shape_slice(shape: &[u64]) -> Result<Self> {
+                if shape.len() == $ndim {
+                    Ok([$(shape[$numbers] as usize),*].into_dimension())
+                } else {
+                    Err(ErrorKind::DimensionMismatch($ndim, shape.len()).into())
+                }
+            }
+        }
+
+        impl DimFromShapeSlice<usize> for $dimtype {
+            fn from_shape_slice(shape: &[usize]) -> Result<Self> {
+                if shape.len() == $ndim {
+                    Ok([$(shape[$numbers] as usize),*].into_dimension())
+                } else {
+                    Err(ErrorKind::DimensionMismatch($ndim, shape.len()).into())
+                }
+            }
         }
     }
 }
 
-impl DimFromShapeSlice<u64> for Ix1 {
-    fn from_shape_slice(shape: &[u64]) -> Result<Self> {
-        if shape.len() == 1 {
-            Ok([shape[0] as usize].into_dimension())
-        } else {
-            Err(ErrorKind::DimensionMismatch(1, shape.len()).into())
-        }
-    }
-}
-
-impl DimFromShapeSlice<u64> for Ix2 {
-    fn from_shape_slice(shape: &[u64]) -> Result<Self> {
-        if shape.len() == 2 {
-            Ok([shape[0] as usize, shape[1] as usize].into_dimension())
-        } else {
-            Err(ErrorKind::DimensionMismatch(2, shape.len()).into())
-        }
-    }
-}
-
-impl DimFromShapeSlice<u64> for Ix3 {
-    fn from_shape_slice(shape: &[u64]) -> Result<Self> {
-        if shape.len() == 3 {
-            Ok([shape[0] as usize, shape[1] as usize, shape[2] as usize].into_dimension())
-        } else {
-            Err(ErrorKind::DimensionMismatch(3, shape.len()).into())
-        }
-    }
-}
-
-impl DimFromShapeSlice<u64> for Ix4 {
-    fn from_shape_slice(shape: &[u64]) -> Result<Self> {
-        if shape.len() == 4 {
-            Ok([shape[0] as usize, shape[1] as usize, shape[2] as usize, shape[3] as usize].into_dimension())
-        } else {
-            Err(ErrorKind::DimensionMismatch(4, shape.len()).into())
-        }
-    }
-}
+impl_dim_from_shape_slice! { Ix0; 0; }
+impl_dim_from_shape_slice! { Ix1; 1; 0 }
+impl_dim_from_shape_slice! { Ix2; 2; 0;1 }
+impl_dim_from_shape_slice! { Ix3; 3; 0;1;2 }
+impl_dim_from_shape_slice! { Ix4; 4; 0;1;2;3 }
+impl_dim_from_shape_slice! { Ix5; 5; 0;1;2;3;4 }
+impl_dim_from_shape_slice! { Ix6; 6; 0;1;2;3;4;5 }
