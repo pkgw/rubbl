@@ -1525,12 +1525,7 @@ fn main() {
         let mut ddid_to_in_spw_id = HashMap::new();
 
         {
-            let (in_ddid_path, mut in_ddid_table) = open_table(&inpath, "DATA_DESCRIPTION", true)?;
-
-            if in_ddid_table.n_rows() != in_spws.len() as u64 {
-                return err_msg!("consistency failure: expected {} rows in input sub-table \"{}\"; got {}",
-                                in_spws.len(), in_ddid_path.display(), in_ddid_table.n_rows());
-            }
+            let (_, mut in_ddid_table) = open_table(&inpath, "DATA_DESCRIPTION", true)?;
 
             let flag_row = in_ddid_table.get_col_as_vec::<bool>("FLAG_ROW")?;
             let pol_id = in_ddid_table.get_col_as_vec::<i32>("POLARIZATION_ID")?;
