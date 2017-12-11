@@ -1584,44 +1584,53 @@ fn main() {
             }
         }
 
+        // We can copy FIELD verbatim but we need to know how many fields there are for
+        // our lamebrained handling of the SOURCE table.
+
+        let n_fields = {
+            let (_, in_field_table) = open_table(&inpath, "FIELD", true)?;
+            in_field_table.n_rows() as usize
+        };
+
         // SOURCE table also needs some custom processing.
 
         {
             let (in_src_path, mut in_src_table) = open_table(&inpath, "SOURCE", true)?;
 
-            let n_source_rows = in_src_table.n_rows() as usize;
-            let n_sources = n_source_rows / in_spws.len();
-
-            if n_sources * in_spws.len() != n_source_rows {
-                return err_msg!("consistency failure: expected {} rows in input sub-table \"{}\"; got {}",
-                                n_sources * in_spws.len(), in_src_path.display(), n_source_rows);
-            }
-
             // First destination ...
 
             let (out_src_path, mut out_src_table) = open_table(&destinations[0], "SOURCE", false)?;
+            let n_out_sources = n_fields * out_spws.len();
 
-            ctry!(out_src_table.add_rows(n_sources * out_spws.len());
-                  "failed to add {} rows to \"{}\"", n_sources * out_spws.len(), out_src_path.display());
+            ctry!(out_src_table.add_rows(n_out_sources);
+                  "failed to add {} rows to \"{}\"", n_out_sources, out_src_path.display());
 
             let mut out_row = out_src_table.get_row_writer()?;
             let mut n_rows_written = 0;
 
             in_src_table.for_each_row(|in_row| {
-                let srcid = in_row.get_cell::<i32>("SOURCE_ID")?;
+                // in the SOURCE table, the column should have been called FIELD_ID
+                // but it is in fact called SOURCE_ID
+                let fldid = in_row.get_cell::<i32>("SOURCE_ID")?;
                 let spwid = in_row.get_cell::<i32>("SPECTRAL_WINDOW_ID")?;
 
                 // We assume, but don't verify, that all other columns are
                 // stable, and so our task here is simply one of filtering the
                 // source table.
 
-                if (srcid as usize) < n_sources && (spwid as usize) < out_spws.len() {
+                if (fldid as usize) < n_fields && (spwid as usize) < out_spws.len() {
                     in_row.copy_and_put(&mut out_row, n_rows_written)?;
                     n_rows_written += 1;
                 }
 
                 Ok(())
             })?;
+
+            if n_out_sources as u64 != n_rows_written {
+                return err_msg!("consistency failure: expected to reuse {} rows in input \
+                                 sub-table \"{}\"; found {}",
+                                n_out_sources, in_src_path.display(), n_rows_written);
+            }
 
             // The rest.
 
