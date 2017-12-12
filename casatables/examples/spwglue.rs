@@ -1789,8 +1789,12 @@ fn main() {
 
         in_main_table.for_each_row(|mut in_row| {
             let ddid = in_row.get_cell::<i32>("DATA_DESC_ID")?;
+            let in_spw_id = match ddid_to_in_spw_id.get(&(ddid as usize)) {
+                Some(i) => i,
+                None => { return Ok(()); } // this DDID is being dropped
+            };
+
             let fieldid = in_row.get_cell::<i32>("FIELD_ID")?;
-            let in_spw_id = *ddid_to_in_spw_id.get(&(ddid as usize)).unwrap();
             let in_spw_info = in_spws.get(&in_spw_id).unwrap();
             let out_spw_id = in_spw_info.out_spw_id();
             let row_ident = VisRecordIdentity::create(out_spw_id, &mut in_row, last_time)?;
