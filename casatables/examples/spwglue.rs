@@ -1592,7 +1592,11 @@ fn main() {
             in_field_table.n_rows() as usize
         };
 
-        // SOURCE table also needs some custom processing.
+        // SOURCE table also needs some custom processing. We assume, but
+        // don't verify, that every row corresponding to the same output spw
+        // has the same values in all columns except SPECTRAL_WINDOW_ID. So we
+        // just copy over the rows corresponding to the first input spw of each
+        // output, making sure to renumber the SPECTRAL_WINDOW_ID appropriately.
 
         {
             let (in_src_path, mut in_src_table) = open_table(&inpath, "SOURCE", true)?;
@@ -1609,18 +1613,17 @@ fn main() {
             let mut n_rows_written = 0;
 
             in_src_table.for_each_row(|in_row| {
-                // in the SOURCE table, the column should have been called FIELD_ID
-                // but it is in fact called SOURCE_ID
-                let fldid = in_row.get_cell::<i32>("SOURCE_ID")?;
                 let spwid = in_row.get_cell::<i32>("SPECTRAL_WINDOW_ID")?;
 
-                // We assume, but don't verify, that all other columns are
-                // stable, and so our task here is simply one of filtering the
-                // source table.
+                for (i, out_spw) in out_spws.iter().enumerate() {
+                    let mut idx_iter = out_spw.spw_indices();
+                    let first_idx = idx_iter.next().unwrap();
 
-                if (fldid as usize) < n_fields && (spwid as usize) < out_spws.len() {
-                    in_row.copy_and_put(&mut out_row, n_rows_written)?;
-                    n_rows_written += 1;
+                    if spwid as usize == first_idx {
+                        in_row.copy_and_put(&mut out_row, n_rows_written)?;
+                        out_src_table.put_cell("SPECTRAL_WINDOW_ID", n_rows_written, &(i as i32))?;
+                        n_rows_written += 1;
+                    }
                 }
 
                 Ok(())
