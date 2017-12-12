@@ -48,7 +48,7 @@ fn main() {
             let desc = ctry!(t.get_col_desc(&n);
                              "failed to query column \"{}\" in \"{}\"", n, inpath.display());
 
-            let type_text = format!("{:?}", desc.data_type());
+            let type_text = format!("{}", desc.data_type());
 
             let multiplicity_text = if desc.is_scalar() {
                 "scalar".to_owned()

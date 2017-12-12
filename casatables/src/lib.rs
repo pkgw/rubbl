@@ -10,6 +10,7 @@ use ndarray::Dimension;
 use rubbl_core::{Array, Complex};
 use rubbl_core::errors::ErrorKind as CoreErrorKind;
 use rubbl_core::num::DimFromShapeSlice;
+use std::fmt;
 use std::path::Path;
 
 #[macro_use] pub mod errors; // most come first to provide macros for other modules
@@ -49,6 +50,43 @@ impl glue::GlueDataType {
     }
 }
 
+impl fmt::Display for glue::GlueDataType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.pad(match self {
+            &glue::GlueDataType::TpBool => "bool",
+            &glue::GlueDataType::TpChar => "i8",
+            &glue::GlueDataType::TpUChar => "u8",
+            &glue::GlueDataType::TpShort => "i16",
+            &glue::GlueDataType::TpUShort => "u16",
+            &glue::GlueDataType::TpInt => "i32",
+            &glue::GlueDataType::TpUInt => "u32",
+            &glue::GlueDataType::TpFloat => "f32",
+            &glue::GlueDataType::TpDouble => "f64",
+            &glue::GlueDataType::TpComplex => "c32",
+            &glue::GlueDataType::TpDComplex => "c64",
+            &glue::GlueDataType::TpString => "string",
+            &glue::GlueDataType::TpTable => "table",
+            &glue::GlueDataType::TpArrayBool => "arr<bool>",
+            &glue::GlueDataType::TpArrayChar => "arr<i8>",
+            &glue::GlueDataType::TpArrayUChar => "arr<u8>",
+            &glue::GlueDataType::TpArrayShort => "arr<i16>",
+            &glue::GlueDataType::TpArrayUShort => "arr<u16>",
+            &glue::GlueDataType::TpArrayInt => "arr<i32>",
+            &glue::GlueDataType::TpArrayUInt => "arr<u32>",
+            &glue::GlueDataType::TpArrayFloat => "arr<f32>",
+            &glue::GlueDataType::TpArrayDouble => "arr<f64>",
+            &glue::GlueDataType::TpArrayComplex => "arr<c32>",
+            &glue::GlueDataType::TpArrayDComplex => "arr<c64>",
+            &glue::GlueDataType::TpArrayString => "arr<string>",
+            &glue::GlueDataType::TpRecord => "record",
+            &glue::GlueDataType::TpOther => "other",
+            &glue::GlueDataType::TpQuantity => "quantity",
+            &glue::GlueDataType::TpArrayQuantity => "arr<quantity>",
+            &glue::GlueDataType::TpInt64 => "i64",
+            &glue::GlueDataType::TpArrayInt64 => "arr<i64>",
+        })
+    }
+}
 
 /// A type that can be translated into a CASA table data type.
 pub trait CasaDataType: Clone + PartialEq + Sized {
