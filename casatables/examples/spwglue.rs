@@ -1682,6 +1682,47 @@ fn main() {
             }
         }
 
+        // And CALDEVICE too. The NOISE_CAL column contains values that seem
+        // to vary across spws. I don't know what the CALDEVICE table actually
+        // does so I am just going to ignore that and hope everything will be
+        // OK!
+
+        {
+            let (_, mut in_cd_table) = open_table(&inpath, "CALDEVICE", true)?;
+
+            // First destination ...
+
+            let (out_cd_path, mut out_cd_table) = open_table(&destinations[0], "CALDEVICE", false)?;
+            let mut out_row = out_cd_table.get_row_writer()?;
+            let mut n_rows_written = 0;
+
+            in_cd_table.for_each_row(|in_row| {
+                let spwid = in_row.get_cell::<i32>("SPECTRAL_WINDOW_ID")?;
+
+                for (i, out_spw) in out_spws.iter().enumerate() {
+                    let mut idx_iter = out_spw.spw_indices();
+                    let first_idx = idx_iter.next().unwrap();
+
+                    if spwid as usize == first_idx {
+                        ctry!(out_cd_table.add_rows(1);
+                              "failed to add row to \"{}\"", out_cd_path.display());
+                        in_row.copy_and_put(&mut out_row, n_rows_written)?;
+                        out_cd_table.put_cell("SPECTRAL_WINDOW_ID", n_rows_written, &(i as i32))?;
+                        n_rows_written += 1;
+                    }
+                }
+
+                Ok(())
+            })?;
+
+            // The rest.
+
+            for more_dest in &destinations[1..] {
+                let (_, mut more_cd_table) = open_table(more_dest, "CALDEVICE", false)?;
+                out_cd_table.copy_rows_to(&mut more_cd_table)?;
+            }
+        }
+
         // Copy over the remaining sub-tables as-is.
 
         let table_kw_names = ctry!(in_main_table.table_keyword_names();
@@ -1689,6 +1730,7 @@ fn main() {
 
         for kw_name in &table_kw_names {
             match kw_name.as_str() {
+                "CALDEVICE" => {},
                 "DATA_DESCRIPTION" => {},
                 "FEED" => {},
                 "POLARIZATION" => {},
