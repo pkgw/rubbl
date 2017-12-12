@@ -1643,6 +1643,45 @@ fn main() {
             }
         }
 
+        // FEED is handled pretty much the same way as SOURCE. (I have no idea
+        // why feeds are tied to spectral windows but here we are.)
+
+        {
+            let (_, mut in_feed_table) = open_table(&inpath, "FEED", true)?;
+
+            // First destination ...
+
+            let (out_feed_path, mut out_feed_table) = open_table(&destinations[0], "FEED", false)?;
+            let mut out_row = out_feed_table.get_row_writer()?;
+            let mut n_rows_written = 0;
+
+            in_feed_table.for_each_row(|in_row| {
+                let spwid = in_row.get_cell::<i32>("SPECTRAL_WINDOW_ID")?;
+
+                for (i, out_spw) in out_spws.iter().enumerate() {
+                    let mut idx_iter = out_spw.spw_indices();
+                    let first_idx = idx_iter.next().unwrap();
+
+                    if spwid as usize == first_idx {
+                        ctry!(out_feed_table.add_rows(1);
+                              "failed to add row to \"{}\"", out_feed_path.display());
+                        in_row.copy_and_put(&mut out_row, n_rows_written)?;
+                        out_feed_table.put_cell("SPECTRAL_WINDOW_ID", n_rows_written, &(i as i32))?;
+                        n_rows_written += 1;
+                    }
+                }
+
+                Ok(())
+            })?;
+
+            // The rest.
+
+            for more_dest in &destinations[1..] {
+                let (_, mut more_feed_table) = open_table(more_dest, "FEED", false)?;
+                out_feed_table.copy_rows_to(&mut more_feed_table)?;
+            }
+        }
+
         // Copy over the remaining sub-tables as-is.
 
         let table_kw_names = ctry!(in_main_table.table_keyword_names();
@@ -1651,6 +1690,7 @@ fn main() {
         for kw_name in &table_kw_names {
             match kw_name.as_str() {
                 "DATA_DESCRIPTION" => {},
+                "FEED" => {},
                 "POLARIZATION" => {},
                 "SOURCE" => {},
                 "SPECTRAL_WINDOW" => {},
