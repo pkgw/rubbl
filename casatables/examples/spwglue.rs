@@ -3,6 +3,8 @@
 
 extern crate byteorder;
 extern crate clap;
+extern crate failure;
+#[macro_use] extern crate failure_derive;
 extern crate itertools;
 #[macro_use] extern crate ndarray;
 #[macro_use] extern crate nom;
@@ -15,8 +17,7 @@ use clap::{App, Arg};
 use ndarray::{Ix1, Ix2};
 use num_traits::{Float, One, Signed, Zero};
 use rubbl_casatables::{CasaDataType, CasaScalarData, Table, TableOpenMode, TableRow};
-use rubbl_casatables::errors::{Error, Result};
-use rubbl_core::{Array, Complex};
+use rubbl_core::{Array, Complex, Error, Result};
 use rubbl_core::notify::ClapNotificationArgsExt;
 use std::collections::HashMap;
 use std::default::Default;
@@ -29,13 +30,25 @@ use std::process;
 use std::str::FromStr;
 
 
+// Define this before the submodules are parsed.
+macro_rules! err_msg {
+    ($( $fmt_args:expr ),*) => {
+        Err($crate::MiscellaneousError(format!($( $fmt_args ),*)).into())
+    }
+}
+
+#[derive(Fail, Debug)]
+#[fail(display = "{}", _0)]
+pub struct MiscellaneousError(String);
+
+
 // Quick .npy file parsing, stealing work from the `npy` crate version 0.3.2.
 
 mod mini_npy_parser {
+    use super::*;
     use byteorder::{ByteOrder, LittleEndian, ReadBytesExt};
     use ndarray::{Array, Dimension};
     use nom::*;
-    use rubbl_casatables::errors::Result;
     use rubbl_core::num::DimFromShapeSlice;
     use std::collections::HashMap;
     use std::io::Read;
@@ -658,7 +671,7 @@ mod main_table {
         fn emit(&self, col_name: &str, _data_mapping: DataMappingKind, _vis_factor: &MaybeVisFactor,
                 table: &mut Table, row: u64) -> Result<()>
         {
-            table.put_cell(col_name, row, &self.value)
+            Ok(table.put_cell(col_name, row, &self.value)?)
         }
 
         fn reset(&mut self) {
@@ -715,7 +728,7 @@ mod main_table {
         fn emit(&self, col_name: &str, _data_mapping: DataMappingKind, _vis_factor: &MaybeVisFactor,
                 table: &mut Table, row: u64) -> Result<()>
         {
-            table.put_cell(col_name, row, &self.buf)
+            Ok(table.put_cell(col_name, row, &self.buf)?)
         }
 
         fn reset(&mut self) {
@@ -765,7 +778,7 @@ mod main_table {
                 self.buf *= &arr.view().into_shape((arr.len(), 1)).unwrap();
             }
 
-            table.put_cell(col_name, row, &self.buf)
+            Ok(table.put_cell(col_name, row, &self.buf)?)
         }
 
         fn reset(&mut self) {
@@ -811,7 +824,7 @@ mod main_table {
                 self.buf *= &arr.view().into_shape((arr.len(), 1)).unwrap();
             }
 
-            table.put_cell(final_col_name, row, &self.buf)
+            Ok(table.put_cell(final_col_name, row, &self.buf)?)
         }
 
         fn reset(&mut self) {
@@ -855,7 +868,7 @@ mod main_table {
                 table: &mut Table, row: u64) -> Result<()>
         {
             self.buf /= self.n_contrib as f32;
-            table.put_cell(col_name, row, &self.buf)
+            Ok(table.put_cell(col_name, row, &self.buf)?)
         }
 
         fn reset(&mut self) {
@@ -1296,7 +1309,7 @@ fn main() {
 
             for info in out_field_items {
                 if field_item_is_id {
-                    last_field_id = ctry!(info.parse();
+                    last_field_id = ctry!(info.parse::<i32>();
                                           "bad field ID \"{}\" in field output arguments", info);
                 } else {
                     let dest = Path::new(info).to_owned();

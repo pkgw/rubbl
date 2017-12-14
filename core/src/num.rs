@@ -7,9 +7,20 @@ General helpers for numerics.
 
 */
 
-use errors::{ErrorKind, Result};
 use ndarray::{IntoDimension, Ix0, Ix1, Ix2, Ix3, Ix4, Ix5, Ix6};
 
+
+/// An error type used when two arrays should have the same dimensionality,
+/// but do not.
+#[derive(Fail, Debug)]
+#[fail(display = "Expected a {}-dimensional array, but got one with {} dimensions", expected, actual)]
+pub struct DimensionMismatchError {
+    /// The number of dimensions that the array was expected to have.
+    pub expected: usize,
+
+    /// The number of dimensions that the array actually had.
+    pub actual: usize,
+}
 
 /// Adapt a slice representing an array shape into an `ndarray::Dimension` type.
 ///
@@ -25,27 +36,27 @@ pub trait DimFromShapeSlice<T> : Sized {
     ///
     /// Returns an Err with an ErrorKind of DimensionMismatch if the slice
     /// size does not match the expected dimensionality.
-    fn from_shape_slice(shape: &[T]) -> Result<Self>;
+    fn from_shape_slice(shape: &[T]) -> Result<Self, DimensionMismatchError>;
 }
 
 macro_rules! impl_dim_from_shape_slice {
     ($dimtype:ty; $ndim:expr; $($numbers:expr);*) => {
         impl DimFromShapeSlice<u64> for $dimtype {
-            fn from_shape_slice(shape: &[u64]) -> Result<Self> {
+            fn from_shape_slice(shape: &[u64]) -> Result<Self, DimensionMismatchError> {
                 if shape.len() == $ndim {
                     Ok([$(shape[$numbers] as usize),*].into_dimension())
                 } else {
-                    Err(ErrorKind::DimensionMismatch($ndim, shape.len()).into())
+                    Err(DimensionMismatchError { expected: $ndim, actual: shape.len() })
                 }
             }
         }
 
         impl DimFromShapeSlice<usize> for $dimtype {
-            fn from_shape_slice(shape: &[usize]) -> Result<Self> {
+            fn from_shape_slice(shape: &[usize]) -> Result<Self, DimensionMismatchError> {
                 if shape.len() == $ndim {
                     Ok([$(shape[$numbers] as usize),*].into_dimension())
                 } else {
-                    Err(ErrorKind::DimensionMismatch($ndim, shape.len()).into())
+                    Err(DimensionMismatchError { expected: $ndim, actual: shape.len() })
                 }
             }
         }

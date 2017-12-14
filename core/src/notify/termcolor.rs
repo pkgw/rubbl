@@ -13,12 +13,11 @@ engine. (Which the author of this module also wrote.)
 // TODO: make this module a feature that can be disabled if the user doesn't want to
 // link with termcolor
 
-use error_chain::ChainedError;
+use failure::Error;
 use std::fmt::Arguments;
 use std::io::Write;
 use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
 
-use errors::Error;
 use super::{ChatterLevel, NotificationKind, NotificationBackend};
 
 
@@ -129,20 +128,20 @@ impl TermcolorNotificationBackend {
     ///
     /// This function prints out the error, the sub-errors that caused it, and
     /// its associated backtrace if available, with colorization.
-    pub fn bare_error<E: ChainedError>(&mut self, err: &E) {
+    pub fn bare_error<E: Into<Error>>(&mut self, err: E) {
         let mut prefix = "error:";
+        let err = err.into();
 
-        for item in err.iter() {
-            self.generic_message(NotificationKind::Severe, Some(prefix), format_args!("{}", item));
+        for fail in err.causes() {
+            self.generic_message(NotificationKind::Severe, Some(prefix), format_args!("{}", fail));
             prefix = "caused by:";
         }
 
-        if let Some(backtrace) = err.backtrace() {
-            self.generic_message(NotificationKind::Severe, Some("debugging:"), format_args!("backtrace follows:"));
-            self.with_stream(NotificationKind::Severe, |s| {
-                writeln!(s, "{:?}", backtrace).expect("backtrace dump failed");
-            });
-        }
+        let backtrace = err.backtrace();
+        self.generic_message(NotificationKind::Severe, Some("debugging:"), format_args!("backtrace follows:"));
+        self.with_stream(NotificationKind::Severe, |s| {
+            writeln!(s, "{:?}", backtrace).expect("backtrace dump failed");
+        });
     }
 }
 
@@ -152,16 +151,15 @@ impl NotificationBackend for TermcolorNotificationBackend {
         self.generic_message(kind, None, args);
 
         if let Some(e) = err {
-            for item in e.iter() {
-                self.generic_message(kind, Some("caused by:"), format_args!("{}", item));
+            for fail in e.causes() {
+                self.generic_message(kind, Some("caused by:"), format_args!("{}", fail));
             }
 
-            if let Some(backtrace) = e.backtrace() {
-                self.generic_message(kind, Some("debugging:"), format_args!("backtrace follows:"));
-                self.with_stream(kind, |s| {
-                    writeln!(s, "{:?}", backtrace).expect("backtrace dump failed");
-                });
-            }
+            let backtrace = e.backtrace();
+            self.generic_message(kind, Some("debugging:"), format_args!("backtrace follows:"));
+            self.with_stream(kind, |s| {
+                writeln!(s, "{:?}", backtrace).expect("backtrace dump failed");
+            });
         }
     }
 }

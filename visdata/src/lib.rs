@@ -10,11 +10,10 @@ the files I'm working with.
 
  */
 
-#[macro_use] extern crate rubbl_core;
+extern crate rubbl_core;
 
 
-use rubbl_core::Complex;
-use rubbl_core::errors::{Error, ErrorKind, Result};
+use rubbl_core::Result;
 
 
 /// A "feed pol(arization)" is the polarization component sampled by a

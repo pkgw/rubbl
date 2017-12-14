@@ -10,9 +10,8 @@ Basic I/O helpers.
 use byteorder::{BigEndian, ByteOrder};
 use num_complex::Complex;
 use std::io;
-use std::io::Read;
-
-use errors::{ErrorKind, Result};
+use std::io::{Read, Result};
+use std::result;
 
 
 /// This struct wraps a Read type to equip it with hooks to track its
@@ -123,8 +122,8 @@ pub trait OpenResultExt {
 }
 
 
-impl<T> OpenResultExt for Result<Option<T>> {
-    type Reprocessed = Result<T>;
+impl<T, E> OpenResultExt for result::Result<Option<T>, E> where E: From<io::Error> {
+    type Reprocessed = result::Result<T, E>;
 
     fn require_found(self) -> Self::Reprocessed {
         match self {
@@ -133,7 +132,7 @@ impl<T> OpenResultExt for Result<Option<T>> {
                 if let Some(x) = o {
                     Ok(x)
                 } else {
-                    Err(ErrorKind::Io(io::Error::new(io::ErrorKind::NotFound, "not found")).into())
+                    Err(io::Error::new(io::ErrorKind::NotFound, "not found").into())
                 }
             }
         }
@@ -150,12 +149,13 @@ pub trait EofReadExactExt: Read {
     /// was OK and EOF has not yet been hit. Returns Err with an IoError with
     /// a "kind" of UnexpectedEof if EOF was encountered somewhere in the
     /// midst of the buffer.
-    fn eof_read_exact(&mut self, buf: &mut [u8]) -> Result<bool>;
+    fn eof_read_exact<E>(&mut self, buf: &mut [u8]) -> result::Result<bool, E>
+        where E: From<io::Error>;
 
     /// Like `byteorder::ReadBytesExt::read_i64::<BigEndian>`, except returns
     /// Some(n) on success and None if EOF was encountered at the first read
     /// attempt.
-    fn eof_read_be_i64(&mut self) -> Result<Option<i64>> {
+    fn eof_read_be_i64<E>(&mut self) -> result::Result<Option<i64>, E> where E: From<io::Error> {
         let mut buf = [0u8; 8];
 
         if self.eof_read_exact(&mut buf)? {
@@ -168,7 +168,7 @@ pub trait EofReadExactExt: Read {
     /// Like `byteorder::ReadBytesExt::read_f32::<BigEndian>`, except returns
     /// Some(n) on success and None if EOF was encountered at the first read
     /// attempt.
-    fn eof_read_be_f32(&mut self) -> Result<Option<f32>> {
+    fn eof_read_be_f32<E>(&mut self) -> result::Result<Option<f32>, E> where E: From<io::Error> {
         let mut buf = [0u8; 4];
 
         if self.eof_read_exact(&mut buf)? {
@@ -182,7 +182,7 @@ pub trait EofReadExactExt: Read {
     /// two values and packs them into a `Complex<f32>`, and returns Some(n)
     /// on success and None if EOF was encountered at the first read attempt.
     /// The real part comes before the imaginary part.
-    fn eof_read_be_c64(&mut self) -> Result<Option<Complex<f32>>> {
+    fn eof_read_be_c64<E>(&mut self) -> result::Result<Option<Complex<f32>>, E> where E: From<io::Error> {
         let mut buf = [0u8; 8];
 
         if self.eof_read_exact(&mut buf)? {
@@ -198,7 +198,9 @@ pub trait EofReadExactExt: Read {
 
 
 impl<R: Read> EofReadExactExt for R {
-    fn eof_read_exact(&mut self, buf: &mut [u8]) -> Result<bool> {
+    fn eof_read_exact<E>(&mut self, buf: &mut [u8]) -> result::Result<bool, E>
+        where E: From<io::Error>
+    {
         let mut n_left = buf.len();
         let mut ofs = 0;
 
@@ -218,7 +220,7 @@ impl<R: Read> EofReadExactExt for R {
                 return if ofs == 0 {
                     Ok(false) // no more data at an expected stopping point
                 } else {
-                    Err(ErrorKind::Io(io::Error::new(io::ErrorKind::UnexpectedEof, "unexpected EOF")).into())
+                    Err(io::Error::new(io::ErrorKind::UnexpectedEof, "unexpected end of file").into())
                 };
             }
 

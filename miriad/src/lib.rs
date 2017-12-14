@@ -8,19 +8,27 @@ Access to MIRIAD-format data sets.
  */
 
 extern crate byteorder;
+extern crate failure;
+#[macro_use] extern crate failure_derive;
 extern crate openat;
-#[macro_use] extern crate rubbl_core;
+extern crate rubbl_core;
 extern crate rubbl_visdata;
 
 use byteorder::{BigEndian, ByteOrder, ReadBytesExt};
+use failure::Error;
 use rubbl_core::Complex;
-use rubbl_core::errors::{Error, ErrorKind, Result};
 use rubbl_core::io::{AligningReader, EofReadExactExt};
 use std::collections::HashMap;
 use std::fs;
 use std::io;
 use std::io::prelude::*;
 
+// Define this before the submodules are parsed.
+macro_rules! mirerr {
+    ($( $fmt_args:expr ),*) => {
+        Err($crate::MiriadFormatError(format!($( $fmt_args ),*)).into())
+    }
+}
 
 pub mod mask;
 pub mod visdata;
@@ -45,8 +53,14 @@ pub enum Type {
     Int64 = 8,
 }
 
+/// An error type for when a MIRIAD file is malformed.
+#[derive(Fail, Debug)]
+#[fail(display = "{}", _0)]
+pub struct MiriadFormatError(String);
+
+
 impl Type {
-    pub fn try_from_i32(type_code: i32) -> Result<Self> {
+    pub fn try_from_i32(type_code: i32) -> Result<Self, MiriadFormatError> {
         // Kind of gross ...
         match type_code {
             0 => Ok(Type::Binary),
@@ -58,13 +72,13 @@ impl Type {
             5 => Ok(Type::Float64),
             7 => Ok(Type::Complex64),
             6 => Ok(Type::Text),
-            _ => err_msg!("illegal MIRIAD type code {}", type_code),
+            _ => mirerr!("illegal MIRIAD type code {}", type_code),
         }
     }
 
     /// This function takes a &str as an argument since working with
     /// individual characters is usually a hassle.
-    pub fn try_from_abbrev(abbrev: &str) -> Result<Self> {
+    pub fn try_from_abbrev(abbrev: &str) -> Result<Self, MiriadFormatError> {
         // Ditto.
         match abbrev {
             "b" => Ok(Type::Int8),
@@ -75,7 +89,7 @@ impl Type {
             "d" => Ok(Type::Float64),
             "c" => Ok(Type::Complex64),
             "a" => Ok(Type::Text),
-            _ => err_msg!("illegal MIRIAD type abbreviation {}", abbrev),
+            _ => mirerr!("illegal MIRIAD type abbreviation {}", abbrev),
         }
     }
 
@@ -145,9 +159,9 @@ pub trait MiriadMappedType: Sized {
     /// The particular MIRIAD `Type` to which this Rust type maps.
     const TYPE: Type;
 
-    fn vec_from_miriad_reader<R: Read>(stream: R) -> Result<Vec<Self>>;
+    fn vec_from_miriad_reader<R: Read>(stream: R) -> Result<Vec<Self>, Error>;
 
-    fn vec_from_miriad_bytes(buf: &[u8]) -> Result<Vec<Self>> {
+    fn vec_from_miriad_bytes(buf: &[u8]) -> Result<Vec<Self>, Error> {
         Self::vec_from_miriad_reader(std::io::Cursor::new(buf))
     }
 
@@ -157,7 +171,7 @@ pub trait MiriadMappedType: Sized {
 impl MiriadMappedType for u8 {
     const TYPE: Type = Type::Binary;
 
-    fn vec_from_miriad_reader<R: Read>(mut stream: R) -> Result<Vec<Self>> {
+    fn vec_from_miriad_reader<R: Read>(mut stream: R) -> Result<Vec<Self>, Error> {
         let mut val = Vec::new();
         stream.read_to_end(&mut val)?;
         Ok(val)
@@ -172,7 +186,7 @@ impl MiriadMappedType for u8 {
 impl MiriadMappedType for i8 {
     const TYPE: Type = Type::Int8;
 
-    fn vec_from_miriad_reader<R: Read>(mut stream: R) -> Result<Vec<Self>> {
+    fn vec_from_miriad_reader<R: Read>(mut stream: R) -> Result<Vec<Self>, Error> {
         let mut val = Vec::new();
         stream.read_to_end(&mut val)?;
         Ok(unsafe { std::mem::transmute::<Vec<u8>, Vec<i8>>(val) }) // yeehaw!
@@ -195,10 +209,10 @@ impl MiriadMappedType for i8 {
 impl MiriadMappedType for i64 {
     const TYPE: Type = Type::Int64;
 
-    fn vec_from_miriad_reader<R: Read>(mut stream: R) -> Result<Vec<Self>> {
+    fn vec_from_miriad_reader<R: Read>(mut stream: R) -> Result<Vec<Self>, Error> {
         let mut val = Vec::new();
 
-        while let Some(n) = stream.eof_read_be_i64()? {
+        while let Some(n) = stream.eof_read_be_i64::<Error>()? {
             val.push(n);
         }
 
@@ -218,10 +232,10 @@ impl MiriadMappedType for i64 {
 impl MiriadMappedType for Complex<f32> {
     const TYPE: Type = Type::Complex64;
 
-    fn vec_from_miriad_reader<R: Read>(mut stream: R) -> Result<Vec<Self>> {
+    fn vec_from_miriad_reader<R: Read>(mut stream: R) -> Result<Vec<Self>, Error> {
         let mut val = Vec::new();
 
-        while let Some(x) = stream.eof_read_be_c64()? {
+        while let Some(x) = stream.eof_read_be_c64::<Error>()? {
             val.push(x);
         }
 
@@ -244,7 +258,7 @@ impl MiriadMappedType for String {
     const TYPE: Type = Type::Text;
 
     /// As a special hack, this only ever returns a 1-element vector.
-    fn vec_from_miriad_reader<R: Read>(mut stream: R) -> Result<Vec<Self>> {
+    fn vec_from_miriad_reader<R: Read>(mut stream: R) -> Result<Vec<Self>, Error> {
         let mut val = String::new();
         stream.read_to_string(&mut val)?;
         Ok(vec!(val))
@@ -285,7 +299,7 @@ impl InternalItemInfo {
         }
     }
 
-    pub fn new_large(dir: &mut openat::Dir, name: &str) -> Result<Self> {
+    pub fn new_large(dir: &mut openat::Dir, name: &str) -> Result<Self, Error> {
         let mut f = dir.open_file(name)?;
         let mut size_offset = 4;
         let mut type_buf = [0u8; 4];
@@ -323,7 +337,7 @@ impl InternalItemInfo {
         let data_size = f.metadata()?.len() - size_offset;
 
         if data_size % ty.size() as u64 != 0 {
-            return err_msg!("non-integral number of elements in {}", name);
+            return mirerr!("non-integral number of elements in {}", name);
         }
 
         Ok(InternalItemInfo {
@@ -376,10 +390,10 @@ impl<'a> Item<'a> {
     }
 
 
-    pub fn read_vector<T: MiriadMappedType>(&self) -> Result<Vec<T>> {
+    pub fn read_vector<T: MiriadMappedType>(&self) -> Result<Vec<T>, Error> {
         // TODO: upcasting
         if T::TYPE != self.info.ty {
-            return err_msg!("expected variable of type {}, but found {}", T::TYPE, self.info.ty);
+            return mirerr!("expected variable of type {}, but found {}", T::TYPE, self.info.ty);
         }
 
         match self.info.storage {
@@ -399,11 +413,11 @@ impl<'a> Item<'a> {
     }
 
 
-    pub fn read_scalar<T: MiriadMappedType>(&self) -> Result<T> {
+    pub fn read_scalar<T: MiriadMappedType>(&self) -> Result<T, Error> {
         let vec = self.read_vector()?;
 
         if vec.len() != 1 {
-            return err_msg!("expected scalar value for {} but got {}-element vector",
+            return mirerr!("expected scalar value for {} but got {}-element vector",
                             self.name, vec.len());
         }
 
@@ -411,13 +425,13 @@ impl<'a> Item<'a> {
     }
 
 
-    pub fn into_lines(self) -> Result<io::Lines<io::BufReader<fs::File>>> {
+    pub fn into_lines(self) -> Result<io::Lines<io::BufReader<fs::File>>, Error> {
         if self.info.ty != Type::Text {
-            return err_msg!("cannot read lines of non-text item {}", self.name);
+            return mirerr!("cannot read lines of non-text item {}", self.name);
         }
 
         if let ItemStorage::Small(_) = self.info.storage {
-            return err_msg!("cannot read lines of small text item {}", self.name);
+            return mirerr!("cannot read lines of small text item {}", self.name);
         }
 
         // Text items don't need any alignment futzing so we don't have to
@@ -426,11 +440,11 @@ impl<'a> Item<'a> {
     }
 
 
-    pub fn into_byte_stream(self) -> Result<AligningReader<io::BufReader<fs::File>>> {
+    pub fn into_byte_stream(self) -> Result<AligningReader<io::BufReader<fs::File>>, Error> {
         if let ItemStorage::Small(_) = self.info.storage {
             // We *could* do this, but for coding simplicity we only allow it
             // for large items.
-            return err_msg!("cannot turn small item {} into byte stream", self.name);
+            return mirerr!("cannot turn small item {} into byte stream", self.name);
         }
 
         let f = self.dset.dir.open_file(self.name)?;
@@ -454,7 +468,7 @@ pub struct DataSet {
 
 
 impl DataSet {
-    pub fn open<P: openat::AsPath>(path: P) -> Result<Self> {
+    pub fn open<P: openat::AsPath>(path: P) -> Result<Self, Error> {
         let mut ds = DataSet {
             dir: openat::Dir::open(path)?,
             items: HashMap::new(),
@@ -467,7 +481,7 @@ impl DataSet {
         let mut buf = [0u8; 16];
 
         loop {
-            if !header.eof_read_exact(&mut buf)? {
+            if !header.eof_read_exact::<Error>(&mut buf)? {
                 break; // no more data
             }
 
@@ -509,7 +523,7 @@ impl DataSet {
 
                 if n_bytes % ty.size() != 0 {
                     // TODO: warn and press on
-                    return err_msg!("illegal array size {} for type {:?}", n_bytes, ty);
+                    return mirerr!("illegal array size {} for type {:?}", n_bytes, ty);
                 }
 
                 let mut data = Vec::with_capacity(n_bytes);
@@ -530,7 +544,7 @@ impl DataSet {
     }
 
 
-    fn scan_large_items(&mut self) -> Result<()> {
+    fn scan_large_items(&mut self) -> Result<(), Error> {
         for maybe_item in self.dir.list_dir(".")? {
             let item = maybe_item?;
 
@@ -555,7 +569,7 @@ impl DataSet {
     }
 
 
-    pub fn item_names<'a>(&'a mut self) -> Result<DataSetItemNamesIterator<'a>> {
+    pub fn item_names<'a>(&'a mut self) -> Result<DataSetItemNamesIterator<'a>, Error> {
         if !self.large_items_scanned {
             self.scan_large_items()?;
             self.large_items_scanned = true;
@@ -565,7 +579,7 @@ impl DataSet {
     }
 
 
-    pub fn items<'a>(&'a mut self) -> Result<DataSetItemsIterator<'a>> {
+    pub fn items<'a>(&'a mut self) -> Result<DataSetItemsIterator<'a>, Error> {
         if !self.large_items_scanned {
             self.scan_large_items()?;
             self.large_items_scanned = true;
@@ -580,7 +594,7 @@ impl DataSet {
     /// I feel like there should be a better way to do this, but right now the
     /// reference to *item_name* needs to have a lifetime compatible with the
     /// reference to the dataset itself.
-    pub fn get<'a>(&'a mut self, item_name: &'a str) -> Result<Option<Item<'a>>> {
+    pub fn get<'a>(&'a mut self, item_name: &'a str) -> Result<Option<Item<'a>>, Error> {
         // The HashMap access approach I use here feels awkward to me but it's
         // the only way I can get the lifetimes to work out.
 
@@ -588,16 +602,20 @@ impl DataSet {
             // Assume it's an as-yet-unprobed large item on the filesystem.
             let iii = match InternalItemInfo::new_large(&mut self.dir, item_name) {
                 Ok(iii) => iii,
-                Err(Error(ErrorKind::Io(ioe), _)) => {
-                    if ioe.kind() == io::ErrorKind::NotFound {
-                        // No such item. Don't bother to cache negative results.
-                        return Ok(None);
-                    }
-                    return Err(ioe.into());
-                },
                 Err(e) => {
-                    return Err(e);
-                },
+                    match e.downcast::<io::Error>() {
+                        Ok(ioe) => {
+                            if ioe.kind() == io::ErrorKind::NotFound {
+                                // No such item. Don't bother to cache negative results.
+                                return Ok(None);
+                            }
+                            return Err(ioe.into());
+                        },
+                        Err(e) => {
+                            return Err(e);
+                        },
+                    }
+                }
             };
             self.items.insert(item_name.to_owned(), iii);
         }
@@ -610,7 +628,7 @@ impl DataSet {
     }
 
 
-    pub fn open_uv(&mut self) -> Result<visdata::Decoder> {
+    pub fn open_uv(&mut self) -> Result<visdata::Decoder, Error> {
         visdata::Decoder::create(self)
     }
 }

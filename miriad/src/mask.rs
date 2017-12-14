@@ -8,7 +8,6 @@ Reading MIRIAD mask-format files, such as UV data flags.
  */
 
 use byteorder::{BigEndian, ReadBytesExt};
-use rubbl_core::errors::Result;
 use std::io;
 
 
@@ -30,7 +29,7 @@ impl<R: io::Read> MaskDecoder<R> {
     }
 
 
-    pub fn expand(&mut self, dest: &mut [bool]) -> Result<()> {
+    pub fn expand(&mut self, dest: &mut [bool]) -> Result<(), io::Error> {
         let mut ofs = 0;
         let mut cur = self.current_val;
         let mut n_bits = dest.len();

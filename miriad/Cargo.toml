@@ -10,6 +10,8 @@ license = "MIT"
 [dependencies]
 byteorder = "^1.1"
 clap = "^2.26"
+failure = "^0.1"
+failure_derive = "^0.1"
 openat = "^0.1"
 rubbl_core = { path = "../core", version = "0.1.0" }
 rubbl_visdata = { path = "../visdata", version = "0.1.0" }

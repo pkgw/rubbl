@@ -17,12 +17,10 @@ engine. (Which the author of this module also wrote.)
 #[macro_use] pub mod termcolor;
 
 use clap;
-use error_chain::ChainedError;
+use failure::Error;
 use std::cmp;
 use std::fmt::Arguments;
 use std::result::Result as StdResult;
-
-use errors::Error;
 
 
 /// How chatty the notification system should be.
@@ -89,7 +87,7 @@ pub trait NotificationBackend {
 ///
 /// Standard usage looks like this:
 ///
-/// ```rust
+/// ```rust,ignore
 /// rn_note!(nb, "downloaded {} files", n_files);
 /// ```
 ///
@@ -239,7 +237,7 @@ impl<'a, 'b> ClapNotificationArgsExt for clap::App<'a, 'b> {
 
 /// Run a function with colorized reporting of errors.
 pub fn run_with_notifications<'a, E, F>(matches: clap::ArgMatches<'a>, inner: F) -> i32
-    where E: ChainedError,
+    where E: Into<Error>,
           F: FnOnce(clap::ArgMatches<'a>, &mut NotificationBackend) -> StdResult<i32, E>
 {
     let chatter = match matches.value_of("chatter_level").unwrap() {
@@ -255,12 +253,12 @@ pub fn run_with_notifications<'a, E, F>(matches: clap::ArgMatches<'a>, inner: F)
 
     // Now that we've got colorized output, we're ready to pass off to the
     // inner function ... all so that we can print out the word "error:" in
-    // red. This code parallels various bits of the `error_chain` crate.
+    // red.
 
     match inner(matches, &mut tnb) {
         Ok(ret) => ret,
 
-        Err(ref e) => {
+        Err(e) => {
             tnb.bare_error(e);
             1
         }

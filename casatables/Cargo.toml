@@ -9,7 +9,8 @@ authors = ["Peter Williams <peter@newton.cx>"]
 [dependencies]
 byteorder = "^1.1"
 clap = "^2.26"
-error-chain = "^0.11"
+failure = "^0.1"
+failure_derive = "^0.1"
 itertools = "^0.7"
 ndarray = "^0.10"
 nom = "^3.2"

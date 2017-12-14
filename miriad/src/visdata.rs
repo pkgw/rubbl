@@ -15,7 +15,7 @@ TODO:
  */
 
 use byteorder::{BigEndian, ReadBytesExt};
-use rubbl_core::errors::Result;
+use failure::Error;
 use rubbl_core::io::{AligningReader, OpenResultExt};
 use std::collections::HashMap;
 use std::fs::File;
@@ -71,7 +71,7 @@ pub struct Decoder {
 
 
 impl Decoder {
-    pub fn create(ds: &mut DataSet) -> Result<Self> {
+    pub fn create(ds: &mut DataSet) -> Result<Self, Error> {
         let vislen = ds.get("vislen").require_found()?.read_scalar::<i64>()?;
         let mut vars = Vec::new();
         let mut vars_by_name = HashMap::new();
@@ -81,13 +81,13 @@ impl Decoder {
             let line = maybe_line?;
 
             if line.len() < 3 {
-                return err_msg!("illegal vartable line: {}", line);
+                return mirerr!("illegal vartable line: {}", line);
             }
 
             let pieces: Vec<_> = line.split_whitespace().collect();
 
             if pieces.len() != 2 {
-                return err_msg!("illegal vartable line: {}", line);
+                return mirerr!("illegal vartable line: {}", line);
             }
 
             let ty = Type::try_from_abbrev(pieces[0])?;
@@ -99,7 +99,7 @@ impl Decoder {
             vars_by_name.insert(name.to_owned(), var_num);
 
             if var_num == 255 {
-                return err_msg!("too many UV variables");
+                return mirerr!("too many UV variables");
             }
 
             var_num += 1;
@@ -123,7 +123,7 @@ impl Decoder {
 
 
     /// Returns Ok(false) on EOF, Ok(true) if there are more data.
-    pub fn next(&mut self) -> Result<bool> {
+    pub fn next(&mut self) -> Result<bool, Error> {
         let mut keep_going = true;
         let mut header_buf = [0u8; 4];
 
@@ -139,18 +139,18 @@ impl Decoder {
             match entry_type {
                 SIZE => {
                     if varnum as usize >= self.vars.len() {
-                        return err_msg!("invalid visdata: too-large variable number");
+                        return mirerr!("invalid visdata: too-large variable number");
                     }
 
                     let var = &mut self.vars[varnum as usize];
                     let n_bytes = self.stream.read_i32::<BigEndian>()?;
 
                     if n_bytes < 0 {
-                        return err_msg!("invalid visdata: negative data size");
+                        return mirerr!("invalid visdata: negative data size");
                     }
 
                     if n_bytes % var.ty.size() as i32 != 0 {
-                        return err_msg!("invalid visdata: non-integral number of elements in array");
+                        return mirerr!("invalid visdata: non-integral number of elements in array");
                     }
 
                     var.n_vals = (n_bytes / (var.ty.size() as i32)) as isize;
@@ -158,7 +158,7 @@ impl Decoder {
                 },
                 DATA => {
                     if varnum as usize >= self.vars.len() {
-                        return err_msg!("invalid visdata: too-large variable number");
+                        return mirerr!("invalid visdata: too-large variable number");
                     }
 
                     let var = &mut self.vars[varnum as usize];
@@ -169,7 +169,7 @@ impl Decoder {
                     keep_going = false;
                 },
                 z => {
-                    return err_msg!("invalid visdata: unrecognized record code {}", z);
+                    return mirerr!("invalid visdata: unrecognized record code {}", z);
                 }
             }
 
@@ -221,7 +221,7 @@ pub struct Reader {
 
 
 impl Reader {
-    pub fn create(ds: &mut DataSet) -> Result<Self> {
+    pub fn create(ds: &mut DataSet) -> Result<Self, Error> {
         let ot_str: String = ds.get("obstype").require_found()?.read_scalar()?;
 
         let obstype = if ot_str.starts_with("auto") {
@@ -231,7 +231,7 @@ impl Reader {
         } else if ot_str.starts_with("mixed") {
             ObsType::MixedAutoCross
         } else {
-            return err_msg!("unexpected \"obstype\" value {}", ot_str);
+            return mirerr!("unexpected \"obstype\" value {}", ot_str);
         };
 
         let ncorr = ds.get("ncorr").require_found()?.read_scalar::<i64>()?;
