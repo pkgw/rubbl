@@ -5,6 +5,12 @@
 name = "rubbl_casatables_impl"
 version = "0.1.0"
 authors = ["Peter Williams <peter@newton.cx>"]
+license = "GPL-2.0+"
+homepage = "https://github.com/pkgw/rubbl"
+repository = "https://github.com/pkgw/rubbl"
+description = """
+A bundle of C++ code that can read the CASA table format for Rubbl.
+"""
 
 [build-dependencies]
 gcc = { version = "^0.3", features = ["parallel"] }

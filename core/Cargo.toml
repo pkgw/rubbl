@@ -6,6 +6,11 @@ name = "rubbl_core"
 version = "0.1.0"
 authors = ["Peter Williams <peter@newton.cx>"]
 license = "MIT"
+homepage = "https://github.com/pkgw/rubbl"
+repository = "https://github.com/pkgw/rubbl"
+description = """
+Core types and traits for Rubbl, a Rust package for astrophysics.
+"""
 
 [dependencies]
 byteorder = "^1.1"

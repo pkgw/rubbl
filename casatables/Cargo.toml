@@ -5,6 +5,12 @@
 name = "rubbl_casatables"
 version = "0.1.0"
 authors = ["Peter Williams <peter@newton.cx>"]
+license = "MIT"
+homepage = "https://github.com/pkgw/rubbl"
+repository = "https://github.com/pkgw/rubbl"
+description = """
+Interfacing to the CASA table format within the Rubbl framework.
+"""
 
 [dependencies]
 byteorder = "^1.1"
