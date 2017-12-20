@@ -2,4 +2,4 @@
 # Licensed under the MIT License.
 
 [workspace]
-members = ["core", "visdata", "miriad", "casatables_impl", "casatables"]
+members = ["core", "visdata", "miriad", "casatables_impl", "casatables", "cli"]

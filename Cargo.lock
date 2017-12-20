@@ -298,6 +298,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "rubbl"
+version = "0.1.0"
+dependencies = [
+ "clap 2.27.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "failure 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "failure_derive 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rubbl_core 0.1.0",
+]
+
+[[package]]
 name = "rubbl_casatables"
 version = "0.1.0"
 dependencies = [

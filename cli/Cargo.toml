@@ -1,0 +1,14 @@
+# Copyright 2017 Peter Williams <peter@newton.cx> and collaborators
+# Licensed under the MIT License.
+
+[package]
+name = "rubbl"
+version = "0.1.0"
+authors = ["Peter Williams <peter@newton.cx>"]
+license = "MIT"
+
+[dependencies]
+clap = "^2.26"
+failure = "^0.1"
+failure_derive = "^0.1"
+rubbl_core = { version = "0.1.0", path = "../core" }
