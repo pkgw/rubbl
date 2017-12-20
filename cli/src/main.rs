@@ -117,7 +117,11 @@ fn do_list(_matches: &ArgMatches, _nbe: &mut NotificationBackend) -> Result<i32>
 /// Run an external command by executing a subprocess
 fn do_external(cmd: &str, matches: &ArgMatches, _nbe: &mut NotificationBackend) -> Result<i32> {
     // TODO: propagate chatter settings downstream.
-    let args: Vec<&str> = matches.values_of("").unwrap().collect();
+    let args: Vec<&str> = match matches.values_of("") {
+        Some(v) => v.collect(),
+        None => Vec::new(),
+    };
+
     Err(try_exec_subcommand(cmd, &args))
 }
 
