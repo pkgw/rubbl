@@ -7,10 +7,12 @@ should basically just be a test of the system's I/O throughput.
 
 extern crate clap;
 extern crate failure;
+extern crate rubbl_core;
 extern crate rubbl_fits;
 
 use clap::{Arg, App};
 use failure::{Error, ResultExt};
+use rubbl_core::io::AligningReader;
 use rubbl_fits::LowLevelFitsItem;
 use std::ffi::OsStr;
 use std::fs;
@@ -47,7 +49,7 @@ fn main() {
 
 fn inner(path: &OsStr) -> Result<i32, Error> {
     let file = fs::File::open(path).context("error opening file")?;
-    let mut dec = rubbl_fits::FitsDecoder::new(file);
+    let mut dec = rubbl_fits::FitsDecoder::new(AligningReader::new(file));
     let t0 = Instant::now();
     let mut last_was_data = false;
 
@@ -83,9 +85,11 @@ fn inner(path: &OsStr) -> Result<i32, Error> {
         }
     }
 
+    let n_bytes = dec.into_inner().offset();
+    let mib = n_bytes as f64 / (1024. * 1024.);
     let dur = t0.elapsed();
     let dur_secs = dur.subsec_nanos() as f64 * 1e-9 + dur.as_secs() as f64;
 
-    println!("Read file in {:.3} seconds.", dur_secs);
+    println!("{:.1} MiB in {:.3} seconds = {:.3} MiB/s", mib, dur_secs, mib / dur_secs);
     Ok(0)
 }
