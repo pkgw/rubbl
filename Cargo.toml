@@ -1,5 +1,5 @@
-# Copyright 2017 Peter Williams <peter@newton.cx> and collaborators
+# Copyright 2017-2018 Peter Williams <peter@newton.cx> and collaborators
 # Licensed under the MIT License.
 
 [workspace]
-members = ["core", "visdata", "miriad", "casatables_impl", "casatables", "cli"]
+members = ["core", "visdata", "fits", "miriad", "casatables_impl", "casatables", "cli"]
