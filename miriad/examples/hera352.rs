@@ -70,28 +70,32 @@ struct UvInflator {
     out_flags: MaskEncoder<WriteStream>,
     out_n: usize,
 
-    /// antnums[hera_index] = miriad_index
-    antnums: Vec<usize>,
+    /// hera_to_mir[hera_index] = miriad_index
+    hera_to_mir: Vec<usize>,
+    mir_to_hera: Vec<usize>,
 
     /// out_ant_to_in[output_hera_index] = input_hera_index.
     out_ant_to_in: Vec<usize>,
 
     /// the last seen time in the dataset
     time: f64,
+    lst: f64,
+    ra: f64,
 
     /// key is the input miriad antenna indices
     records: HashMap<(usize, usize), Record>,
 
     /// variables we use a lot
     time_var: UvVariableReference,
+    lst_var: UvVariableReference,
+    ra_var: UvVariableReference,
     baseline_var: UvVariableReference,
     coord_var: UvVariableReference,
     corr_var: UvVariableReference,
 
-    /// Buffer for conjugating baselines that need it
-    conj_buf: Vec<f32>,
-
-    /// Buffer for all-flagged marker for fake autos
+    /// Buffers for quickie data munging.
+    corr_buf: Vec<f32>,
+    coord_buf: Vec<f64>,
     flag_buf: Vec<bool>,
 }
 
@@ -164,7 +168,7 @@ impl UvInflator {
         // to, uh, correlator input numbers or something? There is probably a less
         // dumb way to assign MIRIAD antnums to the new antennas.
 
-        let mut antnums = Vec::with_capacity(NANTS); // antnums[hera_idx] = miriad_idx
+        let mut hera_to_mir = Vec::with_capacity(NANTS);
         let mut antnums_float: Vec<f64> = Vec::with_capacity(NANTS);
         let mut taken_mir_nums = Vec::with_capacity(NANTS);
         taken_mir_nums.resize(NANTS, false);
@@ -174,11 +178,11 @@ impl UvInflator {
 
         for antnum_float in &antnums_float {
             let antnum = *antnum_float as usize;
-            antnums.push(antnum);
+            hera_to_mir.push(antnum);
             taken_mir_nums[antnum] = true;
         }
 
-        let in_nants_live = antnums.len();
+        let in_nants_live = hera_to_mir.len();
         let in_nants_slots = in_uv.get_scalar::<i32>(in_uv.lookup_variable("nants")
                                                      .ok_or(format_err!("no \"nants\" UV variable"))?) as usize;
         let mut last_used_antnum = 0; // assuming antnum 0 is always taken
@@ -188,12 +192,21 @@ impl UvInflator {
                 last_used_antnum += 1;
             }
 
-            antnums.push(last_used_antnum);
+            hera_to_mir.push(last_used_antnum);
             antnums_float.push(last_used_antnum as f64);
             taken_mir_nums[last_used_antnum] = true;
         }
 
         out_uv.write("antnums", &antnums_float)?;
+
+        // Probably a better way to do this all, but I'm distracted.
+
+        let mut mir_to_hera = Vec::with_capacity(NANTS);
+        mir_to_hera.resize(NANTS, 0);
+
+        for hera in 0..NANTS {
+            mir_to_hera[hera_to_mir[hera]] = hera;
+        }
 
         // We can now build up the mapping from output antnum to input antnum. We
         // just loop around duplicating the existing ones.
@@ -227,7 +240,6 @@ impl UvInflator {
             }
 
             out_antnames.push_str(name);
-            out_ant_to_in.insert(idx, idx);
         }
 
         for idx in 0..n_new {
@@ -250,8 +262,8 @@ impl UvInflator {
         antpos.resize(NANTS * 3, 0.);
 
         for heranum in 0..NANTS {
-            let src = antnums[out_ant_to_in[heranum]];
-            let dst = antnums[heranum];
+            let src = hera_to_mir[out_ant_to_in[heranum]];
+            let dst = hera_to_mir[heranum];
 
             antpos[dst] = in_antpos[src];
             antpos[dst + NANTS] = in_antpos[src + in_nants_slots];
@@ -301,11 +313,15 @@ impl UvInflator {
                                                     .ok_or(format_err!("no \"nschan\" UV variable"))?) as usize;
 
         let time_var = in_uv.lookup_variable("time").ok_or(format_err!("no \"time\" UV variable"))?;
+        let lst_var = in_uv.lookup_variable("lst").ok_or(format_err!("no \"lst\" UV variable"))?;
+        let ra_var = in_uv.lookup_variable("ra").ok_or(format_err!("no \"ra\" UV variable"))?;
         let baseline_var = in_uv.lookup_variable("baseline").ok_or(format_err!("no \"baseline\" UV variable"))?;
         let coord_var = in_uv.lookup_variable("coord").ok_or(format_err!("no \"coord\" UV variable"))?;
         let corr_var = in_uv.lookup_variable("corr").ok_or(format_err!("no \"corr\" UV variable"))?;
 
         let time: f64 = in_uv.get_scalar(time_var);
+        let lst: f64 = in_uv.get_scalar(lst_var);
+        let ra: f64 = in_uv.get_scalar(ra_var);
         let mut records = HashMap::new();
 
         let bl = decode_baseline(in_uv.get_scalar(baseline_var))?;
@@ -325,6 +341,9 @@ impl UvInflator {
         let mut flag_buf = Vec::new();
         flag_buf.resize(nschan, false); // false => bad data
 
+        let mut coord_buf = Vec::new();
+        coord_buf.resize(3, 0.);
+
         Ok(UvInflator {
             pb: pb,
 
@@ -337,15 +356,22 @@ impl UvInflator {
             out_flags: out_flags,
             out_n: 0,
 
-            antnums: antnums,
+            hera_to_mir: hera_to_mir,
+            mir_to_hera: mir_to_hera,
             out_ant_to_in: out_ant_to_in,
             time: time,
+            lst: lst,
+            ra: ra,
+
             records: records,
             time_var: time_var,
+            lst_var: lst_var,
+            ra_var: ra_var,
             baseline_var: baseline_var,
             coord_var: coord_var,
             corr_var: corr_var,
-            conj_buf: Vec::new(),
+            corr_buf: Vec::new(),
+            coord_buf: coord_buf,
             flag_buf: flag_buf,
         })
     }
@@ -360,8 +386,11 @@ impl UvInflator {
             let cur_time = self.time; // borrowck annoyances
 
             if new_time != cur_time {
+                // Make sure not to update lst and RA until after emitting.
                 self.emit(cur_time)?;
                 self.time = new_time;
+                self.lst = self.in_uv.get_scalar(self.lst_var);
+                self.ra = self.in_uv.get_scalar(self.ra_var);
             }
 
             // XXX should in principle check for updated UV variables beyond
@@ -372,7 +401,7 @@ impl UvInflator {
             if !self.records.contains_key(&bl) {
                 let mut flags = Vec::new();
                 flags.resize(self.flag_buf.len(), false);
-                
+
                 self.records.insert(bl, Record {
                     update_time: new_time,
                     coord: Vec::new(),
@@ -395,11 +424,15 @@ impl UvInflator {
 
     fn emit(&mut self, time: f64) -> Result<(), Error> {
         self.out_uv.write_scalar("time", time)?;
+        self.out_uv.write_scalar("lst", self.lst)?;
+        self.out_uv.write_scalar("ra", self.ra)?;
 
         for ant1 in 0..NANTS {
             for ant2 in ant1..NANTS {
-                let mut src_mir_1 = self.antnums[self.out_ant_to_in[ant1]];
-                let mut src_mir_2 = self.antnums[self.out_ant_to_in[ant2]];
+                let hera1 = self.mir_to_hera[ant1];
+                let mut src_mir_1 = self.hera_to_mir[self.out_ant_to_in[hera1]];
+                let hera2 = self.mir_to_hera[ant2];
+                let mut src_mir_2 = self.hera_to_mir[self.out_ant_to_in[hera2]];
                 let mut conj = false;
 
                 if src_mir_1 > src_mir_2 {
@@ -417,9 +450,6 @@ impl UvInflator {
                                            src_mir_1, src_mir_2, rec.update_time, time));
                 }
 
-                self.out_uv.write("coord", &rec.coord)?;
-                self.out_uv.write_scalar("baseline", encode_baseline(ant1, ant2)?)?;
-
                 // In our fake dataset this is a cross-correlation, but in the
                 // source data it is an autocorrelation. Write flagged zeros
                 // to avoid funkiness.
@@ -428,20 +458,31 @@ impl UvInflator {
                 if !conj && !flag_it {
                     self.out_uv.write("corr", &rec.corr)?;
                 } else {
-                    self.conj_buf.resize(rec.corr.len(), 0.);
+                    self.corr_buf.resize(rec.corr.len(), 0.);
 
                     if flag_it {
-                        self.conj_buf.clear();
+                        self.corr_buf.clear();
                     } else {
-                        self.conj_buf.copy_from_slice(&rec.corr);
+                        self.corr_buf.copy_from_slice(&rec.corr);
 
                         for i in 0..rec.flags.len() {
-                            self.conj_buf[2 * i + 1] *= -1.;
+                            self.corr_buf[2 * i + 1] *= -1.;
                         }
                     }
 
-                    self.out_uv.write("corr", &self.conj_buf)?;
+                    self.out_uv.write("corr", &self.corr_buf)?;
                 }
+
+                if !conj {
+                    self.out_uv.write("coord", &rec.coord)?;
+                } else {
+                    self.coord_buf[0] = -rec.coord[0];
+                    self.coord_buf[1] = -rec.coord[1];
+                    self.coord_buf[2] = -rec.coord[2];
+                    self.out_uv.write("coord", &self.coord_buf)?;
+                }
+
+                self.out_uv.write_scalar("baseline", encode_baseline(ant1, ant2)?)?;
 
                 if flag_it {
                     self.out_flags.append_mask(&self.flag_buf)?;

@@ -265,6 +265,85 @@ impl Decoder {
         T::decode_buf_into_vec(&var.data, &mut buf);
         buf.swap_remove(0)
     }
+
+    /// Diagnostic helper.
+    pub fn dump_diagnostic<W: Write>(&mut self, mut dest: W) -> Result<(), Error> {
+        let mut header_buf = [0u8; 4];
+        let mut bl_buf = vec![0f32];
+
+        loop {
+            self.stream.read_exact(&mut header_buf)?;
+            let varnum = header_buf[0];
+            let entry_type = header_buf[2];
+
+            const SIZE: u8 = 0;
+            const DATA: u8 = 1;
+            const EOR: u8 = 2;
+
+            match entry_type {
+                SIZE => {
+                    if varnum as usize >= self.vars.len() {
+                        return mirerr!("invalid visdata: too-large variable number");
+                    }
+
+                    let var = &mut self.vars[varnum as usize];
+                    let n_bytes = self.stream.read_i32::<BigEndian>()?;
+
+                    if n_bytes < 0 {
+                        return mirerr!("invalid visdata: negative data size");
+                    }
+
+                    if n_bytes % var.ty.size() as i32 != 0 {
+                        return mirerr!("invalid visdata: non-integral number of elements in array");
+                    }
+
+                    var.n_vals = (n_bytes / (var.ty.size() as i32)) as isize;
+                    var.data.resize(n_bytes as usize, 0); // bit of slowness: zeroing out the data
+                    writeln!(dest, "size {}({}) = {}", var.name, varnum, var.n_vals)?;
+                },
+
+                DATA => {
+                    if varnum as usize >= self.vars.len() {
+                        return mirerr!("invalid visdata: too-large variable number");
+                    }
+
+                    let var = &mut self.vars[varnum as usize];
+                    self.stream.align_to(var.ty.alignment() as usize)?;
+                    self.stream.read_exact(&mut var.data)?;
+
+                    if var.name == "baseline" {
+                        f32::decode_buf_into_vec(&var.data, &mut bl_buf);
+                        let bl = decode_baseline(bl_buf[0])?;
+                        writeln!(dest, "data {}({}) = {} [{}-{}]", var.name, varnum, bl_buf[0], bl.0, bl.1)?;
+                    } else {
+                        writeln!(dest, "data {}({}) = {}", var.name, varnum, var.get_as_any())?;
+                    }
+                },
+
+                EOR => {
+                    writeln!(dest, "-- EOR --")?;
+                },
+
+                z => {
+                    return mirerr!("invalid visdata: unrecognized record code {}", z);
+                }
+            }
+
+            // The "vislen" variable is what we should use to determine when
+            // to stop reading, rather than EOF -- it's insurance to save
+            // datasets if some extra vis data are written out when a
+            // data-taker crashes. "vislen" should always be set to land on
+            // the end of a UV record.
+
+            if self.stream.offset() >= self.eff_vislen {
+                break;
+            }
+
+            self.stream.align_to(8)?;
+        }
+
+        Ok(())
+    }
 }
 
 
@@ -344,10 +423,10 @@ pub fn encode_baseline(ant1: usize, ant2: usize) -> Result<f32, Error> {
         return mirerr!("illegal baseline pair ({}, {}); ant1 may not exceed ant2", ant1, ant2);
     }
 
-    Ok(if ant2 > 255 {
-        2048 * ant1 + ant2 + 65536
+    Ok(if ant2 > 254 {
+        2048 * (ant1 + 1) + (ant2 + 1) + 65536
     } else {
-        256 * ant1 + ant2
+        256 * (ant1 + 1) + (ant2 + 1)
     } as f32)
 }
 
@@ -453,14 +532,6 @@ impl Encoder {
         })
     }
 
-    fn update_tot_nschan(&mut self, data: &[u8]) {
-        self.tot_nschan = 0;
-
-        for chunk in data.chunks(4) {
-            self.tot_nschan = BigEndian::read_i32(chunk) as i64;
-        }
-    }
-
     pub fn write_var(&mut self, var: &UvVariable) -> Result<(), Error> {
         let our_num = self.vars_by_name.get(&var.name)
             .ok_or(::MiriadFormatError(format!("target stream does not have variable named \"{}\"", var.name)))?;
@@ -471,7 +542,11 @@ impl Encoder {
         const DATA: u8 = 1;
 
         if var.name == "nschan" {
-            self.update_tot_nschan(&var.data);
+            self.tot_nschan = 0;
+
+            for chunk in var.data.chunks(4) {
+                self.tot_nschan = BigEndian::read_i32(chunk) as i64;
+            }
         } // XXX: ignoring wide channels
 
         self.stream.align_to(8)?;
@@ -526,7 +601,11 @@ impl Encoder {
         T::encode_values_into_vec(values, &mut var.data);
 
         if var.name == "nschan" {
-            self.update_tot_nschan(&var.data);
+            self.tot_nschan = 0;
+
+            for chunk in var.data.chunks(4) {
+                self.tot_nschan = BigEndian::read_i32(chunk) as i64;
+            }
         } // XXX: ignoring wide channels
 
         header_buf[0] = var.number;

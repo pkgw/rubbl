@@ -191,7 +191,13 @@ impl MiriadMappedType for u8 {
     }
 
     fn encode_values_into_vec(values: &[Self], vec: &mut Vec<u8>) {
+        if vec.capacity() < values.len() {
+            let extra = values.len() - vec.capacity();
+            vec.reserve(extra);
+        }
+
         unsafe { vec.set_len(values.len()); }
+
         vec.copy_from_slice(values);
     }
 }
@@ -211,7 +217,13 @@ impl MiriadMappedType for i8 {
     }
 
     fn encode_values_into_vec(values: &[Self], vec: &mut Vec<u8>) {
+        if vec.capacity() < values.len() {
+            let extra = values.len() - vec.capacity();
+            vec.reserve(extra);
+        }
+
         unsafe { vec.set_len(values.len()); }
+
         vec.copy_from_slice(unsafe { std::mem::transmute::<&[i8], &[u8]>(values) });
     }
 }
@@ -239,7 +251,13 @@ impl MiriadMappedType for i16 {
     }
 
     fn encode_values_into_vec(values: &[Self], vec: &mut Vec<u8>) {
+        if vec.capacity() < 2 * values.len() {
+            let extra = 2 * values.len() - vec.capacity();
+            vec.reserve(extra);
+        }
+
         unsafe { vec.set_len(2 * values.len()); }
+
         let mut ofs = 0;
 
         for v in values {
@@ -272,7 +290,13 @@ impl MiriadMappedType for i32 {
     }
 
     fn encode_values_into_vec(values: &[Self], vec: &mut Vec<u8>) {
+        if vec.capacity() < 4 * values.len() {
+            let extra = 4 * values.len() - vec.capacity();
+            vec.reserve(extra);
+        }
+
         unsafe { vec.set_len(4 * values.len()); }
+
         let mut ofs = 0;
 
         for v in values {
@@ -304,7 +328,13 @@ impl MiriadMappedType for i64 {
     }
 
     fn encode_values_into_vec(values: &[Self], vec: &mut Vec<u8>) {
+        if vec.capacity() < 8 * values.len() {
+            let extra = 8 * values.len() - vec.capacity();
+            vec.reserve(extra);
+        }
+
         unsafe { vec.set_len(8 * values.len()); }
+
         let mut ofs = 0;
 
         for v in values {
@@ -339,7 +369,13 @@ impl MiriadMappedType for Complex<f32> {
     }
 
     fn encode_values_into_vec(values: &[Self], vec: &mut Vec<u8>) {
+        if vec.capacity() < 8 * values.len() {
+            let extra = 8 * values.len() - vec.capacity();
+            vec.reserve(extra);
+        }
+
         unsafe { vec.set_len(8 * values.len()); }
+
         let mut ofs = 0;
 
         for v in values {
@@ -370,7 +406,14 @@ impl MiriadMappedType for String {
     fn encode_values_into_vec(values: &[Self], vec: &mut Vec<u8>) {
         assert_eq!(values.len(), 1);
         let bytes = values[0].as_bytes();
+
+        if vec.capacity() < bytes.len() {
+            let extra = bytes.len() - vec.capacity();
+            vec.reserve(extra);
+        }
+
         unsafe { vec.set_len(bytes.len()); }
+
         vec.copy_from_slice(bytes);
     }
 
@@ -403,7 +446,13 @@ impl MiriadMappedType for f32 {
     }
 
     fn encode_values_into_vec(values: &[Self], vec: &mut Vec<u8>) {
+        if vec.capacity() < 4 * values.len() {
+            let extra = 4 * values.len() - vec.capacity();
+            vec.reserve(extra);
+        }
+
         unsafe { vec.set_len(4 * values.len()); }
+
         let mut ofs = 0;
 
         for v in values {
@@ -436,7 +485,13 @@ impl MiriadMappedType for f64 {
     }
 
     fn encode_values_into_vec(values: &[Self], vec: &mut Vec<u8>) {
+        if vec.capacity() < 8 * values.len() {
+            let extra = 8 * values.len() - vec.capacity();
+            vec.reserve(extra);
+        }
+
         unsafe { vec.set_len(8 * values.len()); }
+
         let mut ofs = 0;
 
         for v in values {
