@@ -14,16 +14,17 @@ TODO:
 
  */
 
-use byteorder::{BigEndian, ReadBytesExt};
+use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use failure::Error;
-use rubbl_core::io::{AligningReader, OpenResultExt};
+use rubbl_core::io::{AligningReader, AligningWriter, OpenResultExt};
 use std::collections::HashMap;
 use std::fs::File;
 use std::io;
 use std::io::prelude::*;
+use std::slice;
 
 use mask::MaskDecoder;
-use super::{DataSet, MiriadMappedType, Type};
+use super::{AnyMiriadValue, DataSet, MiriadMappedType, Type};
 
 
 #[derive(Copy, Clone, Debug, Eq, Hash, PartialEq)]
@@ -34,24 +35,47 @@ pub enum ObsType {
 }
 
 
+/// Information about a "UV variable" defined in the UV data stream.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
-struct UvVariable {
+pub struct UvVariable {
     name: String,
     number: u8,
     ty: Type,
     n_vals: isize,
     data: Vec<u8>,
+    just_updated: bool,
 }
 
 impl UvVariable {
-    pub fn new(ty: Type, name: &str, number: u8) -> Self {
+    fn new(ty: Type, name: &str, number: u8) -> Self {
         UvVariable {
             name: name.to_owned(),
             number: number,
             ty: ty,
             n_vals: -1,
             data: Vec::new(),
+            just_updated: false,
         }
+    }
+
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    pub fn type_(&self) -> Type {
+        self.ty
+    }
+
+    pub fn n_vals(&self) -> isize {
+        self.n_vals
+    }
+
+    pub fn get_as_any(&self) -> AnyMiriadValue {
+        AnyMiriadValue::from_type_and_buf(self.ty, &self.data)
+    }
+
+    pub fn as_reference(&self) -> UvVariableReference {
+        UvVariableReference(self.number)
     }
 }
 
@@ -127,6 +151,10 @@ impl Decoder {
         let mut keep_going = true;
         let mut header_buf = [0u8; 4];
 
+        for var in &mut self.vars {
+            var.just_updated = false;
+        }
+
         while keep_going {
             self.stream.read_exact(&mut header_buf)?;
             let varnum = header_buf[0];
@@ -164,6 +192,7 @@ impl Decoder {
                     let var = &mut self.vars[varnum as usize];
                     self.stream.align_to(var.ty.alignment() as usize)?;
                     self.stream.read_exact(&mut var.data)?;
+                    var.just_updated = true;
                 },
                 EOR => {
                     keep_going = false;
@@ -190,12 +219,20 @@ impl Decoder {
     }
 
 
+    pub fn variables<'a>(&'a self) -> UvVariablesIterator<'a> {
+        UvVariablesIterator(self.vars.iter())
+    }
+
+
     pub fn lookup_variable(&self, var_name: &str) -> Option<UvVariableReference> {
         self.vars_by_name.get(var_name).map(|o| UvVariableReference(*o))
     }
 
+    pub fn get_var(&self, var: UvVariableReference) -> &UvVariable {
+        &self.vars[var.0 as usize]
+    }
 
-    pub fn get<T: MiriadMappedType>(&self, var: UvVariableReference, buf: &mut Vec<T>) {
+    pub fn get_data<T: MiriadMappedType>(&self, var: UvVariableReference, buf: &mut Vec<T>) {
         let var = &self.vars[var.0 as usize];
 
         // TODO: upcasting
@@ -206,6 +243,20 @@ impl Decoder {
         T::decode_buf_into_vec(&var.data, buf);
     }
 }
+
+
+/// An iterator over the variables defined in a UV data stream
+#[derive(Debug)]
+pub struct UvVariablesIterator<'a>(slice::Iter<'a, UvVariable>);
+
+impl<'a> Iterator for UvVariablesIterator<'a> {
+    type Item = &'a UvVariable;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.0.next()
+    }
+}
+
 
 
 /// A struct that adapts the MIRIAD uv format into our VisStream interface.

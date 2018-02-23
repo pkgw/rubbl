@@ -14,10 +14,10 @@ extern crate openat;
 extern crate rubbl_core;
 extern crate rubbl_visdata;
 
-use byteorder::{BigEndian, ByteOrder, ReadBytesExt};
+use byteorder::{BigEndian, ByteOrder, ReadBytesExt, WriteBytesExt};
 use failure::Error;
 use rubbl_core::Complex;
-use rubbl_core::io::{AligningReader, EofReadExactExt};
+use rubbl_core::io::{AligningReader, AligningWriter, EofReadExactExt};
 use std::collections::HashMap;
 use std::fs;
 use std::io;
@@ -166,6 +166,8 @@ pub trait MiriadMappedType: Sized {
     }
 
     fn decode_buf_into_vec(buf: &[u8], vec: &mut Vec<Self>);
+
+    fn encode_value_into_buf(value: &Self, buf: &mut [u8]);
 }
 
 impl MiriadMappedType for u8 {
@@ -180,6 +182,10 @@ impl MiriadMappedType for u8 {
     fn decode_buf_into_vec(buf: &[u8], vec: &mut Vec<Self>) {
         vec.resize(buf.len(), 0);
         vec.copy_from_slice(buf);
+    }
+
+    fn encode_value_into_buf(value: &Self, buf: &mut [u8]) {
+        buf[0] = *value;
     }
 }
 
@@ -196,15 +202,65 @@ impl MiriadMappedType for i8 {
         vec.resize(buf.len(), 0);
         vec.copy_from_slice(unsafe { std::mem::transmute::<&[u8], &[i8]>(buf) });
     }
+
+    fn encode_value_into_buf(value: &Self, buf: &mut [u8]) {
+        buf[0] = *value as u8;
+    }
 }
 
-//impl MiriadMappedType for i16 {
-//    const TYPE: Type = Type::Int16;
-//}
-//
-//impl MiriadMappedType for i32 {
-//    const TYPE: Type = Type::Int32;
-//}
+
+impl MiriadMappedType for i16 {
+    const TYPE: Type = Type::Int16;
+
+    fn vec_from_miriad_reader<R: Read>(mut stream: R) -> Result<Vec<Self>, Error> {
+        let mut val = Vec::new();
+
+        while let Some(n) = stream.eof_read_be_i16::<Error>()? {
+            val.push(n);
+        }
+
+        Ok(val)
+    }
+
+    fn decode_buf_into_vec(buf: &[u8], vec: &mut Vec<Self>) {
+        vec.clear();
+
+        for chunk in buf.chunks(2) {
+            vec.push(BigEndian::read_i16(chunk));
+        }
+    }
+
+    fn encode_value_into_buf(value: &Self, buf: &mut [u8]) {
+        BigEndian::write_i16(buf, *value);
+    }
+}
+
+
+impl MiriadMappedType for i32 {
+    const TYPE: Type = Type::Int32;
+
+    fn vec_from_miriad_reader<R: Read>(mut stream: R) -> Result<Vec<Self>, Error> {
+        let mut val = Vec::new();
+
+        while let Some(n) = stream.eof_read_be_i32::<Error>()? {
+            val.push(n);
+        }
+
+        Ok(val)
+    }
+
+    fn decode_buf_into_vec(buf: &[u8], vec: &mut Vec<Self>) {
+        vec.clear();
+
+        for chunk in buf.chunks(4) {
+            vec.push(BigEndian::read_i32(chunk));
+        }
+    }
+
+    fn encode_value_into_buf(value: &Self, buf: &mut [u8]) {
+        BigEndian::write_i32(buf, *value);
+    }
+}
 
 impl MiriadMappedType for i64 {
     const TYPE: Type = Type::Int64;
@@ -225,6 +281,10 @@ impl MiriadMappedType for i64 {
         for chunk in buf.chunks(8) {
             vec.push(BigEndian::read_i64(chunk));
         }
+    }
+
+    fn encode_value_into_buf(value: &Self, buf: &mut [u8]) {
+        BigEndian::write_i64(buf, *value);
     }
 }
 
@@ -251,6 +311,11 @@ impl MiriadMappedType for Complex<f32> {
             vec.push(Complex::new(real, imag));
         }
     }
+
+    fn encode_value_into_buf(value: &Self, buf: &mut [u8]) {
+        BigEndian::write_f32(&mut buf[..4], value.re);
+        BigEndian::write_f32(&mut buf[4..8], value.im);
+    }
 }
 
 
@@ -268,15 +333,179 @@ impl MiriadMappedType for String {
         vec.resize(1, String::new());
         vec[0] = String::from_utf8_lossy(buf).into_owned();
     }
+
+    fn encode_value_into_buf(value: &Self, buf: &mut [u8]) {
+        buf.copy_from_slice(value.as_bytes());
+    }
 }
 
-//impl MiriadMappedType for f32 {
-//    const TYPE: Type = Type::Float32;
-//}
-//
-//impl MiriadMappedType for f64 {
-//    const TYPE: Type = Type::Float64;
-//}
+
+impl MiriadMappedType for f32 {
+    const TYPE: Type = Type::Float32;
+
+    fn vec_from_miriad_reader<R: Read>(mut stream: R) -> Result<Vec<Self>, Error> {
+        let mut val = Vec::new();
+
+        while let Some(x) = stream.eof_read_be_f32::<Error>()? {
+            val.push(x);
+        }
+
+        Ok(val)
+    }
+
+    fn decode_buf_into_vec(buf: &[u8], vec: &mut Vec<Self>) {
+        vec.clear();
+
+        for chunk in buf.chunks(4) {
+            vec.push(BigEndian::read_f32(&chunk));
+        }
+    }
+
+    fn encode_value_into_buf(value: &Self, buf: &mut [u8]) {
+        BigEndian::write_f32(buf, *value);
+    }
+}
+
+
+impl MiriadMappedType for f64 {
+    const TYPE: Type = Type::Float64;
+
+    fn vec_from_miriad_reader<R: Read>(mut stream: R) -> Result<Vec<Self>, Error> {
+        let mut val = Vec::new();
+
+        while let Some(x) = stream.eof_read_be_f64::<Error>()? {
+            val.push(x);
+        }
+
+        Ok(val)
+    }
+
+    fn decode_buf_into_vec(buf: &[u8], vec: &mut Vec<Self>) {
+        vec.clear();
+
+        for chunk in buf.chunks(8) {
+            vec.push(BigEndian::read_f64(&chunk));
+        }
+    }
+
+    fn encode_value_into_buf(value: &Self, buf: &mut [u8]) {
+        BigEndian::write_f64(buf, *value);
+    }
+}
+
+
+#[derive(Clone,Debug,PartialEq)]
+pub enum AnyMiriadValue {
+    Binary(Vec<u8>),
+    Int8(Vec<i8>),
+    Int16(Vec<i16>),
+    Int32(Vec<i32>),
+    Int64(Vec<i64>),
+    Float32(Vec<f32>),
+    Float64(Vec<f64>),
+    Complex64(Vec<Complex<f32>>),
+    Text(String),
+}
+
+impl AnyMiriadValue {
+    fn from_type_and_buf(ty: Type, buf: &[u8]) -> Self {
+        match ty {
+            Type::Binary => {
+                let mut vec = Vec::new();
+                u8::decode_buf_into_vec(buf, &mut vec);
+                AnyMiriadValue::Binary(vec)
+            },
+
+            Type::Int8 => {
+                let mut vec = Vec::new();
+                i8::decode_buf_into_vec(buf, &mut vec);
+                AnyMiriadValue::Int8(vec)
+            },
+
+            Type::Int16 => {
+                let mut vec = Vec::new();
+                i16::decode_buf_into_vec(buf, &mut vec);
+                AnyMiriadValue::Int16(vec)
+            },
+
+            Type::Int32 => {
+                let mut vec = Vec::new();
+                i32::decode_buf_into_vec(buf, &mut vec);
+                AnyMiriadValue::Int32(vec)
+            },
+
+            Type::Int64 => {
+                let mut vec = Vec::new();
+                i64::decode_buf_into_vec(buf, &mut vec);
+                AnyMiriadValue::Int64(vec)
+            },
+
+            Type::Float32 => {
+                let mut vec = Vec::new();
+                f32::decode_buf_into_vec(buf, &mut vec);
+                AnyMiriadValue::Float32(vec)
+            },
+
+            Type::Float64 => {
+                let mut vec = Vec::new();
+                f64::decode_buf_into_vec(buf, &mut vec);
+                AnyMiriadValue::Float64(vec)
+            },
+
+            Type::Complex64 => {
+                let mut vec = Vec::new();
+                Complex::<f32>::decode_buf_into_vec(buf, &mut vec);
+                AnyMiriadValue::Complex64(vec)
+            },
+
+            Type::Text => {
+                AnyMiriadValue::Text(String::from_utf8_lossy(buf).into_owned())
+            },
+        }
+    }
+}
+
+impl std::fmt::Display for AnyMiriadValue {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        fn do_vec<T: std::fmt::Display>(f: &mut std::fmt::Formatter, vec: &[T]) -> std::fmt::Result {
+            if vec.len() == 1 {
+                return f.write_fmt(format_args!("{}", vec[0]));
+            }
+
+            let mut first = true;
+
+            f.write_str("[")?;
+
+            for item in vec {
+                if first {
+                    first = false;
+                } else {
+                    f.write_str(", ")?;
+                }
+
+                f.write_fmt(format_args!("{}", item))?;
+            }
+
+            f.write_str("]")
+        }
+
+        match self {
+            &AnyMiriadValue::Binary(ref vec) => { do_vec(f, vec) }
+            &AnyMiriadValue::Int8(ref vec) => { do_vec(f, vec) }
+            &AnyMiriadValue::Int16(ref vec) => { do_vec(f, vec) }
+            &AnyMiriadValue::Int32(ref vec) => { do_vec(f, vec) }
+            &AnyMiriadValue::Int64(ref vec) => { do_vec(f, vec) }
+            &AnyMiriadValue::Float32(ref vec) => { do_vec(f, vec) }
+            &AnyMiriadValue::Float64(ref vec) => { do_vec(f, vec) }
+            &AnyMiriadValue::Complex64(ref vec) => { do_vec(f, vec) }
+            &AnyMiriadValue::Text(ref s) => {
+                f.write_str("\"")?;
+                f.write_str(s)?;
+                f.write_str("\"")
+            }
+        }
+    }
+}
 
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
