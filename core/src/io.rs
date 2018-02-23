@@ -10,7 +10,7 @@ Basic I/O helpers.
 use byteorder::{BigEndian, ByteOrder};
 use num_complex::Complex;
 use std::io;
-use std::io::{Read, Result};
+use std::io::{Read, Result, Write};
 use std::result;
 
 
@@ -45,7 +45,7 @@ impl<R: Read> AligningReader<R> {
 
     /// Return how many bytes we have read since this struct was created.
     ///
-    /// Note that this offset is tracked internally. If you open a file, raed
+    /// Note that this offset is tracked internally. If you open a file, read
     /// part of it, and *then* create an AligningReader, the returned offset
     /// will refer to the number of bytes read since creation, not the actual
     /// file position as understood by the underlying OS.
@@ -92,6 +92,88 @@ impl<R: Read> Read for AligningReader<R> {
         }
 
         result
+    }
+}
+
+
+/// In analogoy with AligningReader, this struct wraps a Write type to equip
+/// it with hooks to track its alignment — that is, how many bytes into the
+/// stream the write has progressed, and whether the current offset is an
+/// exact multiple of a certain number of bytes from the beginning.
+///
+/// Streams often have alignment requirements so that they can safely be
+/// mapped into in-memory data structures. In particular, this is the case for
+/// MIRIAD files.
+#[derive(Debug)]
+pub struct AligningWriter<W: Write> {
+    inner: W,
+    offset: u64
+}
+
+
+impl<W: Write> AligningWriter<W> {
+    /// Create a new AligningWriter that wraps the argument *inner*.
+    pub fn new(inner: W) -> Self {
+        AligningWriter {
+            inner: inner,
+            offset: 0,
+        }
+    }
+
+    /// Consume this struct, returning the underlying inner writer.
+    pub fn into_inner(self) -> W {
+        self.inner
+    }
+
+    /// Return how many bytes we have written since this struct was created.
+    ///
+    /// Note that this offset is tracked internally. If you open a file, write
+    /// some data, and *then* create an AligningWriter, the returned offset
+    /// will refer to the number of bytes written since creation, not the
+    /// actual file position as understood by the underlying OS.
+    pub fn offset(&self) -> u64 {
+        self.offset
+    }
+
+    /// Write zero bytes to ensure that the stream is aligned as specified.
+    ///
+    /// The maximum allowed alignment value is 64 bytes.
+    ///
+    /// Returns whether the stream was already at the right alignment. When
+    /// that is the case, no write is performed.
+    pub fn align_to(&mut self, alignment: usize) -> Result<bool> {
+        let buf = [0u8; 64];
+
+        if alignment > 64 {
+            panic!("maximum alignment size is 64");
+        }
+
+        let excess = (self.offset % alignment as u64) as usize;
+
+        if excess == 0 {
+            Ok(true)
+        } else {
+            let amount = alignment - excess;
+            self.inner.write_all(&buf[..amount])?;
+            self.offset += amount as u64;
+            Ok(false)
+        }
+    }
+}
+
+impl<W: Write> Write for AligningWriter<W> {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        let result = self.inner.write(buf);
+
+        if let Ok(n) = result {
+            self.offset += n as u64;
+        }
+
+        result
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        self.inner.flush()
     }
 }
 
@@ -152,6 +234,32 @@ pub trait EofReadExactExt: Read {
     fn eof_read_exact<E>(&mut self, buf: &mut [u8]) -> result::Result<bool, E>
         where E: From<io::Error>;
 
+    /// Like `byteorder::ReadBytesExt::read_i16::<BigEndian>`, except returns
+    /// Some(n) on success and None if EOF was encountered at the first read
+    /// attempt.
+    fn eof_read_be_i16<E>(&mut self) -> result::Result<Option<i16>, E> where E: From<io::Error> {
+        let mut buf = [0u8; 2];
+
+        if self.eof_read_exact(&mut buf)? {
+            Ok(Some(BigEndian::read_i16(&buf)))
+        } else {
+            Ok(None)
+        }
+    }
+
+    /// Like `byteorder::ReadBytesExt::read_i32::<BigEndian>`, except returns
+    /// Some(n) on success and None if EOF was encountered at the first read
+    /// attempt.
+    fn eof_read_be_i32<E>(&mut self) -> result::Result<Option<i32>, E> where E: From<io::Error> {
+        let mut buf = [0u8; 4];
+
+        if self.eof_read_exact(&mut buf)? {
+            Ok(Some(BigEndian::read_i32(&buf)))
+        } else {
+            Ok(None)
+        }
+    }
+
     /// Like `byteorder::ReadBytesExt::read_i64::<BigEndian>`, except returns
     /// Some(n) on success and None if EOF was encountered at the first read
     /// attempt.
@@ -173,6 +281,19 @@ pub trait EofReadExactExt: Read {
 
         if self.eof_read_exact(&mut buf)? {
             Ok(Some(BigEndian::read_f32(&buf)))
+        } else {
+            Ok(None)
+        }
+    }
+
+    /// Like `byteorder::ReadBytesExt::read_f64::<BigEndian>`, except returns
+    /// Some(n) on success and None if EOF was encountered at the first read
+    /// attempt.
+    fn eof_read_be_f64<E>(&mut self) -> result::Result<Option<f64>, E> where E: From<io::Error> {
+        let mut buf = [0u8; 4];
+
+        if self.eof_read_exact(&mut buf)? {
+            Ok(Some(BigEndian::read_f64(&buf)))
         } else {
             Ok(None)
         }
