@@ -242,6 +242,20 @@ impl Decoder {
 
         T::decode_buf_into_vec(&var.data, buf);
     }
+
+    pub fn get_scalar<T: MiriadMappedType>(&self, var: UvVariableReference) -> T {
+        let var = &self.vars[var.0 as usize];
+
+        // TODO: upcasting
+        if T::TYPE != var.ty {
+            panic!("attempting to decode UV variable of incompatible type");
+        }
+
+        // TODO: more efficient.
+        let mut buf = Vec::new();
+        T::decode_buf_into_vec(&var.data, &mut buf);
+        buf.swap_remove(0)
+    }
 }
 
 
@@ -310,3 +324,135 @@ impl Reader {
         })
     }
 }
+
+
+
+
+/// A struct that holds state for writing a variable stream in the MIRIAD UV
+/// data format.
+#[derive(Debug)]
+pub struct Encoder {
+    eff_vislen: u64,
+    vars: Vec<UvVariable>,
+    vars_by_name: HashMap<String, u8>,
+    stream: AligningWriter<io::BufWriter<File>>,
+    ncorr: i64,
+    nwcorr: i64,
+    flushed: bool,
+}
+
+
+impl Encoder {
+    /// Create a new Encoder that has the same variables as some input Decoder
+    /// struct.
+    pub fn new_like(ds: &mut DataSet, template: &Decoder) -> Result<Self, Error> {
+        let mut vars = template.vars.clone();
+        let vars_by_name = template.vars_by_name.clone();
+        let mut vartable = ds.create_large_item("vartable", Type::Text)?;
+
+        for var in &mut vars {
+            var.n_vals = -1;
+            var.data.clear();
+            writeln!(vartable, "{} {}", var.ty.abbrev_char(), var.name)?;
+        }
+
+        let stream = ds.create_large_item("visdata", Type::Binary)?;
+
+        Ok(Encoder {
+            eff_vislen: 0,
+            vars: vars,
+            vars_by_name: vars_by_name,
+            stream: stream,
+            ncorr: 0,
+            nwcorr: 0,
+            flushed: false,
+        })
+    }
+
+    pub fn write_var(&mut self, var: &UvVariable) -> Result<(), Error> {
+        let our_num = self.vars_by_name.get(&var.name)
+            .ok_or(::MiriadFormatError(format!("target stream does not have variable named \"{}\"", var.name)))?;
+        let our_var = &mut self.vars[*our_num as usize];
+
+        let mut header_buf = [0u8; 4];
+        const SIZE: u8 = 0;
+        const DATA: u8 = 1;
+
+        self.stream.align_to(8)?;
+        self.flushed = false;
+
+        if var.n_vals != our_var.n_vals {
+            our_var.n_vals = var.n_vals;
+            header_buf[0] = our_var.number;
+            header_buf[2] = SIZE;
+            self.stream.write_all(&header_buf)?;
+            self.stream.write_i32::<BigEndian>((var.ty.size() * var.n_vals as usize) as i32)?;
+        }
+
+        header_buf[0] = our_var.number;
+        header_buf[2] = DATA;
+        self.stream.write_all(&header_buf)?;
+        self.stream.align_to(our_var.ty.alignment() as usize)?;
+        self.stream.write_all(&var.data)?;
+        Ok(())
+    }
+
+    pub fn write<T: MiriadMappedType>(&mut self, name: &str, values: &[T]) -> Result<(), Error> {
+        let num = self.vars_by_name.get(name)
+            .ok_or(::MiriadFormatError(format!("target stream does not have variable named \"{}\"", name)))?;
+        let var = &mut self.vars[*num as usize];
+
+        // TODO: upcasting
+        if T::TYPE != var.ty {
+            return mirerr!("attempting to encode UV variable of incompatible type");
+        }
+
+        let mut header_buf = [0u8; 4];
+        const SIZE: u8 = 0;
+        const DATA: u8 = 1;
+
+        self.stream.align_to(8)?;
+        self.flushed = false;
+
+        let n_vals = T::get_miriad_count(values) as isize;
+
+        if var.n_vals != n_vals {
+            var.n_vals = n_vals;
+            let n_bytes = var.ty.size() * var.n_vals as usize;
+            var.data.resize(n_bytes, 0);
+
+            header_buf[0] = var.number;
+            header_buf[2] = SIZE;
+            self.stream.write_all(&header_buf)?;
+            self.stream.write_i32::<BigEndian>(n_bytes as i32)?;
+        }
+
+        T::encode_values_into_vec(values, &mut var.data);
+
+        header_buf[0] = var.number;
+        header_buf[2] = DATA;
+        self.stream.write_all(&header_buf)?;
+        self.stream.align_to(var.ty.alignment() as usize)?;
+        self.stream.write_all(&var.data)?;
+        Ok(())
+    }
+
+    pub fn write_scalar<T: MiriadMappedType>(&mut self, name: &str, value: T) -> Result<(), Error> {
+        self.write(name, &[value])
+    }
+
+    /// Returns the number of visdata bytes written thus far.
+    pub fn flush(&mut self, ds: &mut DataSet) -> Result<u64, Error> {
+        ds.set_scalar_item("ncorr", self.ncorr)?;
+        ds.set_scalar_item("nwcorr", self.nwcorr)?;
+        ds.set_scalar_item("vislen", (self.stream.offset() + 4) as i64)?;
+        self.flushed = true;
+        Ok(self.stream.offset())
+    }
+}
+
+// Note: I wanted to add a Drop impl that panicked if the UV info had not been
+// properly flushed before going away, but you are really not supposed to do
+// anything that panics inside drop() because that can lead to aborts if
+// something is dropped during unwinding. So we just silently let things go
+// wrong. Cf. https://github.com/rust-lang/rust/issues/32677 .

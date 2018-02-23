@@ -167,7 +167,13 @@ pub trait MiriadMappedType: Sized {
 
     fn decode_buf_into_vec(buf: &[u8], vec: &mut Vec<Self>);
 
-    fn encode_value_into_buf(value: &Self, buf: &mut [u8]);
+    fn encode_values_into_vec(values: &[Self], vec: &mut Vec<u8>);
+
+    /// This is a hack so we can write type-generic functions that can figure
+    /// out how many bytes are in a string.
+    fn get_miriad_count(values: &[Self]) -> usize {
+        values.len()
+    }
 }
 
 impl MiriadMappedType for u8 {
@@ -184,8 +190,9 @@ impl MiriadMappedType for u8 {
         vec.copy_from_slice(buf);
     }
 
-    fn encode_value_into_buf(value: &Self, buf: &mut [u8]) {
-        buf[0] = *value;
+    fn encode_values_into_vec(values: &[Self], vec: &mut Vec<u8>) {
+        unsafe { vec.set_len(values.len()); }
+        vec.copy_from_slice(values);
     }
 }
 
@@ -203,8 +210,9 @@ impl MiriadMappedType for i8 {
         vec.copy_from_slice(unsafe { std::mem::transmute::<&[u8], &[i8]>(buf) });
     }
 
-    fn encode_value_into_buf(value: &Self, buf: &mut [u8]) {
-        buf[0] = *value as u8;
+    fn encode_values_into_vec(values: &[Self], vec: &mut Vec<u8>) {
+        unsafe { vec.set_len(values.len()); }
+        vec.copy_from_slice(unsafe { std::mem::transmute::<&[i8], &[u8]>(values) });
     }
 }
 
@@ -230,8 +238,14 @@ impl MiriadMappedType for i16 {
         }
     }
 
-    fn encode_value_into_buf(value: &Self, buf: &mut [u8]) {
-        BigEndian::write_i16(buf, *value);
+    fn encode_values_into_vec(values: &[Self], vec: &mut Vec<u8>) {
+        unsafe { vec.set_len(2 * values.len()); }
+        let mut ofs = 0;
+
+        for v in values {
+            BigEndian::write_i16(&mut vec[ofs..ofs+2], *v);
+            ofs += 2;
+        }
     }
 }
 
@@ -257,8 +271,14 @@ impl MiriadMappedType for i32 {
         }
     }
 
-    fn encode_value_into_buf(value: &Self, buf: &mut [u8]) {
-        BigEndian::write_i32(buf, *value);
+    fn encode_values_into_vec(values: &[Self], vec: &mut Vec<u8>) {
+        unsafe { vec.set_len(4 * values.len()); }
+        let mut ofs = 0;
+
+        for v in values {
+            BigEndian::write_i32(&mut vec[ofs..ofs+4], *v);
+            ofs += 4;
+        }
     }
 }
 
@@ -283,8 +303,14 @@ impl MiriadMappedType for i64 {
         }
     }
 
-    fn encode_value_into_buf(value: &Self, buf: &mut [u8]) {
-        BigEndian::write_i64(buf, *value);
+    fn encode_values_into_vec(values: &[Self], vec: &mut Vec<u8>) {
+        unsafe { vec.set_len(8 * values.len()); }
+        let mut ofs = 0;
+
+        for v in values {
+            BigEndian::write_i64(&mut vec[ofs..ofs+8], *v);
+            ofs += 8;
+        }
     }
 }
 
@@ -312,9 +338,16 @@ impl MiriadMappedType for Complex<f32> {
         }
     }
 
-    fn encode_value_into_buf(value: &Self, buf: &mut [u8]) {
-        BigEndian::write_f32(&mut buf[..4], value.re);
-        BigEndian::write_f32(&mut buf[4..8], value.im);
+    fn encode_values_into_vec(values: &[Self], vec: &mut Vec<u8>) {
+        unsafe { vec.set_len(8 * values.len()); }
+        let mut ofs = 0;
+
+        for v in values {
+            BigEndian::write_f32(&mut vec[ofs..ofs+4], v.re);
+            ofs += 4;
+            BigEndian::write_f32(&mut vec[ofs..ofs+4], v.im);
+            ofs += 4;
+        }
     }
 }
 
@@ -334,8 +367,16 @@ impl MiriadMappedType for String {
         vec[0] = String::from_utf8_lossy(buf).into_owned();
     }
 
-    fn encode_value_into_buf(value: &Self, buf: &mut [u8]) {
-        buf.copy_from_slice(value.as_bytes());
+    fn encode_values_into_vec(values: &[Self], vec: &mut Vec<u8>) {
+        assert_eq!(values.len(), 1);
+        let bytes = values[0].as_bytes();
+        unsafe { vec.set_len(bytes.len()); }
+        vec.copy_from_slice(bytes);
+    }
+
+    fn get_miriad_count(values: &[Self]) -> usize {
+        assert_eq!(values.len(), 1);
+        values[0].as_bytes().len()
     }
 }
 
@@ -361,8 +402,14 @@ impl MiriadMappedType for f32 {
         }
     }
 
-    fn encode_value_into_buf(value: &Self, buf: &mut [u8]) {
-        BigEndian::write_f32(buf, *value);
+    fn encode_values_into_vec(values: &[Self], vec: &mut Vec<u8>) {
+        unsafe { vec.set_len(4 * values.len()); }
+        let mut ofs = 0;
+
+        for v in values {
+            BigEndian::write_f32(&mut vec[ofs..ofs+4], *v);
+            ofs += 4;
+        }
     }
 }
 
@@ -388,8 +435,14 @@ impl MiriadMappedType for f64 {
         }
     }
 
-    fn encode_value_into_buf(value: &Self, buf: &mut [u8]) {
-        BigEndian::write_f64(buf, *value);
+    fn encode_values_into_vec(values: &[Self], vec: &mut Vec<u8>) {
+        unsafe { vec.set_len(8 * values.len()); }
+        let mut ofs = 0;
+
+        for v in values {
+            BigEndian::write_f64(&mut vec[ofs..ofs+8], *v);
+            ofs += 8;
+        }
     }
 }
 
@@ -693,6 +746,7 @@ pub struct DataSet {
     dir: openat::Dir,
     items: HashMap<String, InternalItemInfo>,
     large_items_scanned: bool,
+    needs_flush: bool,
 }
 
 
@@ -702,6 +756,7 @@ impl DataSet {
             dir: openat::Dir::open(path)?,
             items: HashMap::new(),
             large_items_scanned: false,
+            needs_flush: false,
         };
 
         // Parse the header
@@ -859,6 +914,143 @@ impl DataSet {
 
     pub fn open_uv(&mut self) -> Result<visdata::Decoder, Error> {
         visdata::Decoder::create(self)
+    }
+
+
+    pub fn new_uv_like(&mut self, template: &visdata::Decoder) -> Result<visdata::Encoder, Error> {
+        visdata::Encoder::new_like(self, template)
+    }
+
+
+    pub fn create_large_item(&mut self, name: &str, ty: Type) -> Result<AligningWriter<io::BufWriter<fs::File>>, Error> {
+        if name == "header" {
+            return mirerr!("cannot create an item named \"header\"");
+        }
+
+        let name_bytes = name.as_bytes();
+
+        if name_bytes.len() > 8 {
+            return mirerr!("cannot create an item with a name longer than 8 bytes");
+        }
+
+        if !name_bytes.is_ascii() {
+            return mirerr!("cannot create an item with a non-ASCII name");
+        }
+
+        let mut stream = AligningWriter::new(io::BufWriter::new(self.dir.write_file(name, 0o666)?));
+
+        match ty {
+            Type::Text | Type::Binary => {},
+            _ => {
+                stream.write_i32::<BigEndian>(ty as i32)?;
+            },
+        }
+
+        self.items.insert(name.to_owned(), InternalItemInfo {
+            ty: ty,
+            storage: ItemStorage::Large(0), // XXX size unknown
+        });
+
+        Ok(stream)
+    }
+
+
+    pub fn set_small_item<T: MiriadMappedType>(&mut self, name: &str, values: &[T]) -> Result<(), Error> {
+        // Need to do this to ensure that we don't get a small item that masks
+        // a large item.
+        if !self.large_items_scanned {
+            self.scan_large_items()?;
+            self.large_items_scanned = true;
+        }
+
+        // TODO: validate name
+
+        if !self.items.contains_key(name) {
+            self.items.insert(name.to_owned(), InternalItemInfo::new_small(T::TYPE, Vec::new()));
+        }
+
+        let iii = self.items.get_mut(name).unwrap();
+
+        if let ItemStorage::Small(ref mut data) = iii.storage {
+            T::encode_values_into_vec(values, data);
+
+            if data.len() > 64 {
+                return mirerr!("value too large to be stored as a small MIRIAD header item");
+            }
+        } else {
+            return mirerr!("cannot set \"{}\" as a small item; would mask an existing large item", name);
+        }
+
+        iii.ty = T::TYPE;
+        self.needs_flush = true;
+        Ok(())
+    }
+
+
+    pub fn set_scalar_item<T: MiriadMappedType>(&mut self, name: &str, value: T) -> Result<(), Error> {
+        self.set_small_item(name, &[value])
+    }
+
+    /// Flush any pending changes to the overall dataset. In particular, this
+    /// means that the "header" file is rewritten.
+    pub fn flush(&mut self) -> Result<(), Error> {
+        if !self.needs_flush {
+            return Ok(())
+        }
+
+        let mut stream = AligningWriter::new(io::BufWriter::new(self.dir.write_file("header", 0o666)?));
+
+        for (name, item) in &self.items {
+            if let ItemStorage::Small(ref data) = item.storage {
+                let mut buf = [0u8; 16];
+                stream.align_to(16)?;
+
+                let name_bytes = name.as_bytes();
+                buf[..name_bytes.len()].copy_from_slice(name_bytes);
+
+                let n_bytes = data.len();
+
+                if n_bytes == 0 {
+                    // Data-free items are allowed and have no type indicator.
+                    buf[15] = 0;
+                    stream.write_all(&buf)?;
+                    continue;
+                }
+
+                let alignment = std::cmp::max(4, item.ty.size());
+                let excess = (stream.offset() as usize + 4) % alignment;
+                let n_alignment_bytes = if excess == 0 {
+                    0
+                } else {
+                    alignment - excess
+                };
+
+                buf[15] = (4 + n_alignment_bytes + n_bytes) as u8;
+                stream.write_all(&buf)?;
+                stream.write_i32::<BigEndian>(item.ty as u8 as i32)?;
+
+                if n_alignment_bytes > 0 {
+                    for b in &mut buf[..n_alignment_bytes] {
+                        *b = 0;
+                    }
+
+                    stream.write_all(&buf[..n_alignment_bytes])?;
+                }
+
+                stream.write_all(data)?;
+            }
+        }
+
+        self.needs_flush = false;
+        Ok(())
+    }
+}
+
+
+impl Drop for DataSet {
+    fn drop(&mut self) {
+        // cf: https://github.com/rust-lang/rust/issues/32677
+        let _r = self.flush();
     }
 }
 
