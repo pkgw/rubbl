@@ -14,7 +14,7 @@ TODO:
 
  */
 
-use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use byteorder::{BigEndian, ByteOrder, ReadBytesExt, WriteBytesExt};
 use failure::Error;
 use rubbl_core::io::{AligningReader, AligningWriter, OpenResultExt};
 use std::collections::HashMap;
@@ -68,6 +68,10 @@ impl UvVariable {
 
     pub fn n_vals(&self) -> isize {
         self.n_vals
+    }
+
+    pub fn just_updated(&self) -> bool {
+        self.just_updated
     }
 
     pub fn get_as_any(&self) -> AnyMiriadValue {
@@ -139,6 +143,11 @@ impl Decoder {
         })
     }
 
+
+    /// Get the current position into the bulk visibility data
+    pub fn position(&self) -> u64 {
+        self.stream.offset()
+    }
 
     /// Get the size of the bulk visibility data file in bytes.
     pub fn visdata_bytes(&self) -> u64 {
@@ -272,6 +281,77 @@ impl<'a> Iterator for UvVariablesIterator<'a> {
 }
 
 
+/// Decode a MIRIAD baseline value.
+///
+/// Denote the (validated) return value (ant1, ant2). Ant1 is always supposed
+/// to be less than or equal to ant2. The maximum allowed value of each is
+/// 2047. In Rubbl's convention, antenna numbers begin at 0; this is different
+/// than MIRIAD!
+///
+/// Because of the antnum limitation we could return u16s, but ant numbers are
+/// often used as array indices, so it's more convenient to keep them as
+/// usizes.
+pub fn decode_baseline(bl_float: f32) -> Result<(usize, usize), Error> {
+    let bl = bl_float as isize;
+
+    let (ant1, ant2) = if bl > 65536 {
+        let ofs = bl - 65536;
+        let ant1 = ofs / 2048;
+        (ant1, (ofs - 2048 * ant1))
+    } else {
+        let ant1 = bl / 256;
+        (ant1, (bl - 256 * ant1))
+    };
+
+    if ant1 < 1 {
+        return mirerr!("illegal baseline value {:?}: resulting ant1 is < 1", bl_float);
+    }
+
+    if ant2 < 1 {
+        return mirerr!("illegal baseline value {:?}: resulting ant2 is < 1", bl_float);
+    }
+
+    if ant1 > 2048 {
+        return mirerr!("illegal baseline value {:?}: resulting ant1 is > 2048", bl_float);
+    }
+
+    if ant2 > 2048 {
+        return mirerr!("illegal baseline value {:?}: resulting ant2 is > 2048", bl_float);
+    }
+
+    if ant1 > ant2 {
+        return mirerr!("illegal baseline value {:?}: resulting ant1 is > ant2", bl_float);
+    }
+
+    Ok((ant1 as usize - 1, ant2 as usize - 1))
+}
+
+/// Encode a MIRIAD baseline value.
+///
+/// Antenna numbers may be between 0 and 2047, and ant1 must be less than or
+/// equal to ant2. In Rubbl's convention, antenna numbers begin at 0; this is
+/// different than MIRIAD!
+pub fn encode_baseline(ant1: usize, ant2: usize) -> Result<f32, Error> {
+    if ant1 > 2047 {
+        return mirerr!("illegal baseline value: antenna1 is {} but limit is 2047", ant1);
+    }
+
+    if ant2 > 2047 {
+        return mirerr!("illegal baseline value: antenna2 is {} but limit is 2047", ant2);
+    }
+
+    if ant1 > ant2 {
+        return mirerr!("illegal baseline pair ({}, {}); ant1 may not exceed ant2", ant1, ant2);
+    }
+
+    Ok(if ant2 > 255 {
+        2048 * ant1 + ant2 + 65536
+    } else {
+        256 * ant1 + ant2
+    } as f32)
+}
+
+
 
 /// A struct that adapts the MIRIAD uv format into our VisStream interface.
 #[derive(Debug)]
@@ -336,6 +416,8 @@ pub struct Encoder {
     vars: Vec<UvVariable>,
     vars_by_name: HashMap<String, u8>,
     stream: AligningWriter<io::BufWriter<File>>,
+    tot_nschan: i64,
+    tot_nwchan: i64,
     ncorr: i64,
     nwcorr: i64,
     flushed: bool,
@@ -363,10 +445,20 @@ impl Encoder {
             vars: vars,
             vars_by_name: vars_by_name,
             stream: stream,
+            tot_nschan: 0,
+            tot_nwchan: 0,
             ncorr: 0,
             nwcorr: 0,
             flushed: false,
         })
+    }
+
+    fn update_tot_nschan(&mut self, data: &[u8]) {
+        self.tot_nschan = 0;
+
+        for chunk in data.chunks(4) {
+            self.tot_nschan = BigEndian::read_i32(chunk) as i64;
+        }
     }
 
     pub fn write_var(&mut self, var: &UvVariable) -> Result<(), Error> {
@@ -377,6 +469,10 @@ impl Encoder {
         let mut header_buf = [0u8; 4];
         const SIZE: u8 = 0;
         const DATA: u8 = 1;
+
+        if var.name == "nschan" {
+            self.update_tot_nschan(&var.data);
+        } // XXX: ignoring wide channels
 
         self.stream.align_to(8)?;
         self.flushed = false;
@@ -429,6 +525,10 @@ impl Encoder {
 
         T::encode_values_into_vec(values, &mut var.data);
 
+        if var.name == "nschan" {
+            self.update_tot_nschan(&var.data);
+        } // XXX: ignoring wide channels
+
         header_buf[0] = var.number;
         header_buf[2] = DATA;
         self.stream.write_all(&header_buf)?;
@@ -439,6 +539,16 @@ impl Encoder {
 
     pub fn write_scalar<T: MiriadMappedType>(&mut self, name: &str, value: T) -> Result<(), Error> {
         self.write(name, &[value])
+    }
+
+    pub fn finish_record(&mut self) -> Result<(), Error> {
+        self.ncorr += self.tot_nschan;
+        self.nwcorr += self.tot_nwchan;
+
+        const EOR: &[u8] = &[0u8, 0u8, 2u8, 0u8];
+        self.stream.align_to(8)?;
+        self.flushed = false;
+        Ok(self.stream.write_all(EOR)?)
     }
 
     /// Returns the number of visdata bytes written thus far.

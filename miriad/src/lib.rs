@@ -641,6 +641,10 @@ impl InternalItemInfo {
 }
 
 
+pub type ReadStream = AligningReader<io::BufReader<fs::File>>;
+pub type WriteStream = AligningWriter<io::BufWriter<fs::File>>;
+
+
 #[derive(Debug)]
 pub struct Item<'a> {
     dset: &'a DataSet,
@@ -722,7 +726,7 @@ impl<'a> Item<'a> {
     }
 
 
-    pub fn into_byte_stream(self) -> Result<AligningReader<io::BufReader<fs::File>>, Error> {
+    pub fn into_byte_stream(self) -> Result<ReadStream, Error> {
         if let ItemStorage::Small(_) = self.info.storage {
             // We *could* do this, but for coding simplicity we only allow it
             // for large items.
@@ -922,7 +926,7 @@ impl DataSet {
     }
 
 
-    pub fn create_large_item(&mut self, name: &str, ty: Type) -> Result<AligningWriter<io::BufWriter<fs::File>>, Error> {
+    pub fn create_large_item(&mut self, name: &str, ty: Type) -> Result<WriteStream, Error> {
         if name == "header" {
             return mirerr!("cannot create an item named \"header\"");
         }
