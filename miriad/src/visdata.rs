@@ -541,6 +541,10 @@ impl Encoder {
         const SIZE: u8 = 0;
         const DATA: u8 = 1;
 
+        if var.data.len() == 0 {
+            return mirerr!("may not write zero-size array for variable \"{}\"", var.name);
+        }
+
         if var.name == "nschan" {
             self.tot_nschan = 0;
 
@@ -572,6 +576,10 @@ impl Encoder {
         let num = self.vars_by_name.get(name)
             .ok_or(::MiriadFormatError(format!("target stream does not have variable named \"{}\"", name)))?;
         let var = &mut self.vars[*num as usize];
+
+        if values.len() == 0 {
+            return mirerr!("may not write zero-size array for variable \"{}\"", name);
+        }
 
         // TODO: upcasting
         if T::TYPE != var.ty {

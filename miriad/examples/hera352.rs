@@ -460,9 +460,7 @@ impl UvInflator {
                 } else {
                     self.corr_buf.resize(rec.corr.len(), 0.);
 
-                    if flag_it {
-                        self.corr_buf.clear();
-                    } else {
+                    if !flag_it {
                         self.corr_buf.copy_from_slice(&rec.corr);
 
                         for i in 0..rec.flags.len() {
