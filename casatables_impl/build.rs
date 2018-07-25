@@ -1,7 +1,7 @@
 // Copyright 2017 Peter Williams <peter@newton.cx> and collaborators
 // Licensed under the MIT License.
 
-extern crate gcc;
+extern crate cc;
 
 const FILES: &[&str] = &[
     "casacore/casa/Arrays/Array2.cc",
@@ -352,7 +352,7 @@ const FILES: &[&str] = &[
 ];
 
 fn main() {
-    gcc::Build::new()
+    cc::Build::new()
         .cpp(true)
         .warnings(true)
         .include(".")

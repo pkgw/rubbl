@@ -12,7 +12,7 @@ split.
 
 */
 
-extern crate gcc;
+extern crate cc;
 
 
 const FILES: &[&str] = &[
@@ -20,7 +20,7 @@ const FILES: &[&str] = &[
 ];
 
 fn main() {
-    let mut builder = gcc::Build::new();
+    let mut builder = cc::Build::new();
 
     builder
         .cpp(true)
