@@ -26,9 +26,6 @@ srcdir="$(grep CMAKE_HOME_DIRECTORY "$builddir/CMakeCache.txt" |sed -e 's/CMAKE_
 
 (cd "$impldir" && git ls-files) |while read path ; do
     case "$path" in
-        *Gram.?cc)
-            sed -e "s|$builddir|<BUILDDIR>|g" <"$builddir/tables/$path" >"$impldir/$path"
-            ;;
         casacore/casa/config.h|update.sh)
             ;; # skip
         *)
