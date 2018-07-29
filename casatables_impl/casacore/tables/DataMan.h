@@ -52,7 +52,6 @@
 #include <casacore/tables/DataMan/ForwardColRow.h>
 #include <casacore/tables/DataMan/CompressComplex.h>
 #include <casacore/tables/DataMan/CompressFloat.h>
-#include <casacore/tables/DataMan/VirtualTaQLColumn.h>
 
 
 namespace casacore { //# NAMESPACE CASACORE - BEGIN

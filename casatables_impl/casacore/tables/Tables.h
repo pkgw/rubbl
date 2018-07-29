@@ -65,9 +65,6 @@
 //#   data managers
 #include <casacore/tables/DataMan.h>
 
-//#   table expressions (for selection of rows)
-#include <casacore/tables/TaQL.h>
-
 
 namespace casacore { //# NAMESPACE CASACORE - BEGIN
 

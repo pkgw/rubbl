@@ -33,12 +33,10 @@
 #include <casacore/tables/Tables/ConcatTable.h>
 #include <casacore/tables/Tables/NullTable.h>
 #include <casacore/tables/Tables/TableCopy.h>
-#include <casacore/tables/TaQL/ExprDerNode.h>
 #include <casacore/tables/Tables/TableDesc.h>
 #include <casacore/tables/Tables/TableLock.h>
 #include <casacore/tables/Tables/TableError.h>
 #include <casacore/tables/DataMan/StManColumn.h>
-#include <casacore/tables/TaQL/ExprNode.h>
 #include <casacore/casa/Arrays/Vector.h>
 #include <casacore/casa/Arrays/ArrayMath.h>
 #include <casacore/casa/Arrays/ArrayIO.h>
@@ -786,60 +784,6 @@ Table Table::sort (const Block<String>& names,
     { return Table(baseTabPtr_p->sort (names, cmpObjs, orders, option)); }
 
 
-//# Create an expression node to handle a keyword.
-//# The code to handle this is in TableExprNode, because there the
-//# differentation between data types is being made.
-TableExprNode Table::key (const String& keywordName) const
-{
-    Vector<String> names(1);
-    names(0) = keywordName;
-    return TableExprNode::newKeyConst (keywordSet(), names);
-}
-TableExprNode Table::key (const Vector<String>& fieldNames) const
-{
-    return TableExprNode::newKeyConst (keywordSet(), fieldNames);
-}
-TableExprNode Table::col (const String& columnName) const
-{
-    Vector<String> fieldNames;
-    return TableExprNode::newColumnNode (*this, columnName, fieldNames);
-}
-TableExprNode Table::col (const String& columnName,
-			  const Vector<String>& fieldNames) const
-{
-    return TableExprNode::newColumnNode (*this, columnName, fieldNames);
-}
-
-//# Create an expression node for either a keyword or column.
-TableExprNode Table::keyCol (const String& name,
-			     const Vector<String>& fieldNames) const
-{
-    if (tableDesc().isColumn (name)) {
-	return col (name, fieldNames);
-    }else{
-	uInt nr = fieldNames.nelements();
-	Vector<String> names (nr + 1);
-	names (Slice(1,nr)) = fieldNames;
-	names(0) = name;
-	return key (names);
-    }
-}
-
-TableExprNode Table::nodeRownr(uInt origin) const
-{
-    return TableExprNode::newRownrNode (*this, origin);
-}
-
-TableExprNode Table::nodeRandom () const
-{
-    return TableExprNode::newRandomNode (*this);
-}
-
-
-//# Select rows based on an expression.
-Table Table::operator() (const TableExprNode& expr,
-                         uInt maxRow, uInt offset) const
-    { return Table (baseTabPtr_p->select (expr, maxRow, offset)); }
 //# Select rows based on row numbers.
 Table Table::operator() (const Vector<uInt>& rownrs) const
     { return Table (baseTabPtr_p->select (rownrs)); }

@@ -40,7 +40,6 @@
 #include <casacore/tables/DataMan/CompressComplex.h>
 #include <casacore/tables/DataMan/MappedArrayEngine.h>
 #include <casacore/tables/DataMan/ForwardCol.h>
-#include <casacore/tables/DataMan/VirtualTaQLColumn.h>
 #include <casacore/tables/DataMan/BitFlagsEngine.h>
 #include <casacore/tables/Tables/SetupNewTab.h>
 #include <casacore/tables/Tables/Table.h>
@@ -600,8 +599,6 @@ void DataManager::doRegisterMainCtor (void*)
                         MappedArrayEngine<Complex,DComplex>::makeObject);
   unlockedRegisterCtor (ForwardColumnEngine::className(),
                         ForwardColumnEngine::makeObject);
-  unlockedRegisterCtor (VirtualTaQLColumn::className(),
-                        VirtualTaQLColumn::makeObject);
   unlockedRegisterCtor (BitFlagsEngine<uChar>::className(),
                         BitFlagsEngine<uChar>::makeObject);
   unlockedRegisterCtor (BitFlagsEngine<Short>::className(),

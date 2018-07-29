@@ -33,7 +33,6 @@
 #include <casacore/tables/Tables/TableCopy.h>
 #include <casacore/tables/Tables/TableDesc.h>
 #include <casacore/tables/Tables/BaseColumn.h>
-#include <casacore/tables/TaQL/ExprNode.h>
 #include <casacore/tables/Tables/BaseTabIter.h>
 #include <casacore/tables/DataMan/DataManager.h>
 #include <casacore/tables/Tables/TableError.h>
@@ -680,66 +679,6 @@ BaseTable* BaseTable::select (uInt maxRow, uInt offset)
     Vector<uInt> rownrs(maxRow);
     indgen(rownrs, offset);
     return select(rownrs);
-}
-
-// Do the row selection.
-BaseTable* BaseTable::select (const TableExprNode& node,
-                              uInt maxRow, uInt offset)
-{
-    // Check we don't deal with a null table.
-    AlwaysAssert (!isNull(), AipsError);
-    // If it is a null expression, return maxrows.
-    if (node.isNull()) {
-      return select (maxRow, offset);
-    }
-    //# First check if the node is a Bool.
-    if (node.dataType() != TpBool  ||  !node.isScalar()) {
-	throw (TableInvExpr ("select expression result on table " + name_p +
-                             " is not Bool scalar"));
-    }
-    // Accept a const bool expression.
-    if (node.getNodeRep()->isConstant()) {
-        if (node.getBool(0)) {
-            // Select maxRow rows.
-            return select (maxRow, offset);
-        }
-        // Select no rows.
-        return select(Vector<uInt>());
-    }
-    // Now check if this table has been used for all columns.
-    // Accept that the expression has no table, which can be the case for
-    // UDFs in derivedmscal (since they have no function arguments).
-    if (!node.table().isNull()  &&  node.table().nrow() != this->nrow()) {
-      throw (TableInvExpr ("select expression for table " +
-                           node.table().tableName() +
-                           " is used on a differently sized table " + name_p));
-    }
-    //# Create a reference table, which will be in row order.
-    //# Loop through all rows and add to reference table if true.
-    //# Add the rownr of the root table (one may search a reference table).
-    //# Adjust the row numbers to reflect row numbers in the root table.
-    SPtrHolder<RefTable> resultTable (makeRefTable (True, 0));
-    Bool val;
-    uInt nrrow = nrow();
-    TableExprId id;
-    for (uInt i=0; i<nrrow; i++) {
-      id.setRownr (i);
-      node.get (id, val);
-      if (val) {
-        if (offset == 0) {
-          resultTable->addRownr (i);                  // add row
-          // Stop if max #rows reached (note that maxRow==0 means no limit).
-          if (resultTable->nrow() == maxRow) {
-            break;
-          }
-        } else {
-          // Skip first offset matching rows.
-          offset--;
-        }
-      }
-    }
-    adjustRownrs (resultTable->nrow(), *(resultTable->rowStorage()), False);
-    return resultTable.transfer();
 }
 
 BaseTable* BaseTable::select (const Vector<uInt>& rownrs)
