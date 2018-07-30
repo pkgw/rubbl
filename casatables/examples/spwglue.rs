@@ -1,4 +1,4 @@
-// Copyright 2017 Peter Williams <peter@newton.cx> and collaborators
+// Copyright 2017-2018 Peter Williams <peter@newton.cx> and collaborators
 // Licensed under the MIT License.
 
 extern crate byteorder;
@@ -88,12 +88,9 @@ mod mini_npy_parser {
         stream.read_exact(&mut header[..])?;
 
         let pyinfo = match map(&header) {
-            IResult::Done(_, info) => info,
-            IResult::Error(e) => {
-                return err_msg!("failed to parse NPY Python header: {}", e);
-            },
-            IResult::Incomplete(_) => {
-                return err_msg!("failed to parse NPY Python header: incomplete data");
+            Ok(r) => r.1,
+            Err(_) => {
+                return err_msg!("bad NPY Python header: couldn't parse as a dict");
             },
         };
 
