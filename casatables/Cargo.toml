@@ -23,7 +23,7 @@ nom = "^4.0"
 num-traits = "^0.2"
 pbr = "^1.0"
 rubbl_casatables_impl = { version = "0.1.1", path = "../casatables_impl" }
-rubbl_core = { version = "0.1.0", path = "../core" }
+rubbl_core = { version = "0.1.1", path = "../core" }
 
 [build-dependencies]
 cc = { version = "1.0", features = ["parallel"] }
