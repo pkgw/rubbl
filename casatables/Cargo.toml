@@ -13,7 +13,7 @@ Interfacing to the CASA table format within the Rubbl framework.
 """
 
 [dependencies]
-byteorder = "^1.1"
+byteorder = "^1.2"
 clap = "^2.26"
 failure = "^0.1"
 failure_derive = "^0.1"
