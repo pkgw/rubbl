@@ -132,7 +132,7 @@ impl TermcolorNotificationBackend {
         let mut prefix = "error:";
         let err = err.into();
 
-        for fail in err.causes() {
+        for fail in err.iter_chain() {
             self.generic_message(NotificationKind::Severe, Some(prefix), format_args!("{}", fail));
             prefix = "caused by:";
         }
@@ -151,7 +151,7 @@ impl NotificationBackend for TermcolorNotificationBackend {
         self.generic_message(kind, None, args);
 
         if let Some(e) = err {
-            for fail in e.causes() {
+            for fail in e.iter_chain() {
                 self.generic_message(kind, Some("caused by:"), format_args!("{}", fail));
             }
 
