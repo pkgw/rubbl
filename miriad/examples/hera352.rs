@@ -6,57 +6,65 @@ so that we can see how our algorithms scale.
  */
 
 extern crate clap;
-#[macro_use] extern crate failure;
+#[macro_use]
+extern crate failure;
 extern crate pbr;
 extern crate rubbl_miriad;
 
-use clap::{Arg, App};
+use clap::{App, Arg};
 use failure::{Error, ResultExt};
-use rubbl_miriad::{DataSet, ReadStream, Type, WriteStream};
 use rubbl_miriad::mask::{MaskDecoder, MaskEncoder};
-use rubbl_miriad::visdata::{decode_baseline, encode_baseline, Decoder, Encoder, UvVariableReference};
+use rubbl_miriad::visdata::{
+    decode_baseline, encode_baseline, Decoder, Encoder, UvVariableReference,
+};
+use rubbl_miriad::{DataSet, ReadStream, Type, WriteStream};
 use std::collections::HashMap;
 use std::ffi::OsStr;
 use std::io;
 use std::process;
 use std::time::Instant;
 
-
 const NANTS: usize = 352;
-
 
 fn main() {
     let matches = App::new("hera352")
         .version("0.1.0")
         .about("Make a fake 352-antenna HERA UV dataset")
-        .arg(Arg::with_name("INPATH")
-             .help("The path to the input dataset directory")
-             .required(true)
-             .index(1))
-        .arg(Arg::with_name("OUTPATH")
-             .help("The path to the (preexistin!) output dataset directory")
-             .required(true)
-             .index(2))
+        .arg(
+            Arg::with_name("INPATH")
+                .help("The path to the input dataset directory")
+                .required(true)
+                .index(1),
+        )
+        .arg(
+            Arg::with_name("OUTPATH")
+                .help("The path to the (preexistin!) output dataset directory")
+                .required(true)
+                .index(2),
+        )
         .get_matches();
 
     let in_path = matches.value_of_os("INPATH").unwrap();
     let out_path = matches.value_of_os("OUTPATH").unwrap();
 
-    process::exit(match UvInflator::process(in_path.as_ref(), out_path.as_ref()) {
-        Ok(code) => code,
+    process::exit(
+        match UvInflator::process(in_path.as_ref(), out_path.as_ref()) {
+            Ok(code) => code,
 
-        Err(e) => {
-            println!("fatal error while processing {} => {}",
-                     in_path.to_string_lossy(),
-                     out_path.to_string_lossy());
-            for cause in e.causes() {
-                println!("  caused by: {}", cause);
+            Err(e) => {
+                println!(
+                    "fatal error while processing {} => {}",
+                    in_path.to_string_lossy(),
+                    out_path.to_string_lossy()
+                );
+                for cause in e.causes() {
+                    println!("  caused by: {}", cause);
+                }
+                1
             }
-            1
         },
-    });
+    );
 }
-
 
 struct UvInflator {
     pb: pbr::ProgressBar<io::Stdout>,
@@ -106,7 +114,6 @@ struct Record {
     pub flags: Vec<bool>,
 }
 
-
 impl UvInflator {
     fn process(in_path: &OsStr, out_path: &OsStr) -> Result<i32, Error> {
         let t0 = Instant::now();
@@ -118,27 +125,47 @@ impl UvInflator {
 
         inst.out_flags.close()?;
         let out_mib = inst.out_uv.flush(&mut inst.out_ds)? as f64 / (1024. * 1024.);
-        inst.out_ds.flush().context("couldn't flush changes to output dataset")?;
+        inst.out_ds
+            .flush()
+            .context("couldn't flush changes to output dataset")?;
 
         let dur = t0.elapsed();
         let dur_secs = dur.subsec_nanos() as f64 * 1e-9 + dur.as_secs() as f64;
 
         inst.pb.finish();
         println!("elapsed: {:.3} seconds", dur_secs);
-        println!("input: {} records, {:.1} MiB => read {:.3} MiB/s", inst.in_n, in_mib, in_mib / dur_secs);
-        println!("output: {} records, {:.1} MiB => wrote {:.3} MiB/s", inst.out_n, out_mib, out_mib / dur_secs);
+        println!(
+            "input: {} records, {:.1} MiB => read {:.3} MiB/s",
+            inst.in_n,
+            in_mib,
+            in_mib / dur_secs
+        );
+        println!(
+            "output: {} records, {:.1} MiB => wrote {:.3} MiB/s",
+            inst.out_n,
+            out_mib,
+            out_mib / dur_secs
+        );
         Ok(0)
     }
 
     fn new(in_path: &OsStr, out_path: &OsStr) -> Result<Self, Error> {
         let mut in_ds = DataSet::open(in_path).context("error opening input dataset")?;
-        let mut in_uv = in_ds.open_uv().context("could not open input as UV dataset")?;
-        let mut in_flags = MaskDecoder::new(in_ds.get("flags")?
-                                            .ok_or(format_err!("no \"flags\" item in input"))?
-                                            .into_byte_stream()?);
+        let mut in_uv = in_ds
+            .open_uv()
+            .context("could not open input as UV dataset")?;
+        let mut in_flags = MaskDecoder::new(
+            in_ds
+                .get("flags")?
+                .ok_or(format_err!("no \"flags\" item in input"))?
+                .into_byte_stream()?,
+        );
 
-        let mut out_ds = rubbl_miriad::DataSet::open(out_path).context("error opening output dataset")?;
-        let mut out_uv = out_ds.new_uv_like(&in_uv).context("could not open output for writing UV data")?;
+        let mut out_ds =
+            rubbl_miriad::DataSet::open(out_path).context("error opening output dataset")?;
+        let mut out_uv = out_ds
+            .new_uv_like(&in_uv)
+            .context("could not open output for writing UV data")?;
         let out_flags = MaskEncoder::new(out_ds.create_large_item("flags", Type::Int32)?);
 
         // Progress bar
@@ -155,13 +182,16 @@ impl UvInflator {
 
         for var in in_uv.variables() {
             match var.name() {
-                "coord" | "time" | "baseline" |"corr" |
-                "antnames" | "antnums" | "antpos" | "cminfo" | "nants" | "nbls" |
-                "nblts" | "st_type" => { continue; },
-                _ => {},
+                "coord" | "time" | "baseline" | "corr" | "antnames" | "antnums" | "antpos"
+                | "cminfo" | "nants" | "nbls" | "nblts" | "st_type" => {
+                    continue;
+                }
+                _ => {}
             }
 
-            out_uv.write_var(var).context("could not write UV variable")?;
+            out_uv
+                .write_var(var)
+                .context("could not write UV variable")?;
         }
 
         // antnums is an (in_nants)-element f64 array mapping HERA antenna numbers
@@ -173,8 +203,12 @@ impl UvInflator {
         let mut taken_mir_nums = Vec::with_capacity(NANTS);
         taken_mir_nums.resize(NANTS, false);
 
-        in_uv.get_data(in_uv.lookup_variable("antnums")
-                       .ok_or(format_err!("no \"antnums\" UV variable"))?, &mut antnums_float);
+        in_uv.get_data(
+            in_uv
+                .lookup_variable("antnums")
+                .ok_or(format_err!("no \"antnums\" UV variable"))?,
+            &mut antnums_float,
+        );
 
         for antnum_float in &antnums_float {
             let antnum = *antnum_float as usize;
@@ -183,8 +217,11 @@ impl UvInflator {
         }
 
         let in_nants_live = hera_to_mir.len();
-        let in_nants_slots = in_uv.get_scalar::<i32>(in_uv.lookup_variable("nants")
-                                                     .ok_or(format_err!("no \"nants\" UV variable"))?) as usize;
+        let in_nants_slots = in_uv.get_scalar::<i32>(
+            in_uv
+                .lookup_variable("nants")
+                .ok_or(format_err!("no \"nants\" UV variable"))?,
+        ) as usize;
         let mut last_used_antnum = 0; // assuming antnum 0 is always taken
 
         for _ in in_nants_live..NANTS {
@@ -220,7 +257,10 @@ impl UvInflator {
         let n_new = NANTS - in_nants_live;
         let mut in_index = 0;
 
-        println!("numbers: {} live antennas in input set; {} fake antennas being added", in_nants_live, n_new);
+        println!(
+            "numbers: {} live antennas in input set; {} fake antennas being added",
+            in_nants_live, n_new
+        );
 
         for _ in 0..n_new {
             out_ant_to_in.push(in_index);
@@ -229,8 +269,11 @@ impl UvInflator {
 
         // antnames is a string with format "[name, name, name, name, ...]".
 
-        let in_antnames: String = in_uv.get_scalar(in_uv.lookup_variable("antnames")
-                                                   .ok_or(format_err!("no \"antnames\" UV variable"))?);
+        let in_antnames: String = in_uv.get_scalar(
+            in_uv
+                .lookup_variable("antnames")
+                .ok_or(format_err!("no \"antnames\" UV variable"))?,
+        );
         let in_antnames = in_antnames.split_at(in_antnames.len() - 2).0.split_at(1).1;
         let mut out_antnames = String::from("[");
 
@@ -255,8 +298,12 @@ impl UvInflator {
         // antennas, we fill it out with redundant position entries.
 
         let mut in_antpos: Vec<f64> = Vec::with_capacity(in_nants_slots * 3);
-        in_uv.get_data(in_uv.lookup_variable("antpos")
-                       .ok_or(format_err!("no \"antpos\" UV variable"))?, &mut in_antpos);
+        in_uv.get_data(
+            in_uv
+                .lookup_variable("antpos")
+                .ok_or(format_err!("no \"antpos\" UV variable"))?,
+            &mut in_antpos,
+        );
 
         let mut antpos = Vec::with_capacity(NANTS * 3);
         antpos.resize(NANTS * 3, 0.);
@@ -281,14 +328,20 @@ impl UvInflator {
         out_uv.write_scalar("nants", NANTS as i32)?;
         let nbls = (NANTS * (NANTS + 1) / 2) as i32; // note, this includes autos
         out_uv.write_scalar("nbls", nbls)?;
-        let ntimes: i32 = in_uv.get_scalar(in_uv.lookup_variable("ntimes")
-                                           .ok_or(format_err!("no \"ntimes\" UV variable"))?);
+        let ntimes: i32 = in_uv.get_scalar(
+            in_uv
+                .lookup_variable("ntimes")
+                .ok_or(format_err!("no \"ntimes\" UV variable"))?,
+        );
         out_uv.write_scalar("nblts", nbls * ntimes)?;
 
         // st_type is formatted the same as antnames.
 
-        let in_st_type: String = in_uv.get_scalar(in_uv.lookup_variable("st_type")
-                                                  .ok_or(format_err!("no \"st_type\" UV variable"))?);
+        let in_st_type: String = in_uv.get_scalar(
+            in_uv
+                .lookup_variable("st_type")
+                .ok_or(format_err!("no \"st_type\" UV variable"))?,
+        );
         let in_st_type = in_st_type.split_at(in_st_type.len() - 2).0.split_at(1).1;
         let st_types: Vec<_> = in_st_type.split(", ").collect();
 
@@ -309,15 +362,30 @@ impl UvInflator {
         // spectral window, no "wide" channels, etc.
         // We've already read the first record, so we need to record it specially.
 
-        let nschan: usize = in_uv.get_scalar::<i32>(in_uv.lookup_variable("nschan")
-                                                    .ok_or(format_err!("no \"nschan\" UV variable"))?) as usize;
+        let nschan: usize = in_uv.get_scalar::<i32>(
+            in_uv
+                .lookup_variable("nschan")
+                .ok_or(format_err!("no \"nschan\" UV variable"))?,
+        ) as usize;
 
-        let time_var = in_uv.lookup_variable("time").ok_or(format_err!("no \"time\" UV variable"))?;
-        let lst_var = in_uv.lookup_variable("lst").ok_or(format_err!("no \"lst\" UV variable"))?;
-        let ra_var = in_uv.lookup_variable("ra").ok_or(format_err!("no \"ra\" UV variable"))?;
-        let baseline_var = in_uv.lookup_variable("baseline").ok_or(format_err!("no \"baseline\" UV variable"))?;
-        let coord_var = in_uv.lookup_variable("coord").ok_or(format_err!("no \"coord\" UV variable"))?;
-        let corr_var = in_uv.lookup_variable("corr").ok_or(format_err!("no \"corr\" UV variable"))?;
+        let time_var = in_uv
+            .lookup_variable("time")
+            .ok_or(format_err!("no \"time\" UV variable"))?;
+        let lst_var = in_uv
+            .lookup_variable("lst")
+            .ok_or(format_err!("no \"lst\" UV variable"))?;
+        let ra_var = in_uv
+            .lookup_variable("ra")
+            .ok_or(format_err!("no \"ra\" UV variable"))?;
+        let baseline_var = in_uv
+            .lookup_variable("baseline")
+            .ok_or(format_err!("no \"baseline\" UV variable"))?;
+        let coord_var = in_uv
+            .lookup_variable("coord")
+            .ok_or(format_err!("no \"coord\" UV variable"))?;
+        let corr_var = in_uv
+            .lookup_variable("corr")
+            .ok_or(format_err!("no \"corr\" UV variable"))?;
 
         let time: f64 = in_uv.get_scalar(time_var);
         let lst: f64 = in_uv.get_scalar(lst_var);
@@ -336,7 +404,15 @@ impl UvInflator {
         flags.resize(nschan, false);
         in_flags.expand(&mut flags)?;
 
-        records.insert(bl, Record { update_time: time, coord: coord, corr: corr, flags: flags });
+        records.insert(
+            bl,
+            Record {
+                update_time: time,
+                coord: coord,
+                corr: corr,
+                flags: flags,
+            },
+        );
 
         let mut flag_buf = Vec::new();
         flag_buf.resize(nschan, false); // false => bad data
@@ -402,12 +478,15 @@ impl UvInflator {
                 let mut flags = Vec::new();
                 flags.resize(self.flag_buf.len(), false);
 
-                self.records.insert(bl, Record {
-                    update_time: new_time,
-                    coord: Vec::new(),
-                    corr: Vec::new(),
-                    flags: flags,
-                });
+                self.records.insert(
+                    bl,
+                    Record {
+                        update_time: new_time,
+                        coord: Vec::new(),
+                        corr: Vec::new(),
+                        flags: flags,
+                    },
+                );
             }
 
             let rec = self.records.get_mut(&bl).unwrap();
@@ -442,12 +521,23 @@ impl UvInflator {
                     conj = true;
                 }
 
-                let rec = self.records.get(&(src_mir_1, src_mir_2))
-                    .ok_or(format_err!("missing data for source {}-{} baseline", src_mir_1, src_mir_2))?;
+                let rec = self
+                    .records
+                    .get(&(src_mir_1, src_mir_2))
+                    .ok_or(format_err!(
+                        "missing data for source {}-{} baseline",
+                        src_mir_1,
+                        src_mir_2
+                    ))?;
 
                 if rec.update_time != time {
-                    return Err(format_err!("stale data for source {}-{} baseline ({:?} vs {:?})",
-                                           src_mir_1, src_mir_2, rec.update_time, time));
+                    return Err(format_err!(
+                        "stale data for source {}-{} baseline ({:?} vs {:?})",
+                        src_mir_1,
+                        src_mir_2,
+                        rec.update_time,
+                        time
+                    ));
                 }
 
                 // In our fake dataset this is a cross-correlation, but in the
@@ -480,7 +570,8 @@ impl UvInflator {
                     self.out_uv.write("coord", &self.coord_buf)?;
                 }
 
-                self.out_uv.write_scalar("baseline", encode_baseline(ant1, ant2)?)?;
+                self.out_uv
+                    .write_scalar("baseline", encode_baseline(ant1, ant2)?)?;
 
                 if flag_it {
                     self.out_flags.append_mask(&self.flag_buf)?;

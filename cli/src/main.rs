@@ -10,15 +10,17 @@ Heavily modeled on Cargo's implementation of the same sort of functionality.
 
 */
 
-#[macro_use] extern crate clap;
-#[macro_use] extern crate failure_derive;
+#[macro_use]
+extern crate clap;
+#[macro_use]
+extern crate failure_derive;
 extern crate failure;
 extern crate rubbl_core;
 
 use clap::{App, AppSettings, Arg, ArgMatches, SubCommand};
 use failure::Error;
-use rubbl_core::Result;
 use rubbl_core::notify::{ClapNotificationArgsExt, NotificationBackend};
+use rubbl_core::Result;
 use std::collections::BTreeSet;
 use std::env;
 use std::fs;
@@ -26,31 +28,31 @@ use std::os::unix::process::CommandExt;
 use std::path::{Path, PathBuf};
 use std::process;
 
-
 // Some error help.
 
 #[derive(Fail, Debug)]
 #[fail(display = "no such sub-command `{}`", _0)]
 pub struct NoSuchSubcommandError(String);
 
-
 fn main() {
     let matches = make_app().get_matches();
 
-    process::exit(rubbl_core::notify::run_with_notifications(matches, |matches, nbe| -> Result<i32> {
-        match matches.subcommand() {
-            ("help", Some(m)) => do_help(m, nbe),
-            ("list", Some(m)) => do_list(m, nbe),
-            (external, Some(m)) => do_external(external, m, nbe),
-            (_, None) => {
-                // No sub-command provided; can't use do_help() since it wants sub-matches.
-                make_app().print_long_help()?;
-                Ok(0)
+    process::exit(rubbl_core::notify::run_with_notifications(
+        matches,
+        |matches, nbe| -> Result<i32> {
+            match matches.subcommand() {
+                ("help", Some(m)) => do_help(m, nbe),
+                ("list", Some(m)) => do_list(m, nbe),
+                (external, Some(m)) => do_external(external, m, nbe),
+                (_, None) => {
+                    // No sub-command provided; can't use do_help() since it wants sub-matches.
+                    make_app().print_long_help()?;
+                    Ok(0)
+                }
             }
-        }
-    }));
+        },
+    ));
 }
-
 
 /// It seems that the best way to re-print the help in the "help" subcommand
 /// is to be able to make multiple App objects.
@@ -60,13 +62,14 @@ fn make_app<'a, 'b>() -> App<'a, 'b> {
         .setting(AppSettings::AllowExternalSubcommands)
         .setting(AppSettings::DisableHelpSubcommand)
         .rubbl_notify_args()
-        .subcommand(SubCommand::with_name("help")
-                    .about("Get help information for sub-commands")
-                    .arg(Arg::with_name("command")
-                         .help("The name of a sub-command to get help for")))
-        .subcommand(SubCommand::with_name("list")
-                    .about("List the available sub-commands"))
-        .help(r#"rubbl -- dispatcher for command-line access to Rubbl tools
+        .subcommand(
+            SubCommand::with_name("help")
+                .about("Get help information for sub-commands")
+                .arg(Arg::with_name("command").help("The name of a sub-command to get help for")),
+        )
+        .subcommand(SubCommand::with_name("list").about("List the available sub-commands"))
+        .help(
+            r#"rubbl -- dispatcher for command-line access to Rubbl tools
 
 USAGE:
     rubbl [GLOBAL-OPTIONS] [SUBCOMMAND] [SUBCOMMAND arguments ...]
@@ -82,9 +85,9 @@ SUBCOMMANDS:
 
     help    Get help on sub-command usage
     list    List the available sub-commands
-"#)
+"#,
+        )
 }
-
 
 /// Get help on a subcommand, or on the main program.
 fn do_help(matches: &ArgMatches, _nbe: &mut NotificationBackend) -> Result<i32> {
@@ -92,7 +95,7 @@ fn do_help(matches: &ArgMatches, _nbe: &mut NotificationBackend) -> Result<i32> 
         None | Some("help") | Some("list") => {
             make_app().print_long_help()?;
             Ok(0)
-        },
+        }
 
         Some(cmd) => {
             // If the function returns, something went wrong by definition.
@@ -100,7 +103,6 @@ fn do_help(matches: &ArgMatches, _nbe: &mut NotificationBackend) -> Result<i32> 
         }
     }
 }
-
 
 /// Print out a list of the available sub-commands.
 fn do_list(_matches: &ArgMatches, _nbe: &mut NotificationBackend) -> Result<i32> {
@@ -113,7 +115,6 @@ fn do_list(_matches: &ArgMatches, _nbe: &mut NotificationBackend) -> Result<i32>
     Ok(0)
 }
 
-
 /// Run an external command by executing a subprocess
 fn do_external(cmd: &str, matches: &ArgMatches, _nbe: &mut NotificationBackend) -> Result<i32> {
     // TODO: propagate chatter settings downstream.
@@ -124,7 +125,6 @@ fn do_external(cmd: &str, matches: &ArgMatches, _nbe: &mut NotificationBackend) 
 
     Err(try_exec_subcommand(cmd, &args))
 }
-
 
 /// Try to re-execute the process using the executable corresponding to the
 /// named sub-command. If this function returns, something went wrong.
@@ -142,12 +142,8 @@ fn try_exec_subcommand(cmd: &str, args: &[&str]) -> Error {
         }
     };
 
-    process::Command::new(command)
-        .args(args)
-        .exec()
-        .into()
+    process::Command::new(command).args(args).exec().into()
 }
-
 
 // Lots of copy/paste from cargo:
 
@@ -193,7 +189,9 @@ fn is_executable<P: AsRef<Path>>(path: P) -> bool {
 
 #[cfg(windows)]
 fn is_executable<P: AsRef<Path>>(path: P) -> bool {
-    fs::metadata(path).map(|metadata| metadata.is_file()).unwrap_or(false)
+    fs::metadata(path)
+        .map(|metadata| metadata.is_file())
+        .unwrap_or(false)
 }
 
 fn search_directories() -> Vec<PathBuf> {

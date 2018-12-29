@@ -12,9 +12,7 @@ the files I'm working with.
 
 extern crate rubbl_core;
 
-
 use rubbl_core::Result;
-
 
 /// A "feed pol(arization)" is the polarization component sampled by a
 /// particular receptor on an radio antenna.
@@ -25,7 +23,6 @@ pub enum FeedPol {
     R,
     L,
 }
-
 
 /// A "vis(ibility) pol(arization)" is the polarization sampled by the
 /// cross-correlation of the voltages of two radio receptors.
@@ -48,28 +45,30 @@ pub enum VisPol {
 impl VisPol {
     pub fn feedpol1(self) -> FeedPol {
         match self {
-            VisPol::XX|VisPol::XY => FeedPol::X,
-            VisPol::YX|VisPol::YY => FeedPol::Y,
-            VisPol::RR|VisPol::RL => FeedPol::R,
-            VisPol::LR|VisPol::LL => FeedPol::L,
-            VisPol::I|VisPol::Q|VisPol::U|VisPol::V => panic!("cannot convert Stokes VisPol into FeedPol"),
+            VisPol::XX | VisPol::XY => FeedPol::X,
+            VisPol::YX | VisPol::YY => FeedPol::Y,
+            VisPol::RR | VisPol::RL => FeedPol::R,
+            VisPol::LR | VisPol::LL => FeedPol::L,
+            VisPol::I | VisPol::Q | VisPol::U | VisPol::V => {
+                panic!("cannot convert Stokes VisPol into FeedPol")
+            }
         }
     }
 
     pub fn feedpol2(self) -> FeedPol {
         match self {
-            VisPol::XX|VisPol::YX => FeedPol::X,
-            VisPol::XY|VisPol::YY => FeedPol::Y,
-            VisPol::RR|VisPol::LR => FeedPol::R,
-            VisPol::RL|VisPol::LL => FeedPol::L,
-            VisPol::I|VisPol::Q|VisPol::U|VisPol::V => panic!("cannot convert Stokes VisPol into FeedPol"),
+            VisPol::XX | VisPol::YX => FeedPol::X,
+            VisPol::XY | VisPol::YY => FeedPol::Y,
+            VisPol::RR | VisPol::LR => FeedPol::R,
+            VisPol::RL | VisPol::LL => FeedPol::L,
+            VisPol::I | VisPol::Q | VisPol::U | VisPol::V => {
+                panic!("cannot convert Stokes VisPol into FeedPol")
+            }
         }
     }
 }
 
-
 type AntNum = u16;
-
 
 /// An "antpol" specifies a voltage stream fed into a correlator: the
 /// combination of a particular antenna and a particular feed on that
@@ -82,13 +81,9 @@ pub struct AntPol {
 
 impl AntPol {
     pub fn new(ant: AntNum, pol: FeedPol) -> Self {
-        AntPol {
-            ant: ant,
-            pol: pol,
-        }
+        AntPol { ant: ant, pol: pol }
     }
 }
-
 
 /// A "basepol" specifies a visibility output from a correlator: the data
 /// stream associated with the correlation of two input antpols.
@@ -124,7 +119,6 @@ impl BasePol {
         }
     }
 }
-
 
 pub trait VisStream {
     fn next(&mut self) -> Result<bool>;
