@@ -10,7 +10,7 @@ extern crate failure;
 extern crate rubbl_core;
 extern crate rubbl_fits;
 
-use clap::{Arg, App};
+use clap::{App, Arg};
 use failure::{Error, ResultExt};
 use rubbl_core::io::AligningReader;
 use rubbl_fits::LowLevelFitsItem;
@@ -20,15 +20,16 @@ use std::process;
 use std::str;
 use std::time::Instant;
 
-
 fn main() {
     let matches = App::new("fitsdump")
         .version("0.1.0")
         .about("Parse and dump a FITS data file in low-level fashion.")
-        .arg(Arg::with_name("PATH")
-             .help("The path to the data file")
-             .required(true)
-             .index(1))
+        .arg(
+            Arg::with_name("PATH")
+                .help("The path to the data file")
+                .required(true)
+                .index(1),
+        )
         .get_matches();
 
     let path = matches.value_of_os("PATH").unwrap();
@@ -42,10 +43,9 @@ fn main() {
                 println!("  caused by: {}", cause);
             }
             1
-        },
+        }
     });
 }
-
 
 fn inner(path: &OsStr) -> Result<i32, Error> {
     let file = fs::File::open(path).context("error opening file")?;
@@ -55,31 +55,31 @@ fn inner(path: &OsStr) -> Result<i32, Error> {
 
     loop {
         match dec.next().context("error parsing FITS")? {
-            None => { break; },
-            Some(item) => {
-                match item {
-                    LowLevelFitsItem::Header(rec) => {
-                        println!("{}", str::from_utf8(rec)?);
-                        last_was_data = false;
-                    },
+            None => {
+                break;
+            }
+            Some(item) => match item {
+                LowLevelFitsItem::Header(rec) => {
+                    println!("{}", str::from_utf8(rec)?);
+                    last_was_data = false;
+                }
 
-                    LowLevelFitsItem::EndOfHeaders(n_bytes) => {
-                        println!("-- end of headers (expect {} bytes of data) --", n_bytes);
-                        last_was_data = false;
-                    },
+                LowLevelFitsItem::EndOfHeaders(n_bytes) => {
+                    println!("-- end of headers (expect {} bytes of data) --", n_bytes);
+                    last_was_data = false;
+                }
 
-                    LowLevelFitsItem::Data(_) => {
-                        if !last_was_data {
-                            println!("data ...");
-                        }
+                LowLevelFitsItem::Data(_) => {
+                    if !last_was_data {
+                        println!("data ...");
+                    }
 
-                        last_was_data = true;
-                    },
+                    last_was_data = true;
+                }
 
-                    LowLevelFitsItem::SpecialRecordData(_) => {
-                        println!("-- block of \"special record\" data --");
-                        last_was_data = false;
-                    },
+                LowLevelFitsItem::SpecialRecordData(_) => {
+                    println!("-- block of \"special record\" data --");
+                    last_was_data = false;
                 }
             },
         }
@@ -90,6 +90,11 @@ fn inner(path: &OsStr) -> Result<i32, Error> {
     let dur = t0.elapsed();
     let dur_secs = dur.subsec_nanos() as f64 * 1e-9 + dur.as_secs() as f64;
 
-    println!("{:.1} MiB in {:.3} seconds = {:.3} MiB/s", mib, dur_secs, mib / dur_secs);
+    println!(
+        "{:.1} MiB in {:.3} seconds = {:.3} MiB/s",
+        mib,
+        dur_secs,
+        mib / dur_secs
+    );
     Ok(0)
 }

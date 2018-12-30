@@ -14,7 +14,8 @@ support for FITS files.
 
 extern crate byteorder;
 extern crate failure;
-#[macro_use] extern crate failure_derive;
+#[macro_use]
+extern crate failure_derive;
 extern crate rubbl_core;
 //extern crate rubbl_visdata;
 
@@ -23,7 +24,6 @@ use rubbl_core::io::EofReadExactExt;
 use std::io::prelude::*;
 use std::io::SeekFrom;
 use std::str;
-
 
 // Define this before any submodules are parsed.
 macro_rules! fitserr {
@@ -36,7 +36,6 @@ macro_rules! fitserr {
 #[derive(Debug, Fail)]
 #[fail(display = "{}", _0)]
 pub struct FitsFormatError(String);
-
 
 /// A chunk of FITS file data, as produced by our low-level decoder.
 #[derive(Clone, Debug)]
@@ -60,7 +59,6 @@ pub enum LowLevelFitsItem<'a> {
     /// this special record data that is exactly 2880 bytes in size.
     SpecialRecordData(&'a [u8]),
 }
-
 
 /// Possible values for the FITS "BITPIX" header, which identifies the storage
 /// format of FITS binary data.
@@ -100,7 +98,6 @@ impl Bitpix {
     }
 }
 
-
 /// A decoder for single-pass streaming of a FITS file.
 ///
 /// This struct decodes its input stream assuming it is in FITS format. The
@@ -136,17 +133,16 @@ enum DecoderState {
     SpecialRecords,
 }
 
-
 const FITS_MARKER: &[u8] = b"SIMPLE  =                    T";
 const XTENSION_MARKER: &[u8] = b"XTENSION= ";
 const BITPIX_MARKER: &[u8] = b"BITPIX  = ";
-const NAXIS_MARKER: &[u8] =  b"NAXIS   = ";
-const END_MARKER: &[u8] = b"END                                                                             ";
+const NAXIS_MARKER: &[u8] = b"NAXIS   = ";
+const END_MARKER: &[u8] =
+    b"END                                                                             ";
 const GROUPS_MARKER: &[u8] = b"GROUPS  =                    T";
 const PCOUNT_MARKER: &[u8] = b"PCOUNT  = ";
 const GCOUNT_MARKER: &[u8] = b"GCOUNT  = ";
 const EXTNAME_MARKER: &[u8] = b"EXTNAME = ";
-
 
 /// Note that we can't implement our I/O paradigm using Iterator because
 /// Rust's iterators aren't "streaming": basically, the Rust paradigm is that
@@ -178,7 +174,8 @@ impl<R: Read> FitsDecoder<R> {
     pub fn next<'a>(&'a mut self) -> Result<Option<LowLevelFitsItem<'a>>, Error> {
         if self.offset == 2880 {
             if !self.inner.eof_read_exact::<Error>(&mut self.buf)? {
-                if self.state != DecoderState::NewHdu && self.state != DecoderState::SpecialRecords {
+                if self.state != DecoderState::NewHdu && self.state != DecoderState::SpecialRecords
+                {
                     return fitserr!("truncated-looking FITS file");
                 }
 
@@ -212,7 +209,7 @@ impl<R: Read> FitsDecoder<R> {
             return Ok(Some(LowLevelFitsItem::SpecialRecordData(&self.buf)));
         }
 
-        let record = &self.buf[self.offset .. self.offset + 80];
+        let record = &self.buf[self.offset..self.offset + 80];
         self.offset += 80;
 
         if self.state == DecoderState::Beginning {
@@ -254,7 +251,7 @@ impl<R: Read> FitsDecoder<R> {
                     -64 => Bitpix::F64,
                     other => {
                         return fitserr!("unsupported BITPIX value in FITS file: {}", other);
-                    },
+                    }
                 };
             } else if &record[..NAXIS_MARKER.len()] == NAXIS_MARKER {
                 let naxis = parse_fixed_int(record)?;
@@ -323,11 +320,13 @@ impl<R: Read> FitsDecoder<R> {
 
             while i < 8 {
                 match record[i] {
-                    0x30...0x39 => {}, // 0-9
-                    0x41...0x5A => {}, // A-Z
-                    b'_' => {},
-                    b'-' => {},
-                    b' ' => { break; }
+                    0x30...0x39 => {} // 0-9
+                    0x41...0x5A => {} // A-Z
+                    b'_' => {}
+                    b'-' => {}
+                    b' ' => {
+                        break;
+                    }
                     other => {
                         return fitserr!("illegal header keyword ASCII code {}", other);
                     }
@@ -355,7 +354,6 @@ impl<R: Read> FitsDecoder<R> {
         self.inner
     }
 }
-
 
 /// Parse the headers of a FITS file to allow navigation of its structure.
 ///
@@ -417,7 +415,10 @@ impl<R: Read + Seek> FitsParser<R> {
         let file_size = inner.seek(SeekFrom::End(0))?;
 
         if file_size % 2880 != 0 {
-            return fitserr!("FITS stream should be a multiple of 2880 bytes long; got {}", file_size);
+            return fitserr!(
+                "FITS stream should be a multiple of 2880 bytes long; got {}",
+                file_size
+            );
         }
 
         inner.seek(SeekFrom::Start(0))?;
@@ -487,7 +488,7 @@ impl<R: Read + Seek> FitsParser<R> {
                 -64 => Bitpix::F64,
                 other => {
                     return fitserr!("unsupported BITPIX value in FITS file: {}", other);
-                },
+                }
             };
 
             // Next: NAXIS
@@ -559,14 +560,16 @@ impl<R: Read + Seek> FitsParser<R> {
             } else {
                 match extname {
                     Some(s) => s,
-                    None => { return fitserr!("illegal extension HDU without EXTNAME header"); },
+                    None => {
+                        return fitserr!("illegal extension HDU without EXTNAME header");
+                    }
                 }
             };
 
             if seen_groups && hdus.len() == 0 {
                 naxis.remove(0); // dummy 0 value when primary HDU is random-groups
             }
-            
+
             let group_size = pcount + naxis.iter().fold(1, |p, n| p * n) as isize;
 
             if group_size < 0 {
@@ -593,7 +596,7 @@ impl<R: Read + Seek> FitsParser<R> {
                 bitpix: bitpix,
                 pcount: pcount,
                 gcount: gcount,
-                naxis: naxis
+                naxis: naxis,
             });
 
             // If there's more stuff in the file, skip up to the next HDU
@@ -626,7 +629,6 @@ impl<R: Read + Seek> FitsParser<R> {
     }
 }
 
-
 impl ParsedHdu {
     /// Get the "name" of this HDU. If this is an extension HDU, this is the
     /// value of the EXTNAME header keyword. For the primary HDU, it is an
@@ -651,7 +653,6 @@ impl ParsedHdu {
         (self.gcount, self.pcount, &self.naxis[..])
     }
 }
-
 
 fn parse_fixed_int(record: &[u8]) -> Result<isize, Error> {
     if record[30] != b' ' && record[30] != b'/' {
@@ -691,19 +692,40 @@ fn parse_fixed_int(record: &[u8]) -> Result<isize, Error> {
         value *= 10;
 
         match record[i] {
-            b'0' => {},
-            b'1' => { value += 1; },
-            b'2' => { value += 2; },
-            b'3' => { value += 3; },
-            b'4' => { value += 4; },
-            b'5' => { value += 5; },
-            b'6' => { value += 6; },
-            b'7' => { value += 7; },
-            b'8' => { value += 8; },
-            b'9' => { value += 9; },
+            b'0' => {}
+            b'1' => {
+                value += 1;
+            }
+            b'2' => {
+                value += 2;
+            }
+            b'3' => {
+                value += 3;
+            }
+            b'4' => {
+                value += 4;
+            }
+            b'5' => {
+                value += 5;
+            }
+            b'6' => {
+                value += 6;
+            }
+            b'7' => {
+                value += 7;
+            }
+            b'8' => {
+                value += 8;
+            }
+            b'9' => {
+                value += 9;
+            }
             other => {
-                return fitserr!("expected digit but got ASCII {:?} in fixed-format integer", other);
-            },
+                return fitserr!(
+                    "expected digit but got ASCII {:?} in fixed-format integer",
+                    other
+                );
+            }
         }
 
         i += 1;
@@ -745,7 +767,6 @@ fn fixed_int_parsing() {
     assert!(parse_fixed_int(r).is_err());
 }
 
-
 fn parse_fixed_string(record: &[u8]) -> Result<String, Error> {
     if &record[8..11] != b"= '" {
         return fitserr!("expected opening equals and quote in fixed-format string record");
@@ -764,7 +785,7 @@ fn parse_fixed_string(record: &[u8]) -> Result<String, Error> {
         Chars,
         JustSawSingleQuote,
         PreCommentSpaces,
-        Comment
+        Comment,
     }
 
     for i in 0..69 {
@@ -788,49 +809,53 @@ fn parse_fixed_string(record: &[u8]) -> Result<String, Error> {
                     n_chars += 1;
                     any_chars = true;
                 }
-            },
+            }
 
-            State::JustSawSingleQuote => {
-                match c {
-                    SINGLE_QUOTE => {
-                        buf[n_chars] = SINGLE_QUOTE;
-                        last_non_blank_pos = n_chars;
-                        n_chars += 1;
-                        any_chars = true;
-                        state = State::Chars;
-                    },
+            State::JustSawSingleQuote => match c {
+                SINGLE_QUOTE => {
+                    buf[n_chars] = SINGLE_QUOTE;
+                    last_non_blank_pos = n_chars;
+                    n_chars += 1;
+                    any_chars = true;
+                    state = State::Chars;
+                }
 
-                    b' ' => {
-                        state = State::PreCommentSpaces;
-                    },
+                b' ' => {
+                    state = State::PreCommentSpaces;
+                }
 
-                    b'/' => {
-                        state = State::Comment;
-                    },
+                b'/' => {
+                    state = State::Comment;
+                }
 
-                    other => {
-                        return fitserr!("illegal ASCII value {} after single quote in \
-                                         fixed-format string record", other);
-                    },
+                other => {
+                    return fitserr!(
+                        "illegal ASCII value {} after single quote in \
+                         fixed-format string record",
+                        other
+                    );
                 }
             },
 
-            State::PreCommentSpaces => {
-                match c {
-                    b' ' => {}
+            State::PreCommentSpaces => match c {
+                b' ' => {}
 
-                    b'/' => {
-                        state = State::Comment;
-                    },
+                b'/' => {
+                    state = State::Comment;
+                }
 
-                    other => {
-                        return fitserr!("illegal ASCII value {} after string in \
-                                         fixed-format string record", other);
-                    },
+                other => {
+                    return fitserr!(
+                        "illegal ASCII value {} after string in \
+                         fixed-format string record",
+                        other
+                    );
                 }
             },
 
-            State::Comment => { break; },
+            State::Comment => {
+                break;
+            }
         }
     }
 
@@ -841,10 +866,10 @@ fn parse_fixed_string(record: &[u8]) -> Result<String, Error> {
     Ok(if !any_chars {
         ""
     } else {
-        str::from_utf8(&buf[..last_non_blank_pos+1])?
-    }.to_owned())
+        str::from_utf8(&buf[..last_non_blank_pos + 1])?
+    }
+    .to_owned())
 }
-
 
 #[cfg(test)]
 #[test]
@@ -860,8 +885,10 @@ fn fixed_string_parsing() {
     let r = b"XTENSION= 'IMAGE   '                                                            ";
     assert_eq!(parse_fixed_string(r).unwrap(), "IMAGE");
     let r = b"XTENSION= 'looooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooong'";
-    assert_eq!(parse_fixed_string(r).unwrap(),
-               "looooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooong");
+    assert_eq!(
+        parse_fixed_string(r).unwrap(),
+        "looooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooong"
+    );
     let r = b"XTENSION= 'hello'/ok comment goes here                                          ";
     assert_eq!(parse_fixed_string(r).unwrap(), "hello");
     let r = b"XTENSION= 'hello'   / ok comment goes here                                      ";
@@ -873,7 +900,6 @@ fn fixed_string_parsing() {
     let r = b"XTENSION= 'nope                                                                 ";
     assert!(parse_fixed_string(r).is_err());
 }
-
 
 /// Returns Ok(true) if this record in question was the appropriate NAXISnnn
 /// header; Ok(false) if it was some other valid-looking header; Err(_) if it
@@ -898,19 +924,37 @@ fn accumulate_naxis_value(record: &[u8], naxis: &mut Vec<usize>) -> Result<bool,
         value *= 10;
 
         match record[i] {
-            b'0' => {},
-            b'1' => { value += 1; },
-            b'2' => { value += 2; },
-            b'3' => { value += 3; },
-            b'4' => { value += 4; },
-            b'5' => { value += 5; },
-            b'6' => { value += 6; },
-            b'7' => { value += 7; },
-            b'8' => { value += 8; },
-            b'9' => { value += 9; },
+            b'0' => {}
+            b'1' => {
+                value += 1;
+            }
+            b'2' => {
+                value += 2;
+            }
+            b'3' => {
+                value += 3;
+            }
+            b'4' => {
+                value += 4;
+            }
+            b'5' => {
+                value += 5;
+            }
+            b'6' => {
+                value += 6;
+            }
+            b'7' => {
+                value += 7;
+            }
+            b'8' => {
+                value += 8;
+            }
+            b'9' => {
+                value += 9;
+            }
             other => {
                 return fitserr!("expected digit but got ASCII {:?} in NAXIS header", other);
-            },
+            }
         }
 
         i += 1;
@@ -918,14 +962,21 @@ fn accumulate_naxis_value(record: &[u8], naxis: &mut Vec<usize>) -> Result<bool,
 
     while i < 8 {
         if record[i] != b' ' {
-            return fitserr!("expected space but got ASCII {:?} in NAXIS header", record[i]);
+            return fitserr!(
+                "expected space but got ASCII {:?} in NAXIS header",
+                record[i]
+            );
         }
 
         i += 1;
     }
 
     if value != naxis.len() + 1 {
-        return fitserr!("misnumbered NAXIS header (expected {}, got {})", naxis.len() + 1, value);
+        return fitserr!(
+            "misnumbered NAXIS header (expected {}, got {})",
+            naxis.len() + 1,
+            value
+        );
     }
 
     let n = parse_fixed_int(record)?;

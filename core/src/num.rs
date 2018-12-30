@@ -9,11 +9,13 @@ General helpers for numerics.
 
 use ndarray::{IntoDimension, Ix0, Ix1, Ix2, Ix3, Ix4, Ix5, Ix6};
 
-
 /// An error type used when two arrays should have the same dimensionality,
 /// but do not.
 #[derive(Fail, Debug)]
-#[fail(display = "Expected a {}-dimensional array, but got one with {} dimensions", expected, actual)]
+#[fail(
+    display = "Expected a {}-dimensional array, but got one with {} dimensions",
+    expected, actual
+)]
 pub struct DimensionMismatchError {
     /// The number of dimensions that the array was expected to have.
     pub expected: usize,
@@ -30,7 +32,7 @@ pub struct DimensionMismatchError {
 /// trait makes it possible to convert a runtime-flexible array shape into one
 /// of the compile-time types … if the two dimensionalities are in fact the
 /// same.
-pub trait DimFromShapeSlice<T> : Sized {
+pub trait DimFromShapeSlice<T>: Sized {
     /// Try to create the implementing type from the specified array shape,
     /// specified as a slice.
     ///

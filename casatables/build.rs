@@ -14,10 +14,7 @@ split.
 
 extern crate cc;
 
-
-const FILES: &[&str] = &[
-    "src/glue.cc",
-];
+const FILES: &[&str] = &["src/glue.cc"];
 
 fn main() {
     let mut builder = cc::Build::new();

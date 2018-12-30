@@ -10,7 +10,6 @@ Reading MIRIAD mask-format files, such as UV data flags.
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use std::io;
 
-
 #[derive(Debug)]
 pub struct MaskDecoder<R: io::Read> {
     stream: R,
@@ -18,16 +17,14 @@ pub struct MaskDecoder<R: io::Read> {
     bits_left_in_current: usize,
 }
 
-
 impl<R: io::Read> MaskDecoder<R> {
     pub fn new(stream: R) -> Self {
         MaskDecoder {
             stream: stream,
             current_val: 0,
-            bits_left_in_current: 0
+            bits_left_in_current: 0,
         }
     }
-
 
     pub fn expand(&mut self, dest: &mut [bool]) -> Result<(), io::Error> {
         let mut ofs = 0;
@@ -43,11 +40,7 @@ impl<R: io::Read> MaskDecoder<R> {
                 self.bits_left_in_current -= toread;
 
                 while toread > 0 {
-                    dest[ofs] = if cur & (1 << i) != 0 {
-                        true
-                    } else {
-                        false
-                    };
+                    dest[ofs] = if cur & (1 << i) != 0 { true } else { false };
 
                     ofs += 1;
                     i += 1;
@@ -68,7 +61,6 @@ impl<R: io::Read> MaskDecoder<R> {
     }
 }
 
-
 #[derive(Debug)]
 pub struct MaskEncoder<W: io::Write> {
     stream: W,
@@ -76,7 +68,6 @@ pub struct MaskEncoder<W: io::Write> {
     bits_left_in_current: usize,
     closed: bool,
 }
-
 
 impl<W: io::Write> MaskEncoder<W> {
     pub fn new(stream: W) -> Self {
@@ -146,7 +137,6 @@ impl<W: io::Write> MaskEncoder<W> {
         Ok(())
     }
 }
-
 
 impl<W: io::Write> Drop for MaskEncoder<W> {
     fn drop(&mut self) {

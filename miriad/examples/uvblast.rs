@@ -9,21 +9,22 @@ extern crate clap;
 extern crate failure;
 extern crate rubbl_miriad;
 
-use clap::{Arg, App};
+use clap::{App, Arg};
 use failure::{Error, ResultExt};
 use std::ffi::OsStr;
 use std::process;
 use std::time::Instant;
 
-
 fn main() {
     let matches = App::new("uvblast")
         .version("0.1.0")
         .about("Read a MIRIAD UV data set as fast as possible.")
-        .arg(Arg::with_name("PATH")
-             .help("The path to the dataset directory")
-             .required(true)
-             .index(1))
+        .arg(
+            Arg::with_name("PATH")
+                .help("The path to the dataset directory")
+                .required(true)
+                .index(1),
+        )
         .get_matches();
 
     let path = matches.value_of_os("PATH").unwrap();
@@ -37,10 +38,9 @@ fn main() {
                 println!("  caused by: {}", cause);
             }
             1
-        },
+        }
     });
 }
-
 
 fn inner(path: &OsStr) -> Result<i32, Error> {
     let mut ds = rubbl_miriad::DataSet::open(path).context("error opening dataset")?;
@@ -56,6 +56,12 @@ fn inner(path: &OsStr) -> Result<i32, Error> {
     let dur = t0.elapsed();
     let dur_secs = dur.subsec_nanos() as f64 * 1e-9 + dur.as_secs() as f64;
 
-    println!("{} records, {:.1} MiB in {:.3} seconds = {:.3} MiB/s", n, mib, dur_secs, mib / dur_secs);
+    println!(
+        "{} records, {:.1} MiB in {:.3} seconds = {:.3} MiB/s",
+        n,
+        mib,
+        dur_secs,
+        mib / dur_secs
+    );
     Ok(0)
 }

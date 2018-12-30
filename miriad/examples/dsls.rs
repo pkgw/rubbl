@@ -7,22 +7,26 @@ Describe the contents of a generic MIRIAD data set.
 extern crate clap;
 extern crate rubbl_miriad;
 
-use clap::{Arg, App};
-
+use clap::{App, Arg};
 
 fn get<T: rubbl_miriad::MiriadMappedType>(ds: &mut rubbl_miriad::DataSet, name: &str) -> T {
-    ds.get(name).unwrap().unwrap().read_scalar::<T>().expect("error reading item")
+    ds.get(name)
+        .unwrap()
+        .unwrap()
+        .read_scalar::<T>()
+        .expect("error reading item")
 }
-
 
 fn main() {
     let matches = App::new("dsls")
         .version("0.1.0")
         .about("Describe the contents of a MIRIAD data set.")
-        .arg(Arg::with_name("PATH")
-             .help("The path to the dataset directory")
-             .required(true)
-             .index(1))
+        .arg(
+            Arg::with_name("PATH")
+                .help("The path to the dataset directory")
+                .required(true)
+                .index(1),
+        )
         .get_matches();
 
     let path = matches.value_of_os("PATH").unwrap();

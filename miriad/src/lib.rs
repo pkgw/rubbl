@@ -9,15 +9,16 @@ Access to MIRIAD-format data sets.
 
 extern crate byteorder;
 extern crate failure;
-#[macro_use] extern crate failure_derive;
+#[macro_use]
+extern crate failure_derive;
 extern crate openat;
 extern crate rubbl_core;
 extern crate rubbl_visdata;
 
 use byteorder::{BigEndian, ByteOrder, ReadBytesExt, WriteBytesExt};
 use failure::Error;
-use rubbl_core::Complex;
 use rubbl_core::io::{AligningReader, AligningWriter, EofReadExactExt};
+use rubbl_core::Complex;
 use std::collections::HashMap;
 use std::fs;
 use std::io;
@@ -33,11 +34,8 @@ macro_rules! mirerr {
 pub mod mask;
 pub mod visdata;
 
-
 /// The maximum length of the name of a dataset "item", in bytes.
 pub const MAX_ITEM_NAME_LENGTH: usize = 8;
-
-
 
 #[repr(u8)]
 #[derive(Copy, Clone, Debug, Eq, Hash, PartialEq)]
@@ -57,7 +55,6 @@ pub enum Type {
 #[derive(Fail, Debug)]
 #[fail(display = "{}", _0)]
 pub struct MiriadFormatError(String);
-
 
 impl Type {
     pub fn try_from_i32(type_code: i32) -> Result<Self, MiriadFormatError> {
@@ -152,7 +149,6 @@ impl std::fmt::Display for Type {
     }
 }
 
-
 /// This trait marks that the given type maps onto a type defined in the
 /// MIRIAD data format.
 pub trait MiriadMappedType: Sized {
@@ -196,7 +192,9 @@ impl MiriadMappedType for u8 {
             vec.reserve(extra);
         }
 
-        unsafe { vec.set_len(values.len()); }
+        unsafe {
+            vec.set_len(values.len());
+        }
 
         vec.copy_from_slice(values);
     }
@@ -222,12 +220,13 @@ impl MiriadMappedType for i8 {
             vec.reserve(extra);
         }
 
-        unsafe { vec.set_len(values.len()); }
+        unsafe {
+            vec.set_len(values.len());
+        }
 
         vec.copy_from_slice(unsafe { std::mem::transmute::<&[i8], &[u8]>(values) });
     }
 }
-
 
 impl MiriadMappedType for i16 {
     const TYPE: Type = Type::Int16;
@@ -256,17 +255,18 @@ impl MiriadMappedType for i16 {
             vec.reserve(extra);
         }
 
-        unsafe { vec.set_len(2 * values.len()); }
+        unsafe {
+            vec.set_len(2 * values.len());
+        }
 
         let mut ofs = 0;
 
         for v in values {
-            BigEndian::write_i16(&mut vec[ofs..ofs+2], *v);
+            BigEndian::write_i16(&mut vec[ofs..ofs + 2], *v);
             ofs += 2;
         }
     }
 }
-
 
 impl MiriadMappedType for i32 {
     const TYPE: Type = Type::Int32;
@@ -295,12 +295,14 @@ impl MiriadMappedType for i32 {
             vec.reserve(extra);
         }
 
-        unsafe { vec.set_len(4 * values.len()); }
+        unsafe {
+            vec.set_len(4 * values.len());
+        }
 
         let mut ofs = 0;
 
         for v in values {
-            BigEndian::write_i32(&mut vec[ofs..ofs+4], *v);
+            BigEndian::write_i32(&mut vec[ofs..ofs + 4], *v);
             ofs += 4;
         }
     }
@@ -333,17 +335,18 @@ impl MiriadMappedType for i64 {
             vec.reserve(extra);
         }
 
-        unsafe { vec.set_len(8 * values.len()); }
+        unsafe {
+            vec.set_len(8 * values.len());
+        }
 
         let mut ofs = 0;
 
         for v in values {
-            BigEndian::write_i64(&mut vec[ofs..ofs+8], *v);
+            BigEndian::write_i64(&mut vec[ofs..ofs + 8], *v);
             ofs += 8;
         }
     }
 }
-
 
 impl MiriadMappedType for Complex<f32> {
     const TYPE: Type = Type::Complex64;
@@ -374,19 +377,20 @@ impl MiriadMappedType for Complex<f32> {
             vec.reserve(extra);
         }
 
-        unsafe { vec.set_len(8 * values.len()); }
+        unsafe {
+            vec.set_len(8 * values.len());
+        }
 
         let mut ofs = 0;
 
         for v in values {
-            BigEndian::write_f32(&mut vec[ofs..ofs+4], v.re);
+            BigEndian::write_f32(&mut vec[ofs..ofs + 4], v.re);
             ofs += 4;
-            BigEndian::write_f32(&mut vec[ofs..ofs+4], v.im);
+            BigEndian::write_f32(&mut vec[ofs..ofs + 4], v.im);
             ofs += 4;
         }
     }
 }
-
 
 impl MiriadMappedType for String {
     const TYPE: Type = Type::Text;
@@ -395,7 +399,7 @@ impl MiriadMappedType for String {
     fn vec_from_miriad_reader<R: Read>(mut stream: R) -> Result<Vec<Self>, Error> {
         let mut val = String::new();
         stream.read_to_string(&mut val)?;
-        Ok(vec!(val))
+        Ok(vec![val])
     }
 
     fn decode_buf_into_vec(buf: &[u8], vec: &mut Vec<Self>) {
@@ -412,7 +416,9 @@ impl MiriadMappedType for String {
             vec.reserve(extra);
         }
 
-        unsafe { vec.set_len(bytes.len()); }
+        unsafe {
+            vec.set_len(bytes.len());
+        }
 
         vec.copy_from_slice(bytes);
     }
@@ -422,7 +428,6 @@ impl MiriadMappedType for String {
         values[0].as_bytes().len()
     }
 }
-
 
 impl MiriadMappedType for f32 {
     const TYPE: Type = Type::Float32;
@@ -451,17 +456,18 @@ impl MiriadMappedType for f32 {
             vec.reserve(extra);
         }
 
-        unsafe { vec.set_len(4 * values.len()); }
+        unsafe {
+            vec.set_len(4 * values.len());
+        }
 
         let mut ofs = 0;
 
         for v in values {
-            BigEndian::write_f32(&mut vec[ofs..ofs+4], *v);
+            BigEndian::write_f32(&mut vec[ofs..ofs + 4], *v);
             ofs += 4;
         }
     }
 }
-
 
 impl MiriadMappedType for f64 {
     const TYPE: Type = Type::Float64;
@@ -490,19 +496,20 @@ impl MiriadMappedType for f64 {
             vec.reserve(extra);
         }
 
-        unsafe { vec.set_len(8 * values.len()); }
+        unsafe {
+            vec.set_len(8 * values.len());
+        }
 
         let mut ofs = 0;
 
         for v in values {
-            BigEndian::write_f64(&mut vec[ofs..ofs+8], *v);
+            BigEndian::write_f64(&mut vec[ofs..ofs + 8], *v);
             ofs += 8;
         }
     }
 }
 
-
-#[derive(Clone,Debug,PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum AnyMiriadValue {
     Binary(Vec<u8>),
     Int8(Vec<i8>),
@@ -522,60 +529,61 @@ impl AnyMiriadValue {
                 let mut vec = Vec::new();
                 u8::decode_buf_into_vec(buf, &mut vec);
                 AnyMiriadValue::Binary(vec)
-            },
+            }
 
             Type::Int8 => {
                 let mut vec = Vec::new();
                 i8::decode_buf_into_vec(buf, &mut vec);
                 AnyMiriadValue::Int8(vec)
-            },
+            }
 
             Type::Int16 => {
                 let mut vec = Vec::new();
                 i16::decode_buf_into_vec(buf, &mut vec);
                 AnyMiriadValue::Int16(vec)
-            },
+            }
 
             Type::Int32 => {
                 let mut vec = Vec::new();
                 i32::decode_buf_into_vec(buf, &mut vec);
                 AnyMiriadValue::Int32(vec)
-            },
+            }
 
             Type::Int64 => {
                 let mut vec = Vec::new();
                 i64::decode_buf_into_vec(buf, &mut vec);
                 AnyMiriadValue::Int64(vec)
-            },
+            }
 
             Type::Float32 => {
                 let mut vec = Vec::new();
                 f32::decode_buf_into_vec(buf, &mut vec);
                 AnyMiriadValue::Float32(vec)
-            },
+            }
 
             Type::Float64 => {
                 let mut vec = Vec::new();
                 f64::decode_buf_into_vec(buf, &mut vec);
                 AnyMiriadValue::Float64(vec)
-            },
+            }
 
             Type::Complex64 => {
                 let mut vec = Vec::new();
                 Complex::<f32>::decode_buf_into_vec(buf, &mut vec);
                 AnyMiriadValue::Complex64(vec)
-            },
+            }
 
-            Type::Text => {
-                AnyMiriadValue::Text(String::from_utf8_lossy(buf).into_owned())
-            },
+            Type::Text => AnyMiriadValue::Text(String::from_utf8_lossy(buf).into_owned()),
         }
     }
 }
 
 impl std::fmt::Display for AnyMiriadValue {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        fn do_vec<T: std::fmt::Display>(f: &mut std::fmt::Formatter, vec: &[T]) -> std::fmt::Result {
+        fn do_vec<T: std::fmt::Display>(
+            f: &mut std::fmt::Formatter,
+            vec: &[T],
+        ) -> std::fmt::Result {
             if vec.len() == 1 {
                 return f.write_fmt(format_args!("{}", vec[0]));
             }
@@ -598,14 +606,14 @@ impl std::fmt::Display for AnyMiriadValue {
         }
 
         match self {
-            &AnyMiriadValue::Binary(ref vec) => { do_vec(f, vec) }
-            &AnyMiriadValue::Int8(ref vec) => { do_vec(f, vec) }
-            &AnyMiriadValue::Int16(ref vec) => { do_vec(f, vec) }
-            &AnyMiriadValue::Int32(ref vec) => { do_vec(f, vec) }
-            &AnyMiriadValue::Int64(ref vec) => { do_vec(f, vec) }
-            &AnyMiriadValue::Float32(ref vec) => { do_vec(f, vec) }
-            &AnyMiriadValue::Float64(ref vec) => { do_vec(f, vec) }
-            &AnyMiriadValue::Complex64(ref vec) => { do_vec(f, vec) }
+            &AnyMiriadValue::Binary(ref vec) => do_vec(f, vec),
+            &AnyMiriadValue::Int8(ref vec) => do_vec(f, vec),
+            &AnyMiriadValue::Int16(ref vec) => do_vec(f, vec),
+            &AnyMiriadValue::Int32(ref vec) => do_vec(f, vec),
+            &AnyMiriadValue::Int64(ref vec) => do_vec(f, vec),
+            &AnyMiriadValue::Float32(ref vec) => do_vec(f, vec),
+            &AnyMiriadValue::Float64(ref vec) => do_vec(f, vec),
+            &AnyMiriadValue::Complex64(ref vec) => do_vec(f, vec),
             &AnyMiriadValue::Text(ref s) => {
                 f.write_str("\"")?;
                 f.write_str(s)?;
@@ -614,7 +622,6 @@ impl std::fmt::Display for AnyMiriadValue {
         }
     }
 }
-
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 enum ItemStorage {
@@ -695,10 +702,8 @@ impl InternalItemInfo {
     }
 }
 
-
 pub type ReadStream = AligningReader<io::BufReader<fs::File>>;
 pub type WriteStream = AligningWriter<io::BufWriter<fs::File>>;
-
 
 #[derive(Debug)]
 pub struct Item<'a> {
@@ -712,7 +717,6 @@ impl<'a> Item<'a> {
         self.name
     }
 
-
     pub fn is_large(&self) -> bool {
         match self.info.storage {
             ItemStorage::Small(_) => false,
@@ -720,21 +724,22 @@ impl<'a> Item<'a> {
         }
     }
 
-
     pub fn type_(&self) -> Type {
         self.info.ty
     }
-
 
     pub fn n_vals(&self) -> usize {
         self.info.n_vals()
     }
 
-
     pub fn read_vector<T: MiriadMappedType>(&self) -> Result<Vec<T>, Error> {
         // TODO: upcasting
         if T::TYPE != self.info.ty {
-            return mirerr!("expected variable of type {}, but found {}", T::TYPE, self.info.ty);
+            return mirerr!(
+                "expected variable of type {}, but found {}",
+                T::TYPE,
+                self.info.ty
+            );
         }
 
         match self.info.storage {
@@ -749,22 +754,23 @@ impl<'a> Item<'a> {
                 }
 
                 T::vec_from_miriad_reader(f)
-            },
+            }
         }
     }
-
 
     pub fn read_scalar<T: MiriadMappedType>(&self) -> Result<T, Error> {
         let vec = self.read_vector()?;
 
         if vec.len() != 1 {
-            return mirerr!("expected scalar value for {} but got {}-element vector",
-                            self.name, vec.len());
+            return mirerr!(
+                "expected scalar value for {} but got {}-element vector",
+                self.name,
+                vec.len()
+            );
         }
 
         Ok(vec.into_iter().next().unwrap())
     }
-
 
     pub fn into_lines(self) -> Result<io::Lines<io::BufReader<fs::File>>, Error> {
         if self.info.ty != Type::Text {
@@ -779,7 +785,6 @@ impl<'a> Item<'a> {
         // skip initial bytes.
         Ok(io::BufReader::new(self.dset.dir.open_file(self.name)?).lines())
     }
-
 
     pub fn into_byte_stream(self) -> Result<ReadStream, Error> {
         if let ItemStorage::Small(_) = self.info.storage {
@@ -799,7 +804,6 @@ impl<'a> Item<'a> {
     }
 }
 
-
 #[derive(Debug)]
 pub struct DataSet {
     dir: openat::Dir,
@@ -807,7 +811,6 @@ pub struct DataSet {
     large_items_scanned: bool,
     needs_flush: bool,
 }
-
 
 impl DataSet {
     pub fn open<P: openat::AsPath>(path: P) -> Result<Self, Error> {
@@ -870,14 +873,17 @@ impl DataSet {
                 }
 
                 let mut data = Vec::with_capacity(n_bytes);
-                unsafe { data.set_len(n_bytes); } // better way?
+                unsafe {
+                    data.set_len(n_bytes);
+                } // better way?
                 header.read_exact(&mut data[..])?;
 
                 (ty, data)
             };
 
             // TODO: could/should warn if a redundant item is encountered
-            ds.items.insert(name.to_owned(), InternalItemInfo::new_small(ty, data));
+            ds.items
+                .insert(name.to_owned(), InternalItemInfo::new_small(ty, data));
             header.align_to(16)?;
         }
 
@@ -885,7 +891,6 @@ impl DataSet {
 
         Ok(ds)
     }
-
 
     fn scan_large_items(&mut self) -> Result<(), Error> {
         for maybe_item in self.dir.list_dir(".")? {
@@ -911,7 +916,6 @@ impl DataSet {
         Ok(())
     }
 
-
     pub fn item_names<'a>(&'a mut self) -> Result<DataSetItemNamesIterator<'a>, Error> {
         if !self.large_items_scanned {
             self.scan_large_items()?;
@@ -921,7 +925,6 @@ impl DataSet {
         Ok(DataSetItemNamesIterator::new(self))
     }
 
-
     pub fn items<'a>(&'a mut self) -> Result<DataSetItemsIterator<'a>, Error> {
         if !self.large_items_scanned {
             self.scan_large_items()?;
@@ -930,7 +933,6 @@ impl DataSet {
 
         Ok(DataSetItemsIterator::new(self))
     }
-
 
     /// Get a handle to an item in this data set.
     ///
@@ -953,10 +955,10 @@ impl DataSet {
                                 return Ok(None);
                             }
                             return Err(ioe.into());
-                        },
+                        }
                         Err(e) => {
                             return Err(e);
-                        },
+                        }
                     }
                 }
             };
@@ -970,16 +972,13 @@ impl DataSet {
         }))
     }
 
-
     pub fn open_uv(&mut self) -> Result<visdata::Decoder, Error> {
         visdata::Decoder::create(self)
     }
 
-
     pub fn new_uv_like(&mut self, template: &visdata::Decoder) -> Result<visdata::Encoder, Error> {
         visdata::Encoder::new_like(self, template)
     }
-
 
     pub fn create_large_item(&mut self, name: &str, ty: Type) -> Result<WriteStream, Error> {
         if name == "header" {
@@ -999,22 +998,28 @@ impl DataSet {
         let mut stream = AligningWriter::new(io::BufWriter::new(self.dir.write_file(name, 0o666)?));
 
         match ty {
-            Type::Text | Type::Binary => {},
+            Type::Text | Type::Binary => {}
             _ => {
                 stream.write_i32::<BigEndian>(ty as i32)?;
-            },
+            }
         }
 
-        self.items.insert(name.to_owned(), InternalItemInfo {
-            ty: ty,
-            storage: ItemStorage::Large(0), // XXX size unknown
-        });
+        self.items.insert(
+            name.to_owned(),
+            InternalItemInfo {
+                ty: ty,
+                storage: ItemStorage::Large(0), // XXX size unknown
+            },
+        );
 
         Ok(stream)
     }
 
-
-    pub fn set_small_item<T: MiriadMappedType>(&mut self, name: &str, values: &[T]) -> Result<(), Error> {
+    pub fn set_small_item<T: MiriadMappedType>(
+        &mut self,
+        name: &str,
+        values: &[T],
+    ) -> Result<(), Error> {
         // Need to do this to ensure that we don't get a small item that masks
         // a large item.
         if !self.large_items_scanned {
@@ -1025,7 +1030,10 @@ impl DataSet {
         // TODO: validate name
 
         if !self.items.contains_key(name) {
-            self.items.insert(name.to_owned(), InternalItemInfo::new_small(T::TYPE, Vec::new()));
+            self.items.insert(
+                name.to_owned(),
+                InternalItemInfo::new_small(T::TYPE, Vec::new()),
+            );
         }
 
         let iii = self.items.get_mut(name).unwrap();
@@ -1037,7 +1045,10 @@ impl DataSet {
                 return mirerr!("value too large to be stored as a small MIRIAD header item");
             }
         } else {
-            return mirerr!("cannot set \"{}\" as a small item; would mask an existing large item", name);
+            return mirerr!(
+                "cannot set \"{}\" as a small item; would mask an existing large item",
+                name
+            );
         }
 
         iii.ty = T::TYPE;
@@ -1045,8 +1056,11 @@ impl DataSet {
         Ok(())
     }
 
-
-    pub fn set_scalar_item<T: MiriadMappedType>(&mut self, name: &str, value: T) -> Result<(), Error> {
+    pub fn set_scalar_item<T: MiriadMappedType>(
+        &mut self,
+        name: &str,
+        value: T,
+    ) -> Result<(), Error> {
         self.set_small_item(name, &[value])
     }
 
@@ -1054,10 +1068,11 @@ impl DataSet {
     /// means that the "header" file is rewritten.
     pub fn flush(&mut self) -> Result<(), Error> {
         if !self.needs_flush {
-            return Ok(())
+            return Ok(());
         }
 
-        let mut stream = AligningWriter::new(io::BufWriter::new(self.dir.write_file("header", 0o666)?));
+        let mut stream =
+            AligningWriter::new(io::BufWriter::new(self.dir.write_file("header", 0o666)?));
 
         for (name, item) in &self.items {
             if let ItemStorage::Small(ref data) = item.storage {
@@ -1078,11 +1093,7 @@ impl DataSet {
 
                 let alignment = std::cmp::max(4, item.ty.size());
                 let excess = (stream.offset() as usize + 4) % alignment;
-                let n_alignment_bytes = if excess == 0 {
-                    0
-                } else {
-                    alignment - excess
-                };
+                let n_alignment_bytes = if excess == 0 { 0 } else { alignment - excess };
 
                 buf[15] = (4 + n_alignment_bytes + n_bytes) as u8;
                 stream.write_all(&buf)?;
@@ -1105,14 +1116,12 @@ impl DataSet {
     }
 }
 
-
 impl Drop for DataSet {
     fn drop(&mut self) {
         // cf: https://github.com/rust-lang/rust/issues/32677
         let _r = self.flush();
     }
 }
-
 
 /// This helper struct stores state when iterating over the item names
 /// provided by a MIRIAD data set.
@@ -1136,7 +1145,6 @@ impl<'a> Iterator for DataSetItemNamesIterator<'a> {
         self.inner.next().map(|s| s.as_ref())
     }
 }
-
 
 /// This helper struct stores state when iterating over the items inside a
 /// MIRIAD data set.

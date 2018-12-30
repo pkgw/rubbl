@@ -10,17 +10,18 @@ this shows how the rubbl MIRIAD API is used.
 extern crate clap;
 extern crate rubbl_miriad;
 
-use clap::{Arg, App};
-
+use clap::{App, Arg};
 
 fn main() {
     let matches = App::new("dsls")
         .version("0.1.0")
         .about("Describe the contents of a MIRIAD data set.")
-        .arg(Arg::with_name("PATH")
-             .help("The path to the dataset directory")
-             .required(true)
-             .index(1))
+        .arg(
+            Arg::with_name("PATH")
+                .help("The path to the dataset directory")
+                .required(true)
+                .index(1),
+        )
         .get_matches();
 
     let path = matches.value_of_os("PATH").unwrap();
@@ -33,7 +34,8 @@ fn main() {
         }
     };
 
-    for maybe_line in ds.get("history")
+    for maybe_line in ds
+        .get("history")
         .expect("cannot probe history")
         .expect("no history item")
         .into_lines()

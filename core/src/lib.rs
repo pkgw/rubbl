@@ -15,7 +15,8 @@ the Rubbl framework.
 extern crate byteorder;
 extern crate clap;
 extern crate failure;
-#[macro_use] extern crate failure_derive;
+#[macro_use]
+extern crate failure_derive;
 extern crate ndarray;
 extern crate num_complex;
 extern crate termcolor;
@@ -26,7 +27,6 @@ extern crate termcolor;
 pub use failure::{Error, Fail, ResultExt};
 pub use ndarray::Array;
 pub use num_complex::Complex;
-
 
 /// A “contextualized try” macro.
 ///
@@ -50,7 +50,6 @@ macro_rules! ctry {
         }
     }
 }
-
 
 pub mod io;
 pub mod notify;

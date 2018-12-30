@@ -14,14 +14,14 @@ engine. (Which the author of this module also wrote.)
 
 */
 
-#[macro_use] pub mod termcolor;
+#[macro_use]
+pub mod termcolor;
 
 use clap;
 use failure::Error;
 use std::cmp;
 use std::fmt::Arguments;
 use std::result::Result as StdResult;
-
 
 /// How chatty the notification system should be.
 #[repr(usize)]
@@ -55,7 +55,6 @@ impl Ord for ChatterLevel {
     }
 }
 
-
 /// The kind of notification that is being produced.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum NotificationKind {
@@ -72,7 +71,6 @@ pub enum NotificationKind {
     Fatal,
 }
 
-
 /// Trait for type that handle notifications to the user.
 pub trait NotificationBackend {
     /// Notify the user about an event.
@@ -81,7 +79,6 @@ pub trait NotificationBackend {
     /// be reported after the main message.
     fn notify(&mut self, kind: NotificationKind, args: Arguments, err: Option<Error>);
 }
-
 
 /// Send an informational notification to the user.
 ///
@@ -154,25 +151,23 @@ macro_rules! rn_fatal {
     };
 }
 
-
 /// A no-op notification backend.
 ///
 /// This empty structure implements the NotificationBackend trait. Its
 /// `notify()` function does nothing.
 #[derive(Clone, Copy, Debug)]
-pub struct NoopNotificationBackend { }
+pub struct NoopNotificationBackend {}
 
 impl NoopNotificationBackend {
     /// Create a new NoopNotificationBackend object.
     pub fn new() -> NoopNotificationBackend {
-        NoopNotificationBackend { }
+        NoopNotificationBackend {}
     }
 }
 
 impl NotificationBackend for NoopNotificationBackend {
     fn notify(&mut self, _kind: NotificationKind, _args: Arguments, _err: Option<Error>) {}
 }
-
 
 #[derive(Debug)]
 struct NotificationData {
@@ -203,7 +198,6 @@ impl BufferingNotificationBackend {
     }
 }
 
-
 impl NotificationBackend for BufferingNotificationBackend {
     fn notify(&mut self, kind: NotificationKind, args: Arguments, err: Option<Error>) {
         self.buf.push(NotificationData {
@@ -214,7 +208,6 @@ impl NotificationBackend for BufferingNotificationBackend {
     }
 }
 
-
 /// An extension trait for adding standard notification arguments to a clap
 /// App object.
 pub trait ClapNotificationArgsExt {
@@ -224,26 +217,28 @@ pub trait ClapNotificationArgsExt {
 
 impl<'a, 'b> ClapNotificationArgsExt for clap::App<'a, 'b> {
     fn rubbl_notify_args(self) -> Self {
-        self.arg(clap::Arg::with_name("chatter_level")
-                 .long("chatter")
-                 .short("c")
-                 .value_name("LEVEL")
-                 .help("How much chatter to print when running")
-                 .possible_values(&["default", "minimal"])
-                 .default_value("default"))
+        self.arg(
+            clap::Arg::with_name("chatter_level")
+                .long("chatter")
+                .short("c")
+                .value_name("LEVEL")
+                .help("How much chatter to print when running")
+                .possible_values(&["default", "minimal"])
+                .default_value("default"),
+        )
     }
 }
 
-
 /// Run a function with colorized reporting of errors.
 pub fn run_with_notifications<'a, E, F>(matches: clap::ArgMatches<'a>, inner: F) -> i32
-    where E: Into<Error>,
-          F: FnOnce(clap::ArgMatches<'a>, &mut NotificationBackend) -> StdResult<i32, E>
+where
+    E: Into<Error>,
+    F: FnOnce(clap::ArgMatches<'a>, &mut NotificationBackend) -> StdResult<i32, E>,
 {
     let chatter = match matches.value_of("chatter_level").unwrap() {
         "default" => ChatterLevel::Normal,
         "minimal" => ChatterLevel::Minimal,
-        _ => unreachable!()
+        _ => unreachable!(),
     };
 
     // Set up colorized output. At one point we might add an option to disable
