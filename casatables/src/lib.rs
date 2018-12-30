@@ -399,7 +399,7 @@ impl Table {
             None => {
                 return Err(err_msg(
                     "table paths must be representable as UTF-8 strings",
-                ))
+                ));
             }
         };
         let cpath = glue::StringBridge::from_rust(spath);
