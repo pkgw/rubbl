@@ -19,7 +19,7 @@ failure = "^0.1"
 failure_derive = "^0.1"
 itertools = "^0.8"
 ndarray = "^0.12"
-nom = "^4.1"
+nom = "^4.2"
 num-traits = "^0.2"
 pbr = "^1.0"
 rubbl_casatables_impl = { version = "0.1.1", path = "../casatables_impl" }
