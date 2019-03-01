@@ -21,6 +21,7 @@ matrix:
       rust: nightly
   allow_failures:
     - rust: nightly
+    - rust: beta # TEMPORARY: rustfmt change
 
 before_script:
   - rustup component add rustfmt
