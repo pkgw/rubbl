@@ -8,7 +8,7 @@ authors = ["Peter Williams <peter@newton.cx>"]
 license = "MIT"
 
 [dependencies]
-clap = "^2.26"
+clap = "^2.33"
 failure = "^0.1"
 failure_derive = "^0.1"
 rubbl_core = { version = "0.1.1", path = "../core" }
