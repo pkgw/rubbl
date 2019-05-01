@@ -21,7 +21,6 @@ matrix:
       rust: nightly
   allow_failures:
     - rust: nightly
-    - rust: beta # TEMPORARY: rustfmt change
 
 # Don't build branches besides master -- note that PR's still get built! This
 # prevents PRs being built twice in the standard workflow.
