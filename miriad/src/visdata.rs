@@ -180,7 +180,9 @@ impl Decoder {
                     }
 
                     if n_bytes % var.ty.size() as i32 != 0 {
-                        return mirerr!("invalid visdata: non-integral number of elements in array");
+                        return mirerr!(
+                            "invalid visdata: non-integral number of elements in array"
+                        );
                     }
 
                     var.n_vals = (n_bytes / (var.ty.size() as i32)) as isize;
@@ -287,7 +289,9 @@ impl Decoder {
                     }
 
                     if n_bytes % var.ty.size() as i32 != 0 {
-                        return mirerr!("invalid visdata: non-integral number of elements in array");
+                        return mirerr!(
+                            "invalid visdata: non-integral number of elements in array"
+                        );
                     }
 
                     var.n_vals = (n_bytes / (var.ty.size() as i32)) as isize;
