@@ -1,4 +1,4 @@
-// Copyright 2017 Peter Williams <peter@newton.cx> and collaborators
+// Copyright 2017-2019 Peter Williams <peter@newton.cx> and collaborators
 // Licensed under the MIT License.
 
 extern crate failure;
@@ -892,10 +892,11 @@ impl Table {
         }
     }
 
-    pub fn get_row_writer(&mut self) -> Result<TableRow, CasacoreError> {
+    fn get_row_handle(&mut self, is_read_only: bool) -> Result<TableRow, CasacoreError> {
         let mut exc_info = unsafe { std::mem::zeroed::<glue::ExcInfo>() };
+        let ro_flag = if is_read_only { 1 } else { 0 };
 
-        let handle = unsafe { glue::table_row_alloc(self.handle, 0, &mut exc_info) };
+        let handle = unsafe { glue::table_row_alloc(self.handle, ro_flag, &mut exc_info) };
         if handle.is_null() {
             return exc_info.as_err();
         }
@@ -904,6 +905,22 @@ impl Table {
             handle: handle,
             exc_info: exc_info,
         })
+    }
+
+    pub fn get_row_reader(&mut self) -> Result<TableRow, CasacoreError> {
+        self.get_row_handle(true)
+    }
+
+    pub fn get_row_writer(&mut self) -> Result<TableRow, CasacoreError> {
+        self.get_row_handle(false)
+    }
+
+    pub fn read_row(&mut self, row: &mut TableRow, row_number: u64) -> Result<(), Error> {
+        if unsafe { glue::table_row_read(row.handle, row_number, &mut row.exc_info) } != 0 {
+            return row.exc_info.as_err();
+        }
+
+        Ok(())
     }
 
     pub fn for_each_row<F>(&mut self, mut func: F) -> Result<(), Error>
