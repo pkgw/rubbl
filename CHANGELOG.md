@@ -1,3 +1,8 @@
+# `rubbl_casatables` 0.1.3 (2019 Jun 10)
+
+- Fix compilation with some older C++ compilers.
+- Update to `casatables_impl` 0.2.31100.
+
 # `rubbl_casatables_impl` 0.2.31100 (2019 Jun 10)
 
 - Fix compilation with some older C++ compilers.
