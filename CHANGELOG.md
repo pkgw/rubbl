@@ -1,3 +1,10 @@
+# `rubbl_casatables` 0.1.2 (2019 Jun 10)
+
+- Update to `casatables_impl` 0.2.311.
+- Add a couple more routines for row-based data retrieval.
+- Clearly remove the confusing `spwglue` example, superseded by my `rxpackage`
+  version.
+
 # `rubbl_casatables_impl` 0.2.311 (2019 Jun 10)
 
 - Update to casacore 3.1.1 — this version is now encoded in

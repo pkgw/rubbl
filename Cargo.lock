@@ -339,7 +339,7 @@ dependencies = [
 
 [[package]]
 name = "rubbl_casatables"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "byteorder 1.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "cc 1.0.37 (registry+https://github.com/rust-lang/crates.io-index)",
