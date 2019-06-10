@@ -224,16 +224,8 @@ inline Complex square(const Complex &val) { return val*val; }
 inline DComplex cube(const DComplex &val) { return val*val*val; }
 inline Complex cube(const Complex &val) { return val*val*val; }
 
-// The log10 should be in stl
-// <group>
-#if defined(NEEDS_LOG10_COMPLEX)
-Complex log10(const Complex &val);
-DComplex log10(const DComplex &val);
-#endif
-// </group>
-
-// ArrayMath::pow needs this pow function (on SGI).
-inline Complex pow(const Complex& val, Double p) { return std::pow(val,Float(p)); }
+// ArrayMath::pow needs this pow function.
+///inline Complex pow(const Complex& val, Double p) { return std::pow(val,Float(p)); }
 
 // We have to explicitly implement these for different type operands
 inline DComplex operator+(const DComplex& d, const Complex& c) {
@@ -357,16 +349,9 @@ Complex erfc(const Complex &in);
 
 // Define real & complex conjugation for non-complex types
 // and put comparisons into std namespace.
-// The new C++11 standard library already defines real and imag.
 namespace std { 
   inline float  conj(float  x) { return x; }
   inline double conj(double x) { return x; }
-#if !(defined(AIPS_CXX11) || (defined(__APPLE_CC__) && __APPLE_CC__ > 5621))
-  inline float  real(float  x) { return x; }
-  inline double real(double x) { return x; }
-  inline float  imag(float   ) { return 0; }
-  inline double imag(double  ) { return 0; }
-#endif  
   using casacore::operator>;
   using casacore::operator>=;
   using casacore::operator<;

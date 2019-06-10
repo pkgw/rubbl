@@ -1116,53 +1116,58 @@ template<class T> T mean(const Array<T> &a)
 // <thrown>
 //    </item> ArrayError
 // </thrown>
+// Similar to numpy the ddof argument can be used to get the population
+// variance (ddof=0) or the sample variance (ddof=1).
+template<class T> T pvariance(const Array<T> &a, T mean, uInt ddof)
+{
+  if (a.nelements() < ddof+1) {
+    throw(ArrayError("::variance(const Array<T> &) - Need at least " +
+                     String::toString(ddof+1) + 
+                     " elements"));
+  }
+  T sum = a.contiguousStorage() ?
+    std::accumulate(a.cbegin(), a.cend(), T(), casacore::SumSqrDiff<T>(mean)) :
+    std::accumulate(a.begin(),  a.end(),  T(), casacore::SumSqrDiff<T>(mean));
+  return T(sum/(1.0*a.nelements() - ddof));
+}
 template<class T> T variance(const Array<T> &a, T mean)
 {
-    if (a.nelements() < 2) {
-	throw(ArrayError("::variance(const Array<T> &,T) - Need at least 2 "
-			 "elements"));
-    }
-    T sum = a.contiguousStorage() ?
-      std::accumulate(a.cbegin(), a.cend(), T(), casacore::SumSqrDiff<T>(mean)) :
-      std::accumulate(a.begin(),  a.end(),  T(), casacore::SumSqrDiff<T>(mean));
-    return T(sum/(1.0*a.nelements() - 1));
+  return pvariance (a, mean, 1);
 }
-
-// <thrown>
-//    </item> ArrayError
-// </thrown>
+template<class T> T pvariance(const Array<T> &a, uInt ddof)
+{
+  return pvariance(a, mean(a), ddof);
+}
 template<class T> T variance(const Array<T> &a)
 {
-    if (a.nelements() < 2) {
-	throw(ArrayError("::variance(const Array<T> &) - Need at least 2 "
-			 "elements"));
-    }
-    return variance(a, mean(a));
+  return pvariance(a, mean(a), 1);
 }
 
 // <thrown>
 //    </item> ArrayError
 // </thrown>
-template<class T> T stddev(const Array<T> &a)
+template<class T> T pstddev(const Array<T> &a, T mean, uInt ddof)
 {
-    if (a.nelements() < 2) {
-	throw(ArrayError("::stddev(const Array<T> &) - Need at least 2 "
-			 "elements"));
-    }
-    return sqrt(variance(a));
+  if (a.nelements() < ddof+1) {
+    throw(ArrayError("::stddev(const Array<T> &) - Need at least " +
+                     String::toString(ddof+1) + 
+                     " elements"));
+  }
+  return sqrt(pvariance(a, mean, ddof));
 }
-
-// <thrown>
-//    </item> ArrayError
-// </thrown>
 template<class T> T stddev(const Array<T> &a, T mean)
 {
-    if (a.nelements() < 2) {
-	throw(ArrayError("::stddev(const Array<T> &,T) - Need at least 2 "
-			 "elements"));
-    }
-    return sqrt(variance(a, mean));
+  return pstddev (a, mean, 1);
 }
+template<class T> T pstddev(const Array<T> &a, uInt ddof)
+{
+  return pstddev (a, mean(a), ddof);
+}
+template<class T> T stddev(const Array<T> &a)
+{
+  return pstddev (a, mean(a), 1);
+}
+
 
 // <thrown>
 //    </item> ArrayError
@@ -1430,14 +1435,18 @@ template<class T>
 void expandArray (Array<T>& out, const Array<T>& in,
                   const IPosition& alternate)
 {
-  IPosition mult;
-  IPosition alt = checkExpandArray (mult, in.shape(), out.shape(),
-                                    alternate);
+  IPosition mult, inshp, outshp;
+  IPosition alt = checkExpandArray (mult, inshp,
+                                    in.shape(), out.shape(), alternate);
+  Array<T> incp(in);
+  if (in.ndim() < inshp.size()) {
+    incp.reference (in.reform(inshp));
+  }
   // Make sure output is contiguous.
   Bool deleteIt;
   T* outPtr = out.getStorage (deleteIt);
-  expandRecursive (in.ndim()-1, in.shape(), mult, in.steps(),
-                   in.data(), outPtr, alt);
+  expandRecursive (out.ndim()-1, inshp, mult, incp.steps(),
+                   incp.data(), outPtr, alt);
   out.putStorage (outPtr, deleteIt);
 }
 
@@ -1448,6 +1457,7 @@ T* expandRecursive (int axis, const IPosition& shp, const IPosition& mult,
 {
   if (axis == 0) {
     if (alternate[0]) {
+      // Copy as 1,2,3 1,2,3, etc.
       for (uInt j=0; j<mult[0]; ++j) {
         const T* pin = in;
         for (uInt i=0; i<shp[0]; ++i) {
@@ -1456,6 +1466,7 @@ T* expandRecursive (int axis, const IPosition& shp, const IPosition& mult,
         }
       }
     } else {
+      // Copy as 1,1,1 2,2,2 etc.
       for (uInt i=0; i<shp[0]; ++i) {
         for (uInt j=0; j<mult[0]; ++j) {
           *out++ = *in;

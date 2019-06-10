@@ -279,7 +279,7 @@ protected:
   Double getLat(Double ln) const;
   //# Data
   // Position vector (in m)
-  Vector<Double> & xyz;
+  Vector<Double> xyz;
 };
 
 //# Global functions

@@ -34,11 +34,7 @@
 
 //# Forward declarations
 //template <class T, class U> class vector; 
-#if defined(WHATEVER_VECTOR_FORWARD_DEC)
-WHATEVER_VECTOR_FORWARD_DEC;
-#else
 #include <casacore/casa/stdvector.h>
-#endif
 
 namespace casacore { //#Begin namespace casacore
 
@@ -317,7 +313,6 @@ private:
 
 
 //# Declare extern templates for often used types.
-#ifdef AIPS_CXX11
   extern template class Vector<Bool>;
   extern template class Vector<Char>;
   extern template class Vector<Short>;
@@ -330,7 +325,6 @@ private:
   extern template class Vector<Complex>;
   extern template class Vector<DComplex>;
   extern template class Vector<String>;
-#endif
 
 } //#End namespace casacore
 
