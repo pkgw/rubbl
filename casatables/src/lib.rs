@@ -1087,6 +1087,8 @@ impl TableRow {
         Ok(result)
     }
 
+    /// Note: I am not sure if this function actually works. `Table.put_cell`
+    /// does work. Investigation required.
     pub fn put_cell<T: CasaDataType>(
         &mut self,
         col_name: &str,
