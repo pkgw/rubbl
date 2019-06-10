@@ -57,7 +57,7 @@ fn main() {
                     in_path.to_string_lossy(),
                     out_path.to_string_lossy()
                 );
-                for cause in e.causes() {
+                for cause in e.iter_chain() {
                     println!("  caused by: {}", cause);
                 }
                 1
