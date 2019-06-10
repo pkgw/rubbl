@@ -351,13 +351,13 @@ dependencies = [
  "nom 4.2.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "num-traits 0.2.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "pbr 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "rubbl_casatables_impl 0.2.311",
+ "rubbl_casatables_impl 0.2.31100",
  "rubbl_core 0.1.2",
 ]
 
 [[package]]
 name = "rubbl_casatables_impl"
-version = "0.2.311"
+version = "0.2.31100"
 dependencies = [
  "cc 1.0.37 (registry+https://github.com/rust-lang/crates.io-index)",
 ]

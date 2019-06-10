@@ -1,3 +1,9 @@
+# `rubbl_casatables_impl` 0.2.31100 (2019 Jun 10)
+
+- Fix compilation with some older C++ compilers.
+- Bump version number — now we can make new releases of this package even if
+  the underlying version of casacore stays the same.
+
 # `rubbl_casatables` 0.1.2 (2019 Jun 10)
 
 - Update to `casatables_impl` 0.2.311.
