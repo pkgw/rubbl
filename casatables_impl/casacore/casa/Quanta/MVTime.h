@@ -324,7 +324,7 @@ class MVTime {
 	Format(const Format &other) :
 	typ(other.typ), prec(other.prec) {;};
 
-	constexpr Format& operator=(const Format&) = default;
+	Format& operator=(const Format&) = default;
 
 	private:
 	MVTime::formatTypes typ;

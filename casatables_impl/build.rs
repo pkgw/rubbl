@@ -309,6 +309,7 @@ fn main() {
     cc::Build::new()
         .cpp(true)
         .warnings(true)
+        .flag_if_supported("-std=c++11")
         .include(".")
         .files(FILES)
         .compile("libcasatables_impl.a");
