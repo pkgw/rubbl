@@ -1,9 +1,9 @@
-# Copyright 2017-2018 Peter Williams <peter@newton.cx> and collaborators
+# Copyright 2017-2019 Peter Williams <peter@newton.cx> and collaborators
 # Licensed under the MIT License.
 
 [package]
 name = "rubbl_casatables_impl"
-version = "0.1.1"
+version = "0.2.31100"
 authors = ["Peter Williams <peter@newton.cx>"]
 license = "GPL-2.0+"
 homepage = "https://github.com/pkgw/rubbl"

@@ -35,28 +35,28 @@ extern "C" {
 
     // StringBridge
 
-    casa::String
+    casacore::String
     bridge_string(const StringBridge &input)
     {
-        casa::String result((const char *) input.data, input.n_bytes);
+        casacore::String result((const char *) input.data, input.n_bytes);
         return result;
     }
 
     void
-    unbridge_string(const casa::String &input, StringBridge &dest)
+    unbridge_string(const casacore::String &input, StringBridge &dest)
     {
         dest.data = input.data();
         dest.n_bytes = input.length();
     }
 
-    casa::Array<casa::String>
-    bridge_string_array(const StringBridge *source, const casa::IPosition &shape)
+    casacore::Array<casacore::String>
+    bridge_string_array(const StringBridge *source, const casacore::IPosition &shape)
     {
-        casa::Array<casa::String> array(shape);
+        casacore::Array<casacore::String> array(shape);
         unsigned int n = 0;
-        casa::Array<casa::String>::iterator end = array.end();
+        casacore::Array<casacore::String>::iterator end = array.end();
 
-        for (casa::Array<casa::String>::iterator i = array.begin(); i != end; i++, n++)
+        for (casacore::Array<casacore::String>::iterator i = array.begin(); i != end; i++, n++)
             *i = bridge_string(source[n]);
 
         return array;
@@ -64,12 +64,12 @@ extern "C" {
 
     // We have to assume that destination has enough space.
     void
-    unbridge_string_array(const casa::Array<casa::String> &input, StringBridge *dest)
+    unbridge_string_array(const casacore::Array<casacore::String> &input, StringBridge *dest)
     {
         unsigned int n = 0;
-        casa::Array<casa::String>::const_iterator end = input.end();
+        casacore::Array<casacore::String>::const_iterator end = input.end();
 
-        for (casa::Array<casa::String>::const_iterator i = input.begin(); i != end; i++, n++) {
+        for (casacore::Array<casacore::String>::const_iterator i = input.begin(); i != end; i++, n++) {
             dest[n].data = (*i).data();
             dest[n].n_bytes = (*i).length();
         }
@@ -81,38 +81,38 @@ extern "C" {
     data_type_get_element_size(const GlueDataType ty)
     {
         switch (ty) {
-        case casa::TpBool: return sizeof(casa::Bool);
-        case casa::TpChar: return sizeof(casa::Char);
-        case casa::TpUChar: return sizeof(casa::uChar);
-        case casa::TpShort: return sizeof(casa::Short);
-        case casa::TpUShort: return sizeof(casa::uShort);
-        case casa::TpInt: return sizeof(casa::Int);
-        case casa::TpUInt: return sizeof(casa::uInt);
-        case casa::TpFloat: return sizeof(float);
-        case casa::TpDouble: return sizeof(double);
-        case casa::TpComplex: return sizeof(casa::Complex);
-        case casa::TpDComplex: return sizeof(casa::DComplex);
-        case casa::TpString: return -1;
-        case casa::TpTable: return -1;
-        case casa::TpArrayBool: return sizeof(casa::Bool);
-        case casa::TpArrayChar: return sizeof(casa::Char);
-        case casa::TpArrayUChar: return sizeof(casa::uChar);
-        case casa::TpArrayShort: return sizeof(casa::Short);
-        case casa::TpArrayUShort: return sizeof(casa::uShort);
-        case casa::TpArrayInt: return sizeof(casa::Int);
-        case casa::TpArrayUInt: return sizeof(casa::uInt);
-        case casa::TpArrayFloat: return sizeof(float);
-        case casa::TpArrayDouble: return sizeof(double);
-        case casa::TpArrayComplex: return sizeof(casa::Complex);
-        case casa::TpArrayDComplex: return sizeof(casa::DComplex);
-        case casa::TpArrayString: return -1;
-        case casa::TpRecord: return -1;
-        case casa::TpOther: return -1;
-        case casa::TpQuantity: return -1;
-        case casa::TpArrayQuantity: return -1;
-        case casa::TpInt64: return sizeof(casa::Int64);
-        case casa::TpArrayInt64: return sizeof(casa::Int64);
-        case casa::TpNumberOfTypes: return -1; // shut up compiler warning
+        case casacore::TpBool: return sizeof(casacore::Bool);
+        case casacore::TpChar: return sizeof(casacore::Char);
+        case casacore::TpUChar: return sizeof(casacore::uChar);
+        case casacore::TpShort: return sizeof(casacore::Short);
+        case casacore::TpUShort: return sizeof(casacore::uShort);
+        case casacore::TpInt: return sizeof(casacore::Int);
+        case casacore::TpUInt: return sizeof(casacore::uInt);
+        case casacore::TpFloat: return sizeof(float);
+        case casacore::TpDouble: return sizeof(double);
+        case casacore::TpComplex: return sizeof(casacore::Complex);
+        case casacore::TpDComplex: return sizeof(casacore::DComplex);
+        case casacore::TpString: return -1;
+        case casacore::TpTable: return -1;
+        case casacore::TpArrayBool: return sizeof(casacore::Bool);
+        case casacore::TpArrayChar: return sizeof(casacore::Char);
+        case casacore::TpArrayUChar: return sizeof(casacore::uChar);
+        case casacore::TpArrayShort: return sizeof(casacore::Short);
+        case casacore::TpArrayUShort: return sizeof(casacore::uShort);
+        case casacore::TpArrayInt: return sizeof(casacore::Int);
+        case casacore::TpArrayUInt: return sizeof(casacore::uInt);
+        case casacore::TpArrayFloat: return sizeof(float);
+        case casacore::TpArrayDouble: return sizeof(double);
+        case casacore::TpArrayComplex: return sizeof(casacore::Complex);
+        case casacore::TpArrayDComplex: return sizeof(casacore::DComplex);
+        case casacore::TpArrayString: return -1;
+        case casacore::TpRecord: return -1;
+        case casacore::TpOther: return -1;
+        case casacore::TpQuantity: return -1;
+        case casacore::TpArrayQuantity: return -1;
+        case casacore::TpInt64: return sizeof(casacore::Int64);
+        case casacore::TpArrayInt64: return sizeof(casacore::Int64);
+        case casacore::TpNumberOfTypes: return -1; // shut up compiler warning
         }
 
         return -1;
@@ -167,7 +167,7 @@ extern "C" {
     table_get_column_names(const GlueTable &table, StringBridge *col_names, ExcInfo &exc)
     {
         try {
-            casa::Vector<casa::String> cnames = table.actualTableDesc().columnNames();
+            casacore::Vector<casacore::String> cnames = table.actualTableDesc().columnNames();
 
             for (size_t i = 0; i < cnames.size(); i++)
                 unbridge_string(cnames[i], col_names[i]);
@@ -203,10 +203,10 @@ extern "C" {
     {
         try {
             StringBridge name;
-            const casa::TableRecord &rec = table.keywordSet();
-            casa::uInt n_kws = rec.nfields();
+            const casacore::TableRecord &rec = table.keywordSet();
+            casacore::uInt n_kws = rec.nfields();
 
-            for (casa::uInt i = 0; i < n_kws; i++) {
+            for (casacore::uInt i = 0; i < n_kws; i++) {
                 unbridge_string(rec.name(i), name);
                 callback(&name, rec.type(i), ctxt);
             }
@@ -222,7 +222,7 @@ extern "C" {
     table_copy_rows(const GlueTable &source, GlueTable &dest, ExcInfo &exc)
     {
         try {
-            casa::TableCopy::copyRows(dest, source);
+            casacore::TableCopy::copyRows(dest, source);
         } catch (...) {
             handle_exception(exc);
             return 1;
@@ -257,9 +257,9 @@ extern "C" {
                           unsigned long dims[8], ExcInfo &exc)
     {
         try {
-            casa::TableColumn col(table, bridge_string(col_name));
-            const casa::ColumnDesc &desc = col.columnDesc();
-            const casa::IPosition &shape = desc.shape();
+            casacore::TableColumn col(table, bridge_string(col_name));
+            const casacore::ColumnDesc &desc = col.columnDesc();
+            const casacore::IPosition &shape = desc.shape();
 
             if (shape.size() > 8)
                 throw std::runtime_error("cannot handle columns with data of dimensionality greater than 8");
@@ -287,36 +287,36 @@ extern "C" {
                                  void *data, ExcInfo &exc)
     {
         try {
-            const casa::ColumnDesc &desc = casa::TableColumn(table, bridge_string(col_name)).columnDesc();
-            casa::IPosition shape(1, table.nrow());
+            const casacore::ColumnDesc &desc = casacore::TableColumn(table, bridge_string(col_name)).columnDesc();
+            casacore::IPosition shape(1, table.nrow());
 
             switch (desc.dataType()) {
 
 #define CASE(DTYPE, CPPTYPE) \
-            case casa::DTYPE: { \
-                casa::ScalarColumn<CPPTYPE> col(table, bridge_string(col_name)); \
-                casa::Vector<CPPTYPE> vec(shape, (CPPTYPE *) data, casa::SHARE); \
+            case casacore::DTYPE: { \
+                casacore::ScalarColumn<CPPTYPE> col(table, bridge_string(col_name)); \
+                casacore::Vector<CPPTYPE> vec(shape, (CPPTYPE *) data, casacore::SHARE); \
                 col.getColumn(vec); \
                 break; \
             }
 
-            CASE(TpBool, casa::Bool)
-            CASE(TpChar, casa::Char)
-            CASE(TpUChar, casa::uChar)
-            CASE(TpShort, casa::Short)
-            CASE(TpUShort, casa::uShort)
-            CASE(TpInt, casa::Int)
-            CASE(TpUInt, casa::uInt)
+            CASE(TpBool, casacore::Bool)
+            CASE(TpChar, casacore::Char)
+            CASE(TpUChar, casacore::uChar)
+            CASE(TpShort, casacore::Short)
+            CASE(TpUShort, casacore::uShort)
+            CASE(TpInt, casacore::Int)
+            CASE(TpUInt, casacore::uInt)
             CASE(TpFloat, float)
             CASE(TpDouble, double)
-            CASE(TpComplex, casa::Complex)
-            CASE(TpDComplex, casa::DComplex)
+            CASE(TpComplex, casacore::Complex)
+            CASE(TpDComplex, casacore::DComplex)
 
 #undef CASE
 
-            case casa::TpString: {                                         \
-                casa::ScalarColumn<casa::String> col(table, bridge_string(col_name));
-                casa::Vector<casa::String> vec(shape);
+            case casacore::TpString: {                                         \
+                casacore::ScalarColumn<casacore::String> col(table, bridge_string(col_name));
+                casacore::Vector<casacore::String> vec(shape);
                 col.getColumn(vec);
                 unbridge_string_array(vec, (StringBridge *) data);
                 break;
@@ -339,8 +339,8 @@ extern "C" {
                         int *n_dim, unsigned long dims[8], ExcInfo &exc)
     {
         try {
-            casa::TableColumn col(table, bridge_string(col_name));
-            const casa::ColumnDesc &desc = col.columnDesc();
+            casacore::TableColumn col(table, bridge_string(col_name));
+            const casacore::ColumnDesc &desc = col.columnDesc();
 
             *data_type = desc.dataType();
 
@@ -352,7 +352,7 @@ extern "C" {
                 if (*n_dim > 8)
                     throw std::runtime_error("cannot handle cells with data of dimensionality greater than 8");
 
-                const casa::IPosition shape = col.shape(row_number);
+                const casacore::IPosition shape = col.shape(row_number);
 
                 for (int i = 0; i < *n_dim; i++)
                     dims[*n_dim - 1 - i] = (unsigned long) shape[i];
@@ -372,9 +372,9 @@ extern "C" {
                    const unsigned long row_number, void *data, ExcInfo &exc)
     {
         try {
-            casa::TableColumn col(table, bridge_string(col_name));
-            const casa::ColumnDesc &desc = col.columnDesc();
-            casa::IPosition shape;
+            casacore::TableColumn col(table, bridge_string(col_name));
+            const casacore::ColumnDesc &desc = col.columnDesc();
+            casacore::IPosition shape;
 
             if (!desc.isScalar())
                 shape = col.shape(row_number);
@@ -382,57 +382,57 @@ extern "C" {
             switch (desc.trueDataType()) {
 
 #define SCALAR_CASE(DTYPE, CPPTYPE) \
-            case casa::DTYPE: { \
-                casa::ScalarColumn<CPPTYPE> col(table, bridge_string(col_name)); \
+            case casacore::DTYPE: { \
+                casacore::ScalarColumn<CPPTYPE> col(table, bridge_string(col_name)); \
                 *((CPPTYPE *) data) = col.get(row_number); \
                 break; \
             }
 
 #define VECTOR_CASE(DTYPE, CPPTYPE) \
-            case casa::DTYPE: { \
-                casa::ArrayColumn<CPPTYPE> col(table, bridge_string(col_name)); \
-                casa::Array<CPPTYPE> array(shape, (CPPTYPE *) data, casa::SHARE); \
-                col.get(row_number, array, casa::False); \
+            case casacore::DTYPE: { \
+                casacore::ArrayColumn<CPPTYPE> col(table, bridge_string(col_name)); \
+                casacore::Array<CPPTYPE> array(shape, (CPPTYPE *) data, casacore::SHARE); \
+                col.get(row_number, array, casacore::False); \
                 break; \
             }
 
-            SCALAR_CASE(TpBool, casa::Bool)
-            SCALAR_CASE(TpChar, casa::Char)
-            SCALAR_CASE(TpUChar, casa::uChar)
-            SCALAR_CASE(TpShort, casa::Short)
-            SCALAR_CASE(TpUShort, casa::uShort)
-            SCALAR_CASE(TpInt, casa::Int)
-            SCALAR_CASE(TpUInt, casa::uInt)
+            SCALAR_CASE(TpBool, casacore::Bool)
+            SCALAR_CASE(TpChar, casacore::Char)
+            SCALAR_CASE(TpUChar, casacore::uChar)
+            SCALAR_CASE(TpShort, casacore::Short)
+            SCALAR_CASE(TpUShort, casacore::uShort)
+            SCALAR_CASE(TpInt, casacore::Int)
+            SCALAR_CASE(TpUInt, casacore::uInt)
             SCALAR_CASE(TpFloat, float)
             SCALAR_CASE(TpDouble, double)
-            SCALAR_CASE(TpComplex, casa::Complex)
-            SCALAR_CASE(TpDComplex, casa::DComplex)
+            SCALAR_CASE(TpComplex, casacore::Complex)
+            SCALAR_CASE(TpDComplex, casacore::DComplex)
 
-            VECTOR_CASE(TpArrayBool, casa::Bool)
-            VECTOR_CASE(TpArrayChar, casa::Char)
-            VECTOR_CASE(TpArrayUChar, casa::uChar)
-            VECTOR_CASE(TpArrayShort, casa::Short)
-            VECTOR_CASE(TpArrayUShort, casa::uShort)
-            VECTOR_CASE(TpArrayInt, casa::Int)
-            VECTOR_CASE(TpArrayUInt, casa::uInt)
+            VECTOR_CASE(TpArrayBool, casacore::Bool)
+            VECTOR_CASE(TpArrayChar, casacore::Char)
+            VECTOR_CASE(TpArrayUChar, casacore::uChar)
+            VECTOR_CASE(TpArrayShort, casacore::Short)
+            VECTOR_CASE(TpArrayUShort, casacore::uShort)
+            VECTOR_CASE(TpArrayInt, casacore::Int)
+            VECTOR_CASE(TpArrayUInt, casacore::uInt)
             VECTOR_CASE(TpArrayFloat, float)
             VECTOR_CASE(TpArrayDouble, double)
-            VECTOR_CASE(TpArrayComplex, casa::Complex)
-            VECTOR_CASE(TpArrayDComplex, casa::DComplex)
+            VECTOR_CASE(TpArrayComplex, casacore::Complex)
+            VECTOR_CASE(TpArrayDComplex, casacore::DComplex)
 
 #undef SCALAR_CASE
 #undef VECTOR_CASE
 
-            case casa::TpString: {                                         \
-                casa::ScalarColumn<casa::String> col(table, bridge_string(col_name));
+            case casacore::TpString: {                                         \
+                casacore::ScalarColumn<casacore::String> col(table, bridge_string(col_name));
                 unbridge_string(col.get(row_number), *((StringBridge *) data));
                 break;
             }
 
-            case casa::TpArrayString: {
-                casa::ArrayColumn<casa::String> col(table, bridge_string(col_name));
-                casa::Array<casa::String> array(shape);
-                col.get(row_number, array, casa::False);
+            case casacore::TpArrayString: {
+                casacore::ArrayColumn<casacore::String> col(table, bridge_string(col_name));
+                casacore::Array<casacore::String> array(shape);
+                col.get(row_number, array, casacore::False);
                 unbridge_string_array(array, (StringBridge *) data);
                 break;
             }
@@ -458,60 +458,60 @@ extern "C" {
             switch (data_type) {
 
 #define SCALAR_CASE(DTYPE, CPPTYPE) \
-            case casa::DTYPE: { \
-                casa::ScalarColumn<CPPTYPE> col(table, bridge_string(col_name)); \
+            case casacore::DTYPE: { \
+                casacore::ScalarColumn<CPPTYPE> col(table, bridge_string(col_name)); \
                 col.put(row_number, *(CPPTYPE *) data); \
                 break; \
             }
 
 #define VECTOR_CASE(DTYPE, CPPTYPE) \
-            case casa::DTYPE: { \
-                casa::ArrayColumn<CPPTYPE> col(table, bridge_string(col_name)); \
-                casa::IPosition shape(n_dims); \
-                for (casa::uInt i = 0; i < n_dims; i++) \
+            case casacore::DTYPE: { \
+                casacore::ArrayColumn<CPPTYPE> col(table, bridge_string(col_name)); \
+                casacore::IPosition shape(n_dims); \
+                for (casacore::uInt i = 0; i < n_dims; i++) \
                     shape[i] = dims[n_dims - 1 - i]; \
-                casa::Array<CPPTYPE> array(shape, (CPPTYPE *) data, casa::SHARE); \
+                casacore::Array<CPPTYPE> array(shape, (CPPTYPE *) data, casacore::SHARE); \
                 col.put(row_number, array); \
                 break; \
             }
 
-            SCALAR_CASE(TpBool, casa::Bool)
-            SCALAR_CASE(TpChar, casa::Char)
-            SCALAR_CASE(TpUChar, casa::uChar)
-            SCALAR_CASE(TpShort, casa::Short)
-            SCALAR_CASE(TpUShort, casa::uShort)
-            SCALAR_CASE(TpInt, casa::Int)
-            SCALAR_CASE(TpUInt, casa::uInt)
+            SCALAR_CASE(TpBool, casacore::Bool)
+            SCALAR_CASE(TpChar, casacore::Char)
+            SCALAR_CASE(TpUChar, casacore::uChar)
+            SCALAR_CASE(TpShort, casacore::Short)
+            SCALAR_CASE(TpUShort, casacore::uShort)
+            SCALAR_CASE(TpInt, casacore::Int)
+            SCALAR_CASE(TpUInt, casacore::uInt)
             SCALAR_CASE(TpFloat, float)
             SCALAR_CASE(TpDouble, double)
-            SCALAR_CASE(TpComplex, casa::Complex)
-            SCALAR_CASE(TpDComplex, casa::DComplex)
+            SCALAR_CASE(TpComplex, casacore::Complex)
+            SCALAR_CASE(TpDComplex, casacore::DComplex)
 
-            VECTOR_CASE(TpArrayBool, casa::Bool)
-            VECTOR_CASE(TpArrayChar, casa::Char)
-            VECTOR_CASE(TpArrayUChar, casa::uChar)
-            VECTOR_CASE(TpArrayShort, casa::Short)
-            VECTOR_CASE(TpArrayUShort, casa::uShort)
-            VECTOR_CASE(TpArrayInt, casa::Int)
-            VECTOR_CASE(TpArrayUInt, casa::uInt)
+            VECTOR_CASE(TpArrayBool, casacore::Bool)
+            VECTOR_CASE(TpArrayChar, casacore::Char)
+            VECTOR_CASE(TpArrayUChar, casacore::uChar)
+            VECTOR_CASE(TpArrayShort, casacore::Short)
+            VECTOR_CASE(TpArrayUShort, casacore::uShort)
+            VECTOR_CASE(TpArrayInt, casacore::Int)
+            VECTOR_CASE(TpArrayUInt, casacore::uInt)
             VECTOR_CASE(TpArrayFloat, float)
             VECTOR_CASE(TpArrayDouble, double)
-            VECTOR_CASE(TpArrayComplex, casa::Complex)
-            VECTOR_CASE(TpArrayDComplex, casa::DComplex)
+            VECTOR_CASE(TpArrayComplex, casacore::Complex)
+            VECTOR_CASE(TpArrayDComplex, casacore::DComplex)
 
 #undef SCALAR_CASE
 #undef VECTOR_CASE
 
-            case casa::TpString: {
-                casa::ScalarColumn<casa::String> col(table, bridge_string(col_name));
+            case casacore::TpString: {
+                casacore::ScalarColumn<casacore::String> col(table, bridge_string(col_name));
                 col.put(row_number, bridge_string(*((StringBridge *) data)));
                 break;
             }
 
-            case casa::TpArrayString: {
-                casa::ArrayColumn<casa::String> col(table, bridge_string(col_name));
-                casa::IPosition shape(n_dims);
-                for (casa::uInt i = 0; i < n_dims; i++)
+            case casacore::TpArrayString: {
+                casacore::ArrayColumn<casacore::String> col(table, bridge_string(col_name));
+                casacore::IPosition shape(n_dims);
+                for (casacore::uInt i = 0; i < n_dims; i++)
                     shape[i] = dims[n_dims - 1 - i];
                 col.put(row_number, bridge_string_array((const StringBridge *) data, shape));
                 break;
@@ -548,9 +548,9 @@ extern "C" {
     {
         try {
             if (is_read_only)
-                return new casa::ROTableRow(table);
+                return new casacore::ROTableRow(table);
             else
-                return new casa::TableRow(table);
+                return new casacore::TableRow(table);
         } catch (...) {
             handle_exception(exc);
             return NULL;
@@ -585,7 +585,7 @@ extern "C" {
     table_row_copy_and_put(GlueTableRow &src_row, const unsigned long dest_row_number,
                            GlueTableRow &wrap_dest_row, ExcInfo &exc)
     {
-        casa::TableRow &dest_row = (casa::TableRow &) wrap_dest_row;
+        casacore::TableRow &dest_row = (casacore::TableRow &) wrap_dest_row;
 
         try {
             dest_row.put(dest_row_number, src_row.record(), src_row.getDefined());
@@ -602,9 +602,9 @@ extern "C" {
                             unsigned long dims[8], ExcInfo &exc)
     {
         try {
-            const casa::TableRecord &rec = row.record();
-            const casa::RecordDesc &desc = rec.description();
-            casa::Int field_num = rec.fieldNumber(bridge_string(col_name));
+            const casacore::TableRecord &rec = row.record();
+            const casacore::RecordDesc &desc = rec.description();
+            casacore::Int field_num = rec.fieldNumber(bridge_string(col_name));
 
             if (field_num < 0)
                 throw std::runtime_error("unrecognized column name");
@@ -617,13 +617,13 @@ extern "C" {
                 // desc.shape() is generic, not specific to the row we're
                 // looking at, so we have to create a TableColumn to get the
                 // cell's shape.
-                casa::TableColumn col(row.table(), bridge_string(col_name));
+                casacore::TableColumn col(row.table(), bridge_string(col_name));
                 *n_dim = (int) col.ndim(row.rowNumber());
 
                 if (*n_dim > 8)
                     throw std::runtime_error("cannot handle cells with data of dimensionality greater than 8");
 
-                const casa::IPosition shape = col.shape(row.rowNumber());
+                const casacore::IPosition shape = col.shape(row.rowNumber());
 
                 for (int i = 0; i < *n_dim; i++)
                     dims[*n_dim - 1 - i] = (unsigned long) shape[i];
@@ -643,23 +643,23 @@ extern "C" {
                        void *data, ExcInfo &exc)
     {
         try {
-            const casa::TableRecord &rec = row.record();
-            const casa::RecordDesc &desc = rec.description();
-            casa::Int field_num = rec.fieldNumber(bridge_string(col_name));
-            casa::IPosition shape;
+            const casacore::TableRecord &rec = row.record();
+            const casacore::RecordDesc &desc = rec.description();
+            casacore::Int field_num = rec.fieldNumber(bridge_string(col_name));
+            casacore::IPosition shape;
 
             if (field_num < 0)
                 throw std::runtime_error("unrecognized column name");
 
             if (!desc.isScalar(field_num)) {
-                casa::TableColumn col(row.table(), bridge_string(col_name));
+                casacore::TableColumn col(row.table(), bridge_string(col_name));
                 shape = col.shape(row.rowNumber());
             }
 
             switch (rec.type(field_num)) {
 
 #define SCALAR_CASE(DTYPE, CPPTYPE) \
-            case casa::DTYPE: { \
+            case casacore::DTYPE: { \
                 CPPTYPE datum; \
                 rec.get(field_num, datum); \
                 *((CPPTYPE *) data) = datum; \
@@ -667,48 +667,48 @@ extern "C" {
             }
 
 #define VECTOR_CASE(DTYPE, CPPTYPE) \
-            case casa::DTYPE: { \
-                casa::Array<CPPTYPE> array(shape, (CPPTYPE *) data, casa::SHARE); \
+            case casacore::DTYPE: { \
+                casacore::Array<CPPTYPE> array(shape, (CPPTYPE *) data, casacore::SHARE); \
                 rec.get(field_num, array); \
                 break; \
             }
 
-            SCALAR_CASE(TpBool, casa::Bool)
-            //SCALAR_CASE(TpChar, casa::Char)
-            SCALAR_CASE(TpUChar, casa::uChar)
-            SCALAR_CASE(TpShort, casa::Short)
-            //SCALAR_CASE(TpUShort, casa::uShort)
-            SCALAR_CASE(TpInt, casa::Int)
-            SCALAR_CASE(TpUInt, casa::uInt)
+            SCALAR_CASE(TpBool, casacore::Bool)
+            //SCALAR_CASE(TpChar, casacore::Char)
+            SCALAR_CASE(TpUChar, casacore::uChar)
+            SCALAR_CASE(TpShort, casacore::Short)
+            //SCALAR_CASE(TpUShort, casacore::uShort)
+            SCALAR_CASE(TpInt, casacore::Int)
+            SCALAR_CASE(TpUInt, casacore::uInt)
             SCALAR_CASE(TpFloat, float)
             SCALAR_CASE(TpDouble, double)
-            SCALAR_CASE(TpComplex, casa::Complex)
-            SCALAR_CASE(TpDComplex, casa::DComplex)
+            SCALAR_CASE(TpComplex, casacore::Complex)
+            SCALAR_CASE(TpDComplex, casacore::DComplex)
 
-            VECTOR_CASE(TpArrayBool, casa::Bool)
-            //VECTOR_CASE(TpArrayChar, casa::Char)
-            VECTOR_CASE(TpArrayUChar, casa::uChar)
-            VECTOR_CASE(TpArrayShort, casa::Short)
-            //VECTOR_CASE(TpArrayUShort, casa::uShort)
-            VECTOR_CASE(TpArrayInt, casa::Int)
-            VECTOR_CASE(TpArrayUInt, casa::uInt)
+            VECTOR_CASE(TpArrayBool, casacore::Bool)
+            //VECTOR_CASE(TpArrayChar, casacore::Char)
+            VECTOR_CASE(TpArrayUChar, casacore::uChar)
+            VECTOR_CASE(TpArrayShort, casacore::Short)
+            //VECTOR_CASE(TpArrayUShort, casacore::uShort)
+            VECTOR_CASE(TpArrayInt, casacore::Int)
+            VECTOR_CASE(TpArrayUInt, casacore::uInt)
             VECTOR_CASE(TpArrayFloat, float)
             VECTOR_CASE(TpArrayDouble, double)
-            VECTOR_CASE(TpArrayComplex, casa::Complex)
-            VECTOR_CASE(TpArrayDComplex, casa::DComplex)
+            VECTOR_CASE(TpArrayComplex, casacore::Complex)
+            VECTOR_CASE(TpArrayDComplex, casacore::DComplex)
 
 #undef SCALAR_CASE
 #undef VECTOR_CASE
 
-            case casa::TpString: {
-                casa::String datum;
+            case casacore::TpString: {
+                casacore::String datum;
                 rec.get(field_num, datum);
                 unbridge_string(datum, *(StringBridge *) data);
                 break;
             }
 
-            case casa::TpArrayString: {
-                casa::Array<casa::String> array(shape);
+            case casacore::TpArrayString: {
+                casacore::Array<casacore::String> array(shape);
                 rec.get(field_num, array);
                 unbridge_string_array(array, (StringBridge *) data);
                 break;
@@ -730,65 +730,65 @@ extern "C" {
                        const GlueDataType data_type, const unsigned long n_dims,
                        const unsigned long *dims, void *data, ExcInfo &exc)
     {
-        casa::TableRow &row = (casa::TableRow &) wrap_row;
+        casacore::TableRow &row = (casacore::TableRow &) wrap_row;
 
         try {
-            casa::TableRecord &rec = row.record();
-            casa::Int field_num = rec.fieldNumber(bridge_string(col_name));
+            casacore::TableRecord &rec = row.record();
+            casacore::Int field_num = rec.fieldNumber(bridge_string(col_name));
 
             switch (data_type) {
 
 #define SCALAR_CASE(DTYPE, CPPTYPE) \
-            case casa::DTYPE: { \
+            case casacore::DTYPE: { \
                 rec.define(field_num, *(CPPTYPE *) data); \
                 break; \
             }
 
 #define VECTOR_CASE(DTYPE, CPPTYPE) \
-            case casa::DTYPE: { \
-                casa::IPosition shape(n_dims); \
-                for (casa::uInt i = 0; i < n_dims; i++) \
+            case casacore::DTYPE: { \
+                casacore::IPosition shape(n_dims); \
+                for (casacore::uInt i = 0; i < n_dims; i++) \
                     shape[i] = dims[n_dims - 1 - i]; \
-                casa::Array<CPPTYPE> array(shape, (CPPTYPE *) data, casa::SHARE); \
+                casacore::Array<CPPTYPE> array(shape, (CPPTYPE *) data, casacore::SHARE); \
                 rec.define(field_num, array); \
                 break; \
             }
 
-            SCALAR_CASE(TpBool, casa::Bool)
-            //SCALAR_CASE(TpChar, casa::Char)
-            SCALAR_CASE(TpUChar, casa::uChar)
-            SCALAR_CASE(TpShort, casa::Short)
-            //SCALAR_CASE(TpUShort, casa::uShort)
-            SCALAR_CASE(TpInt, casa::Int)
-            SCALAR_CASE(TpUInt, casa::uInt)
+            SCALAR_CASE(TpBool, casacore::Bool)
+            //SCALAR_CASE(TpChar, casacore::Char)
+            SCALAR_CASE(TpUChar, casacore::uChar)
+            SCALAR_CASE(TpShort, casacore::Short)
+            //SCALAR_CASE(TpUShort, casacore::uShort)
+            SCALAR_CASE(TpInt, casacore::Int)
+            SCALAR_CASE(TpUInt, casacore::uInt)
             SCALAR_CASE(TpFloat, float)
             SCALAR_CASE(TpDouble, double)
-            SCALAR_CASE(TpComplex, casa::Complex)
-            SCALAR_CASE(TpDComplex, casa::DComplex)
+            SCALAR_CASE(TpComplex, casacore::Complex)
+            SCALAR_CASE(TpDComplex, casacore::DComplex)
 
-            VECTOR_CASE(TpArrayBool, casa::Bool)
-            //VECTOR_CASE(TpArrayChar, casa::Char)
-            VECTOR_CASE(TpArrayUChar, casa::uChar)
-            VECTOR_CASE(TpArrayShort, casa::Short)
-            //VECTOR_CASE(TpArrayUShort, casa::uShort)
-            VECTOR_CASE(TpArrayInt, casa::Int)
-            VECTOR_CASE(TpArrayUInt, casa::uInt)
+            VECTOR_CASE(TpArrayBool, casacore::Bool)
+            //VECTOR_CASE(TpArrayChar, casacore::Char)
+            VECTOR_CASE(TpArrayUChar, casacore::uChar)
+            VECTOR_CASE(TpArrayShort, casacore::Short)
+            //VECTOR_CASE(TpArrayUShort, casacore::uShort)
+            VECTOR_CASE(TpArrayInt, casacore::Int)
+            VECTOR_CASE(TpArrayUInt, casacore::uInt)
             VECTOR_CASE(TpArrayFloat, float)
             VECTOR_CASE(TpArrayDouble, double)
-            VECTOR_CASE(TpArrayComplex, casa::Complex)
-            VECTOR_CASE(TpArrayDComplex, casa::DComplex)
+            VECTOR_CASE(TpArrayComplex, casacore::Complex)
+            VECTOR_CASE(TpArrayDComplex, casacore::DComplex)
 
 #undef SCALAR_CASE
 #undef VECTOR_CASE
 
-            case casa::TpString: {
+            case casacore::TpString: {
                 rec.define(field_num, bridge_string(*(StringBridge *) data));
                 break;
             }
 
-            case casa::TpArrayString: {
-                casa::IPosition shape(n_dims);
-                for (casa::uInt i = 0; i < n_dims; i++)
+            case casacore::TpArrayString: {
+                casacore::IPosition shape(n_dims);
+                for (casacore::uInt i = 0; i < n_dims; i++)
                     shape[i] = dims[n_dims - 1 - i];
                 rec.define(field_num, bridge_string_array((const StringBridge *) data, shape));
                 break;
@@ -808,7 +808,7 @@ extern "C" {
     int
     table_row_write(GlueTableRow &wrap_row, const unsigned long dest_row_number, ExcInfo &exc)
     {
-        casa::TableRow &row = (casa::TableRow &) wrap_row;
+        casacore::TableRow &row = (casacore::TableRow &) wrap_row;
 
         try {
             row.put(dest_row_number);

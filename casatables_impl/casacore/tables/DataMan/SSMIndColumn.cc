@@ -109,8 +109,12 @@ void SSMIndColumn::setShapeColumn (const IPosition& aShape)
 void SSMIndColumn::setShape (uInt aRowNr, const IPosition& aShape)
 {
   // Get the current entry. If none, make empty one.
-  if (getArrayPtr (aRowNr) == 0) {
+  StIndArray* aPtr = getArrayPtr (aRowNr);
+  if (aPtr == 0) {
     itsIndArray = StIndArray(0);
+  } else {
+    // Note that getArrayPtr sets itsIndArray (which is equal to aPtr).
+    aPtr->getShape (*itsIosFile);
   }
   // put the new shape (if changed)
   // when changed put the file offset
@@ -224,6 +228,7 @@ SSMIndColumn_GETPUT(Short,ShortV)
 SSMIndColumn_GETPUT(uShort,uShortV)
 SSMIndColumn_GETPUT(Int,IntV)
 SSMIndColumn_GETPUT(uInt,uIntV)
+SSMIndColumn_GETPUT(Int64,Int64V)
 SSMIndColumn_GETPUT(float,floatV)
 SSMIndColumn_GETPUT(double,doubleV)
 SSMIndColumn_GETPUT(Complex,ComplexV)

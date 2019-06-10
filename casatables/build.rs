@@ -22,6 +22,7 @@ fn main() {
     builder
         .cpp(true)
         .warnings(true)
+        .flag_if_supported("-std=c++11")
         .include("src")
         .files(FILES)
         .compile("libcasatables_glue.a");

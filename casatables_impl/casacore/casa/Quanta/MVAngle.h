@@ -288,6 +288,8 @@ class MVAngle {
       typ((MVAngle::formatTypes) intyp), prec(inprec) {;};
     Format(const Format &other) :
       typ(other.typ), prec(other.prec) {;};
+
+    Format& operator=(const Format&) = default;
   private:
     MVAngle::formatTypes typ;
     uInt prec;

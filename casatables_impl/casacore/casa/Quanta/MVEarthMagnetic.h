@@ -142,6 +142,9 @@ public:
   MVEarthMagnetic(const Vector<Double> &other);
   MVEarthMagnetic(const Vector<Quantity> &other);
   // </group>
+
+  MVEarthMagnetic(const MVEarthMagnetic&) = default;
+
   // Copy assignment
   MVEarthMagnetic &operator=(const MVEarthMagnetic &other);
   

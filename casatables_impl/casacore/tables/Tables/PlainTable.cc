@@ -49,18 +49,37 @@ namespace casacore { //# NAMESPACE CASACORE - BEGIN
 //# Initialize the static TableCache object.
 TableCache PlainTable::theirTableCache;
 
-
 PlainTable::PlainTable (SetupNewTable& newtab, uInt nrrow, Bool initialize,
-			const TableLock& lockOptions, int endianFormat,
-                        const TSMOption& tsmOption)
-: BaseTable      (newtab.name(), newtab.option(), 0),
-  colSetPtr_p    (0),
-  tableChanged_p (True),
-  addToCache_p   (True),
-  lockPtr_p      (0),
-  tsmOption_p    (tsmOption)
+        const TableLock& lockOptions, int endianFormat,
+        const TSMOption& tsmOption)
+    : BaseTable (newtab.name(), newtab.option(), 0)
 {
-  try {
+    PlainTableCommon(newtab, nrrow, initialize, lockOptions,
+            endianFormat, tsmOption);
+}
+
+#ifdef HAVE_MPI
+PlainTable::PlainTable (MPI_Comm mpiComm, SetupNewTable& newtab, uInt nrrow,
+        Bool initialize, const TableLock& lockOptions, int endianFormat,
+        const TSMOption& tsmOption)
+    : BaseTable (mpiComm, newtab.name(), newtab.option(), 0)
+{
+    PlainTableCommon(newtab, nrrow, initialize, lockOptions,
+            endianFormat, tsmOption);
+}
+#endif
+
+void PlainTable::PlainTableCommon (SetupNewTable& newtab, uInt nrrow,
+        Bool initialize, const TableLock& lockOptions, int endianFormat,
+        const TSMOption& tsmOption)
+{
+    colSetPtr_p = 0;
+    tableChanged_p = True;
+    addToCache_p = True;
+    lockPtr_p = 0;
+    tsmOption_p = tsmOption;
+
+    try {
     // Determine and set the endian option.
     setEndian (endianFormat);
     // Replace default TSM option for new table.
@@ -149,7 +168,6 @@ PlainTable::PlainTable (SetupNewTable& newtab, uInt nrrow, Bool initialize,
   }
 }
 
-
 PlainTable::PlainTable (AipsIO&, uInt version, const String& tabname,
 			const String& type, uInt nrrow, int opt,
 			const TableLock& lockOptions,
@@ -200,6 +218,10 @@ PlainTable::PlainTable (AipsIO&, uInt version, const String& tabname,
     ios >> format;
     bigEndian_p = (format==0);
     ios >> tp;
+    // If locking is not used, nrrow_p might be 0. Use nrrow in that case.
+    if (nrrow_p == 0) {
+      nrrow_p = nrrow;
+    }
 #if defined(TABLEREPAIR)
     cerr << "tableRepair: found " << nrrow << " rows; give new number: ";
     cin >> nrrow_p;
@@ -481,11 +503,11 @@ uInt PlainTable::getModifyCounter() const
 void PlainTable::flush (Bool fsync, Bool recursive)
 {
     if (openedForWrite()) {
-	putFile (False);
-	// Flush subtables if wanted.
-	if (recursive) {
-	    keywordSet().flushTables (fsync);
-	}
+        putFile (False);
+        // Flush subtables if wanted.
+        if (recursive) {
+            keywordSet().flushTables (fsync);
+        }
     }
 }
 
@@ -613,8 +635,8 @@ TableRecord& PlainTable::rwKeywordSet()
     tableChanged_p = True;
     return rec;
 }
-    
-    
+
+
 
 //# Get a column object.
 BaseColumn* PlainTable::getColumn (uInt columnIndex) const

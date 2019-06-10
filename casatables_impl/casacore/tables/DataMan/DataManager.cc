@@ -1,5 +1,5 @@
 //# DataManager.cc: Storage manager for tables
-//# Copyright (C) 1994,1995,1996,1997,1998,1999,2000,2001,2002,2003
+//# Copyright (C) 1994,1995,1996,1997,1998,1999,2000,2001,2002,2003,2016
 //# Associated Universities, Inc. Washington DC, USA.
 //#
 //# This library is free software; you can redistribute it and/or modify it
@@ -44,13 +44,18 @@
 #include <casacore/tables/Tables/SetupNewTab.h>
 #include <casacore/tables/Tables/Table.h>
 #include <casacore/tables/Tables/PlainTable.h>
-#include <casacore/casa/Arrays/IPosition.h>
+#include <casacore/casa/Arrays/ArrayBase.h>
 #include <casacore/casa/Containers/Record.h>
 #include <casacore/casa/BasicSL/String.h>
 #include <casacore/casa/OS/DynLib.h>
 #include <casacore/tables/DataMan/DataManError.h>
 #include <casacore/casa/stdio.h>                     // for sprintf
 
+#ifdef HAVE_MPI
+#ifdef HAVE_ADIOS2
+#include <casacore/tables/DataMan/Adios2StMan.h>
+#endif
+#endif
 
 namespace casacore { //# NAMESPACE CASACORE - BEGIN
 
@@ -174,7 +179,7 @@ void DataManager::checkDataType (const DataManagerColumn* colPtr,
 {
     if (dataType != colPtr->dataType()) {
 	throw (DataManInvDT ("Column " + columnName +
-                             " has data type " + 
+                             " has data type " +
                              String::toString(colPtr->dataTypeId()) +
                              "; expected " + String::toString(dataTypeId)));
     }
@@ -205,7 +210,7 @@ Bool DataManager::canReallocateColumns() const
     { return False; }
 DataManagerColumn* DataManager::reallocateColumn (DataManagerColumn* column)
     { return column; }
-    
+
 
 
 //# Compose the keyword name from the given name appended with the
@@ -278,37 +283,33 @@ void DataManager::removeColumn (DataManagerColumn*)
 //# Initialize the static map of "constructors".
 // Use a recursive mutex, because loading from a shared library can cause
 // a nested lock.
-SimpleOrderedMap<String,DataManagerCtor>
-        DataManager::theirRegisterMap (DataManager::unknownDataManager);
-MutexedInit DataManager::theirMutexedInit(doRegisterMainCtor, 0,
-                                          Mutex::Recursive);
-
+std::map<String,DataManagerCtor>
+        DataManager::theirRegisterMap(initRegisterMap());
+Mutex DataManager::theirMutex(Mutex::Recursive);
 
 //# Register a mapping.
 void DataManager::registerCtor (const String& type, DataManagerCtor func)
 {
-    ScopedMutexLock lock(theirMutexedInit.mutex());
-    unlockedRegisterCtor (type, func);
+    ScopedMutexLock lock(theirMutex);
+    theirRegisterMap.insert (std::make_pair(type, func));
 }
 
 //# Test if the data manager is registered.
 Bool DataManager::isRegistered (const String& type)
 {
-    ScopedMutexLock lock(theirMutexedInit.mutex());
-    if (theirRegisterMap.isDefined(type)) {
-	return True;
-    }
-    return False;
+    ScopedMutexLock lock(theirMutex);
+    return theirRegisterMap.find(type) != theirRegisterMap.end();
 }
 
 //# Get a data manager constructor.
-//# Return default function if the data manager is undefined.
+//# Return default function if the data manager is undefined
+//# after having tried to load it from a shared library.
 DataManagerCtor DataManager::getCtor (const String& type)
 {
-    ScopedMutexLock lock(theirMutexedInit.mutex());
-    DataManagerCtor* fp = theirRegisterMap.isDefined (type);
-    if (fp) {
-        return *fp;
+    ScopedMutexLock lock(theirMutex);
+    std::map<String,DataManagerCtor>::const_iterator iter = theirRegisterMap.find (type);
+    if (iter != theirRegisterMap.end()) {
+        return iter->second;
     }
     // Try to load the data manager from a dynamic library with that name
     // (in lowercase without possible template extension).
@@ -326,9 +327,9 @@ DataManagerCtor DataManager::getCtor (const String& type)
               "register_"+libname, False);
     if (dl.getHandle()) {
         // See if registered now.
-        fp = theirRegisterMap.isDefined (type);
-        if (fp) {
-            return *fp;
+        iter = theirRegisterMap.find (type);
+        if (iter != theirRegisterMap.end()) {
+            return iter->second;
         }
     }
     return unknownDataManager;
@@ -338,7 +339,7 @@ DataManagerCtor DataManager::getCtor (const String& type)
 DataManager* DataManager::unknownDataManager (const String& type,
 					      const Record&)
 {
-    throw DataManUnknownCtor ("Data Manager class " + type + 
+    throw DataManUnknownCtor ("Data Manager class " + type +
                               " is not registered\n"
                               "  Check (DY)LD_LIBRARY_PATH matches the"
                               " libraries used during the build of "
@@ -460,6 +461,7 @@ DATAMANAGER_GETPUT(Short,ShortV)
 DATAMANAGER_GETPUT(uShort,uShortV)
 DATAMANAGER_GETPUT(Int,IntV)
 DATAMANAGER_GETPUT(uInt,uIntV)
+DATAMANAGER_GETPUT(Int64,Int64V)
 DATAMANAGER_GETPUT(float,floatV)
 DATAMANAGER_GETPUT(double,doubleV)
 DATAMANAGER_GETPUT(Complex,ComplexV)
@@ -488,15 +490,13 @@ void DataManagerColumn::putScalarColumnV (const void*)
   throw (DataManInvOper("DataManagerColumn::putScalarColumn not allowed"
                         " in column " + columnName()));
 }
-void DataManagerColumn::getScalarColumnCellsV (const RefRows&, void*)
+void DataManagerColumn::getScalarColumnCellsV (const RefRows& rows, void* dataPtr)
 {
-  throw (DataManInvOper("DataManagerColumn::getScalarColumnCells not allowed"
-                        " in column " + columnName()));
+  getScalarColumnCellsBase (rows, *static_cast<ArrayBase*>(dataPtr));
 }
-void DataManagerColumn::putScalarColumnCellsV (const RefRows&, const void*)
+void DataManagerColumn::putScalarColumnCellsV (const RefRows& rows, const void* dataPtr)
 {
-  throw (DataManInvOper("DataManagerColumn::putScalarColumnCells not allowed"
-                        " in column " + columnName()));
+  putScalarColumnCellsBase (rows, *static_cast<const ArrayBase*>(dataPtr));
 }
 uInt DataManagerColumn::getBlockV (uInt, uInt, void*)
 {
@@ -519,92 +519,375 @@ void DataManagerColumn::putArrayV (uInt, const void*)
   throw (DataManInvOper("DataManagerColumn::putArray not allowed"
                         " in column " + columnName()));
 }
-void DataManagerColumn::getArrayColumnV (void*)
+void DataManagerColumn::getArrayColumnV (void* dataPtr)
 {
-  throw (DataManInvOper("DataManagerColumn::getArrayColumn not allowed"
-                        " in column " + columnName()));
+  getArrayColumnBase (*static_cast<ArrayBase*>(dataPtr));
 }
-void DataManagerColumn::putArrayColumnV (const void*)
+void DataManagerColumn::putArrayColumnV (const void* dataPtr)
 {
-  throw (DataManInvOper("DataManagerColumn::putArrayColumn not allowed"
-                        " in column " + columnName()));
+  putArrayColumnBase (*static_cast<const ArrayBase*>(dataPtr));
 }
-void DataManagerColumn::getArrayColumnCellsV (const RefRows&, void*)
+void DataManagerColumn::getArrayColumnCellsV (const RefRows& rows, void* dataPtr)
 {
-  throw (DataManInvOper("DataManagerColumn::getArrayColumnCells not allowed"
-                        " in column " + columnName()));
+  getArrayColumnCellsBase (rows, *static_cast<ArrayBase*>(dataPtr));
 }
-void DataManagerColumn::putArrayColumnCellsV (const RefRows&, const void*)
+void DataManagerColumn::putArrayColumnCellsV (const RefRows& rows, const void* dataPtr)
 {
-  throw (DataManInvOper("DataManagerColumn::putArrayColumnCells not allowed"
-                        " in column " + columnName()));
+  putArrayColumnCellsBase (rows, *static_cast<const ArrayBase*>(dataPtr));
 }
-void DataManagerColumn::getSliceV (uInt, const Slicer&, void*)
+void DataManagerColumn::getSliceV (uInt rownr, const Slicer& slicer, void* dataPtr)
 {
-  throw (DataManInvOper("DataManagerColumn::getSlice not allowed"
-                        " in column " + columnName()));
+  getSliceBase (rownr, slicer, *static_cast<ArrayBase*>(dataPtr));
 }
-void DataManagerColumn::putSliceV (uInt, const Slicer&, const void*)
+void DataManagerColumn::putSliceV (uInt rownr, const Slicer& slicer, const void* dataPtr)
 {
-  throw (DataManInvOper("DataManagerColumn::putSlice not allowed"
-                        " in column " + columnName()));
+  putSliceBase (rownr, slicer, *static_cast<const ArrayBase*>(dataPtr));
 }
-void DataManagerColumn::getColumnSliceV (const Slicer&, void*)
+void DataManagerColumn::getColumnSliceV (const Slicer& slicer, void* dataPtr)
 {
-  throw (DataManInvOper("DataManagerColumn::getColumnSlice not allowed"
-                        " in column " + columnName()));
+  getColumnSliceBase (slicer, *static_cast<ArrayBase*>(dataPtr));
 }
-void DataManagerColumn::putColumnSliceV (const Slicer&, const void*)
+void DataManagerColumn::putColumnSliceV (const Slicer& slicer, const void* dataPtr)
 {
-  throw (DataManInvOper("DataManagerColumn::putColumnSlice not allowed"
-                        " in column " + columnName()));
+  putColumnSliceBase (slicer, *static_cast<const ArrayBase*>(dataPtr));
 }
-void DataManagerColumn::getColumnSliceCellsV (const RefRows&,
-					      const Slicer&, void*)
+void DataManagerColumn::getColumnSliceCellsV (const RefRows& rows,
+					      const Slicer& slicer, void* dataPtr)
 {
-  throw (DataManInvOper("DataManagerColumn::getColumnSliceCells not allowed"
-                        " in column " + columnName()));
+  getColumnSliceCellsBase (rows, slicer, *static_cast<ArrayBase*>(dataPtr));
 }
-void DataManagerColumn::putColumnSliceCellsV (const RefRows&,
-					      const Slicer&, const void*)
+void DataManagerColumn::putColumnSliceCellsV (const RefRows& rows,
+					      const Slicer& slicer, const void* dataPtr)
 {
-  throw (DataManInvOper("DataManagerColumn::putColumnSliceCells not allowed"
-                        " in column " + columnName()));
+  putColumnSliceCellsBase (rows, slicer, *static_cast<const ArrayBase*>(dataPtr));
 }
 
 
+#define DATAMANAGERCOLUMN_GETCELLS(T,TV)         \
+{                                                \
+  Vector<T>& vec = static_cast<Vector<T>&>(arr); \
+  RefRowsSliceIter iter(rownrs);                 \
+  uInt i=0;                                      \
+  while (! iter.pastEnd()) {                     \
+    uInt rownr = iter.sliceStart();              \
+    uInt end   = iter.sliceEnd();                \
+    uInt incr  = iter.sliceIncr();               \
+    while (rownr <= end) {                       \
+      aips_name2(get,TV) (rownr, &(vec[i]));     \
+      i++;                                       \
+      rownr += incr;                             \
+    }                                            \
+    iter++;                                      \
+  }                                              \
+}
+#define DATAMANAGERCOLUMN_PUTCELLS(T,TV)         \
+{                                                \
+  const Vector<T>& vec = static_cast<const Vector<T>&>(arr); \
+  RefRowsSliceIter iter(rownrs);                 \
+  uInt i=0;                                      \
+  while (! iter.pastEnd()) {                     \
+    uInt rownr = iter.sliceStart();              \
+    uInt end   = iter.sliceEnd();                \
+    uInt incr  = iter.sliceIncr();               \
+    while (rownr <= end) {                       \
+      aips_name2(put,TV) (rownr, &(vec[i]));     \
+      i++;                                       \
+      rownr += incr;                             \
+    }                                            \
+    iter++;                                      \
+  }                                              \
+}
 
+void DataManagerColumn::getScalarColumnCellsBase (const RefRows& rownrs,
+                                                  ArrayBase& arr)
+{
+  switch (dataType()) {
+  case TpBool:
+    DATAMANAGERCOLUMN_GETCELLS(Bool,BoolV)
+    break;
+  case TpUChar:
+    DATAMANAGERCOLUMN_GETCELLS(uChar,uCharV)
+    break;
+  case TpShort:
+    DATAMANAGERCOLUMN_GETCELLS(Short,ShortV)
+    break;
+  case TpUShort:
+    DATAMANAGERCOLUMN_GETCELLS(uShort,uShortV)
+    break;
+  case TpInt:
+    DATAMANAGERCOLUMN_GETCELLS(Int,IntV)
+    break;
+  case TpUInt:
+    DATAMANAGERCOLUMN_GETCELLS(uInt,uIntV)
+    break;
+  case TpInt64:
+    DATAMANAGERCOLUMN_GETCELLS(Int64,Int64V)
+    break;
+  case TpFloat:
+    DATAMANAGERCOLUMN_GETCELLS(float,floatV)
+    break;
+  case TpDouble:
+    DATAMANAGERCOLUMN_GETCELLS(double,doubleV)
+    break;
+  case TpComplex:
+    DATAMANAGERCOLUMN_GETCELLS(Complex,ComplexV)
+    break;
+  case TpDComplex:
+    DATAMANAGERCOLUMN_GETCELLS(DComplex,DComplexV)
+    break;
+  case TpString:
+    DATAMANAGERCOLUMN_GETCELLS(String,StringV)
+    break;
+  default:
+    throw (DataManInvOper("DataManagerColumn::getScalarColumnCellsV not allowed"
+                          " in column " + columnName()));
+  }
+}
+
+void DataManagerColumn::putScalarColumnCellsBase (const RefRows& rownrs,
+                                                  const ArrayBase& arr)
+{
+  switch (dataType()) {
+  case TpBool:
+    DATAMANAGERCOLUMN_PUTCELLS(Bool,BoolV)
+    break;
+  case TpUChar:
+    DATAMANAGERCOLUMN_PUTCELLS(uChar,uCharV)
+    break;
+  case TpShort:
+    DATAMANAGERCOLUMN_PUTCELLS(Short,ShortV)
+    break;
+  case TpUShort:
+    DATAMANAGERCOLUMN_PUTCELLS(uShort,uShortV)
+    break;
+  case TpInt:
+    DATAMANAGERCOLUMN_PUTCELLS(Int,IntV)
+    break;
+  case TpUInt:
+    DATAMANAGERCOLUMN_PUTCELLS(uInt,uIntV)
+    break; 
+  case TpInt64:
+    DATAMANAGERCOLUMN_PUTCELLS(Int64,Int64V)
+    break;
+  case TpFloat:
+    DATAMANAGERCOLUMN_PUTCELLS(float,floatV)
+    break;
+  case TpDouble:
+    DATAMANAGERCOLUMN_PUTCELLS(double,doubleV)
+    break;
+  case TpComplex:
+    DATAMANAGERCOLUMN_PUTCELLS(Complex,ComplexV)
+    break;
+  case TpDComplex:
+    DATAMANAGERCOLUMN_PUTCELLS(DComplex,DComplexV)
+    break;
+  case TpString:
+    DATAMANAGERCOLUMN_PUTCELLS(String,StringV)
+    break;
+  default:
+    throw (DataManInvOper("DataManagerColumn::putScalarColumnCellsV not allowed"
+                          " in column " + columnName()));
+  }
+}
+
+void DataManagerColumn::getArrayColumnBase (ArrayBase& arr)
+{
+  const IPosition& shp = arr.shape();
+  uInt nr = shp[shp.size() - 1];
+  DebugAssert (nr == nrow(), AipsError);
+  CountedPtr<ArrayPositionIterator> iter = arr.makeIterator (shp.size()-1);
+  for (uInt row=0; row<nr; ++row) {
+    getArrayV (row, &(iter->getArray()));
+    iter->next();
+  }
+}
+void DataManagerColumn::putArrayColumnBase (const ArrayBase& arr)
+{
+  const IPosition& shp = arr.shape();
+  uInt nr = shp[shp.size() - 1];
+  DebugAssert (nr == nrow(), AipsError);
+  CountedPtr<ArrayPositionIterator> iter = arr.makeIterator (shp.size()-1);
+  for (uInt row=0; row<nr; ++row) {
+    putArrayV (row, &(iter->getArray()));
+    iter->next();
+  }
+}
+void DataManagerColumn::getArrayColumnCellsBase (const RefRows& rows, ArrayBase& arr)
+{
+  CountedPtr<ArrayPositionIterator> iter = arr.makeIterator (arr.ndim()-1);
+  RefRowsSliceIter rowsIter(rows);
+  while (! rowsIter.pastEnd()) {
+    for (uInt row=rowsIter.sliceStart(); row<=rowsIter.sliceEnd();
+         row+=rowsIter.sliceIncr()) {
+      DebugAssert (! iter->pastEnd(), AipsError);
+      getArrayV (row, &(iter->getArray()));
+      iter->next();
+    }
+    rowsIter.next();
+  }
+  DebugAssert (iter->pastEnd(), AipsError);
+}
+void DataManagerColumn::putArrayColumnCellsBase (const RefRows& rows,
+                                                 const ArrayBase& arr)
+{
+  CountedPtr<ArrayPositionIterator> iter = arr.makeIterator (arr.ndim()-1);
+  RefRowsSliceIter rowsIter(rows);
+  while (! rowsIter.pastEnd()) {
+    for (uInt row=rowsIter.sliceStart(); row<=rowsIter.sliceEnd();
+         row+=rowsIter.sliceIncr()) {
+      DebugAssert (! iter->pastEnd(), AipsError);
+      putArrayV (row, &(iter->getArray()));
+      iter->next();
+    }
+    rowsIter.next();
+  }
+  DebugAssert (iter->pastEnd(), AipsError);
+}
+void DataManagerColumn::getSliceArr (uInt row, const Slicer& section,
+                                     CountedPtr<ArrayBase>& fullArr,
+                                     ArrayBase& arr)
+{
+  IPosition shp = shape(row);
+  if (shp.isEqual (arr.shape())) {
+    getArrayV (row, &arr);
+  } else {
+    if (! shp.isEqual (fullArr->shape())) {
+      fullArr->resize (shp);
+    }
+    getArrayV (row, fullArr.get());
+    arr.assignBase (*(fullArr->getSection (section)));
+  }
+}
+void DataManagerColumn::putSliceArr (uInt row, const Slicer& section,
+                                     CountedPtr<ArrayBase>& fullArr,
+                                     const ArrayBase& arr)
+{
+  IPosition shp = shape(row);
+  if (shp.isEqual (arr.shape())) {
+    putArrayV (row, &arr);
+  } else {
+    if (! shp.isEqual (fullArr->shape())) {
+      fullArr->resize (shp);
+    }
+    getArrayV (row, fullArr.get());
+    (fullArr->getSection(section))->assignBase (arr);
+    putArrayV (row, fullArr.get());
+  }
+}
+void DataManagerColumn::getSliceBase (uInt row, const Slicer& section,
+                                      ArrayBase& arr)
+{
+  CountedPtr<ArrayBase> fullArr = arr.makeArray();
+  getSliceArr (row, section, fullArr, arr);
+}
+void DataManagerColumn::putSliceBase (uInt row, const Slicer& section,
+                                      const ArrayBase& arr)
+{
+  CountedPtr<ArrayBase> fullArr = arr.makeArray();
+  putSliceArr (row, section, fullArr, arr);
+}
+void DataManagerColumn::getColumnSliceBase (const Slicer& section, ArrayBase& arr)
+{
+  const IPosition& shp = arr.shape();
+  uInt nr = shp[shp.size() - 1];
+  DebugAssert (nr == nrow(), AipsError);
+  CountedPtr<ArrayBase> fullArr = arr.makeArray();
+  CountedPtr<ArrayPositionIterator> iter = arr.makeIterator (shp.size()-1);
+  for (uInt row=0; row<nr; ++row) {
+    getSliceArr (row, section, fullArr, iter->getArray());
+    iter->next();
+  }
+}
+void DataManagerColumn::putColumnSliceBase (const Slicer& section,
+                                            const ArrayBase& arr)
+{
+  const IPosition& shp = arr.shape();
+  uInt nr = shp[shp.size() - 1];
+  DebugAssert (nr == nrow(), AipsError);
+  CountedPtr<ArrayBase> fullArr = arr.makeArray();
+  CountedPtr<ArrayPositionIterator> iter = arr.makeIterator (shp.size()-1);
+  for (uInt row=0; row<nr; ++row) {
+    putSliceArr (row, section, fullArr, iter->getArray());
+    iter->next();
+  }
+}
+void DataManagerColumn::getColumnSliceCellsBase (const RefRows& rows,
+                                                 const Slicer& section,
+                                                 ArrayBase& arr)
+{
+  CountedPtr<ArrayBase> fullArr = arr.makeArray();
+  CountedPtr<ArrayPositionIterator> iter = arr.makeIterator (arr.ndim()-1);
+  RefRowsSliceIter rowsIter(rows);
+  while (! rowsIter.pastEnd()) {
+    for (uInt row=rowsIter.sliceStart(); row<=rowsIter.sliceEnd();
+         row+=rowsIter.sliceIncr()) {
+      DebugAssert (! iter->pastEnd(), AipsError);
+      getSliceArr (row, section, fullArr, iter->getArray());
+      iter->next();
+    }
+    rowsIter.next();
+  }
+  DebugAssert (iter->pastEnd(), AipsError);
+}
+void DataManagerColumn::putColumnSliceCellsBase (const RefRows& rows,
+                                                 const Slicer& section,
+                                                 const ArrayBase& arr)
+{
+  CountedPtr<ArrayBase> fullArr = arr.makeArray();
+  CountedPtr<ArrayPositionIterator> iter = arr.makeIterator (arr.ndim()-1);
+  RefRowsSliceIter rowsIter(rows);
+  while (! rowsIter.pastEnd()) {
+    for (uInt row=rowsIter.sliceStart(); row<=rowsIter.sliceEnd();
+         row+=rowsIter.sliceIncr()) {
+      DebugAssert (! iter->pastEnd(), AipsError);
+      putSliceArr (row, section, fullArr, iter->getArray());
+      iter->next();
+    }
+    rowsIter.next();
+  }
+  DebugAssert (iter->pastEnd(), AipsError);
+}
 
 
 //# Register all mappings of the names of classes derived from
 //# DataManager to a static function calling the default constructor.
 //# The class name is the name as returned by the function dataManagerType.
-void DataManager::doRegisterMainCtor (void*)
+// No locking since private and only called by ctor of static member init.
+std::map<String,DataManagerCtor> DataManager::initRegisterMap()
 {
-  unlockedRegisterCtor ("StManAipsIO", StManAipsIO::makeObject);
-  unlockedRegisterCtor ("StandardStMan", StandardStMan::makeObject);
-  unlockedRegisterCtor ("IncrementalStMan", IncrementalStMan::makeObject);
-  unlockedRegisterCtor ("TiledDataStMan", TiledDataStMan::makeObject);
-  unlockedRegisterCtor ("TiledCellStMan", TiledCellStMan::makeObject);
-  unlockedRegisterCtor ("TiledColumnStMan", TiledColumnStMan::makeObject);
-  unlockedRegisterCtor ("TiledShapeStMan", TiledShapeStMan::makeObject);
-  unlockedRegisterCtor ("MemoryStMan", MemoryStMan::makeObject);
-  unlockedRegisterCtor (CompressFloat::className(),
-                        CompressFloat::makeObject);
-  unlockedRegisterCtor (CompressComplex::className(),
-                        CompressComplex::makeObject);
-  unlockedRegisterCtor (CompressComplexSD::className(),
-                        CompressComplexSD::makeObject);
-  unlockedRegisterCtor (MappedArrayEngine<Complex,DComplex>::className(),
-                        MappedArrayEngine<Complex,DComplex>::makeObject);
-  unlockedRegisterCtor (ForwardColumnEngine::className(),
-                        ForwardColumnEngine::makeObject);
-  unlockedRegisterCtor (BitFlagsEngine<uChar>::className(),
-                        BitFlagsEngine<uChar>::makeObject);
-  unlockedRegisterCtor (BitFlagsEngine<Short>::className(),
-                        BitFlagsEngine<Short>::makeObject);
-  unlockedRegisterCtor (BitFlagsEngine<Int>::className(),
-                        BitFlagsEngine<Int>::makeObject);
+  std::map<String,DataManagerCtor> regMap;
+
+  theirRegisterMap.insert (std::make_pair("StManAipsIO",      StManAipsIO::makeObject));
+  theirRegisterMap.insert (std::make_pair("StandardStMan",    StandardStMan::makeObject));
+  theirRegisterMap.insert (std::make_pair("IncrementalStMan", IncrementalStMan::makeObject));
+  theirRegisterMap.insert (std::make_pair("TiledDataStMan",   TiledDataStMan::makeObject));
+  theirRegisterMap.insert (std::make_pair("TiledCellStMan",   TiledCellStMan::makeObject));
+  theirRegisterMap.insert (std::make_pair("TiledColumnStMan", TiledColumnStMan::makeObject));
+  theirRegisterMap.insert (std::make_pair("TiledShapeStMan",  TiledShapeStMan::makeObject));
+  theirRegisterMap.insert (std::make_pair("MemoryStMan",      MemoryStMan::makeObject));
+#ifdef HAVE_MPI
+#ifdef HAVE_ADIOS2
+  theirRegisterMap.insert (std::make_pair("Adios2StMan",      Adios2StMan::makeObject));
+#endif
+#endif
+  theirRegisterMap.insert (std::make_pair(CompressFloat::className(),
+                                          CompressFloat::makeObject));
+  theirRegisterMap.insert (std::make_pair(CompressComplex::className(),
+                                          CompressComplex::makeObject));
+  theirRegisterMap.insert (std::make_pair(CompressComplexSD::className(),
+                                          CompressComplexSD::makeObject));
+  theirRegisterMap.insert (std::make_pair(MappedArrayEngine<Complex,DComplex>::className(),
+                                          MappedArrayEngine<Complex,DComplex>::makeObject));
+  theirRegisterMap.insert (std::make_pair(ForwardColumnEngine::className(),
+                                          ForwardColumnEngine::makeObject));
+  theirRegisterMap.insert (std::make_pair(BitFlagsEngine<uChar>::className(),
+                                          BitFlagsEngine<uChar>::makeObject));
+  theirRegisterMap.insert (std::make_pair(BitFlagsEngine<Short>::className(),
+                                          BitFlagsEngine<Short>::makeObject));
+  theirRegisterMap.insert (std::make_pair(BitFlagsEngine<Int>::className(),
+                                          BitFlagsEngine<Int>::makeObject));
+
+  return regMap;
 }
 
 } //# NAMESPACE CASACORE - END

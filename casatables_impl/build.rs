@@ -36,10 +36,7 @@ const FILES: &[&str] = &[
     "casacore/casa/Containers/Allocator.cc",
     "casacore/casa/Containers/Block.cc",
     "casacore/casa/Containers/Block_tmpl.cc",
-    "casacore/casa/Containers/HashMap2.cc",
     "casacore/casa/Containers/IterError.cc",
-    "casacore/casa/Containers/List2.cc",
-    "casacore/casa/Containers/Map2.cc",
     "casacore/casa/Containers/Record2.cc",
     "casacore/casa/Containers/Record2Interface.cc",
     "casacore/casa/Containers/Record.cc",
@@ -49,8 +46,6 @@ const FILES: &[&str] = &[
     "casacore/casa/Containers/RecordFieldId.cc",
     "casacore/casa/Containers/RecordInterface.cc",
     "casacore/casa/Containers/RecordRep.cc",
-    "casacore/casa/Containers/Stack2.cc",
-    "casacore/casa/Containers/StackError.cc",
     "casacore/casa/Containers/ValueHolder.cc",
     "casacore/casa/Containers/ValueHolderRep.cc",
     "casacore/casa/Exceptions/CasaErrorTools.cc",
@@ -314,6 +309,7 @@ fn main() {
     cc::Build::new()
         .cpp(true)
         .warnings(true)
+        .flag_if_supported("-std=c++11")
         .include(".")
         .files(FILES)
         .compile("libcasatables_impl.a");
