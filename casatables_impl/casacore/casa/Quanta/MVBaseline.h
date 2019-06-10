@@ -144,6 +144,9 @@ public:
   // <group>
   MVBaseline(const MVPosition &pos, const MVPosition &base);
   // </group>
+
+  MVBaseline(const MVBaseline&) = default;
+
   // Copy assignment
   MVBaseline &operator=(const MVBaseline &other);
   

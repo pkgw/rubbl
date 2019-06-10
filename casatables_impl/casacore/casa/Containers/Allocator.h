@@ -33,16 +33,13 @@
 #include <casacore/casa/aips.h>
 #include <casacore/casa/Utilities/DataType.h>
 
-#include <memory>
-#include <typeinfo>
-
 #include <cstdlib>
-namespace casacore { //# NAMESPACE CASACORE - BEGIN
+#include <memory>
+#include <new>
+#include <typeinfo>
+#include <type_traits>
 
-#if __cplusplus < 201103L && ! defined(noexcept)
-# define noexcept throw()
-# define CASA_UNDEF_noexcept
-#endif
+namespace casacore { //# NAMESPACE CASACORE - BEGIN
 
 #ifndef CASA_DEFAULT_ALIGNMENT
 # define CASA_DEFAULT_ALIGNMENT (32UL) // AVX/AVX2 alignment
@@ -56,10 +53,6 @@ namespace casacore { //# NAMESPACE CASACORE - BEGIN
 // </synopsis>
 class ArrayInitPolicy {
 public:
-  // Don't initialize elements in the array. (The array will be explicitly filled with values other than the default value.)
-  static ArrayInitPolicy const NO_INIT;
-  // Initialize all elements in the array with the default value.
-  static ArrayInitPolicy const INIT;
   Bool operator ==(ArrayInitPolicy const &other) {
     return init == other.init;
   }
@@ -68,49 +61,20 @@ public:
   }
 private:
   Bool init;
-  explicit ArrayInitPolicy(bool v): init(v) {}
+  explicit constexpr ArrayInitPolicy(bool v): init(v) {}
+  friend struct ArrayInitPolicies;
 };
 
-#if __cplusplus < 201103L
-template<typename T>
-struct std11_allocator: public std::allocator<T> {
-  typedef std::allocator<T> Super;
-  typedef typename Super::size_type size_type;
-  typedef typename Super::difference_type difference_type;
-  typedef typename Super::pointer pointer;
-  typedef typename Super::const_pointer const_pointer;
-  typedef typename Super::reference reference;
-  typedef typename Super::const_reference const_reference;
-  typedef typename Super::value_type value_type;
-
-  template<typename TOther>
-  struct rebind {
-    typedef std11_allocator<TOther> other;
-  };
-  void construct(pointer ptr) {
-    ::new(static_cast<void *>(ptr)) T();
-  }
-  void construct(pointer ptr, const_reference val) {
-    Super::construct(ptr, val);
-  }
+struct ArrayInitPolicies {
+    // Don't initialize elements in the array. (The array will be explicitly filled with values other than the default value.)
+    static constexpr ArrayInitPolicy NO_INIT = ArrayInitPolicy(false);
+    // Initialize all elements in the array with the default value.
+    static constexpr ArrayInitPolicy INIT = ArrayInitPolicy(true);
 };
 
-template<typename T>
-inline bool operator==(const std11_allocator<T>&,
-    const std11_allocator<T>&) {
-  return true;
-}
-
-template<typename T>
-inline bool operator!=(const std11_allocator<T>&,
-    const std11_allocator<T>&) {
-  return false;
-}
-
-#else
 template<typename T>
 using std11_allocator = std::allocator<T>;
-#endif
+
 
 template<typename T, size_t ALIGNMENT = CASA_DEFAULT_ALIGNMENT>
 struct casacore_allocator: public std11_allocator<T> {
@@ -122,11 +86,8 @@ struct casacore_allocator: public std11_allocator<T> {
   typedef typename Super::reference reference;
   typedef typename Super::const_reference const_reference;
   typedef typename Super::value_type value_type;
-#if __cplusplus < 201103L
-  enum {alignment = ALIGNMENT};
-#else
+
   static constexpr size_t alignment = ALIGNMENT;
-#endif
 
   template<typename TOther>
   struct rebind {
@@ -214,12 +175,6 @@ struct new_del_allocator: public std11_allocator<T> {
   void deallocate(pointer ptr, size_type) {
     delete[] ptr;
   }
-#if __cplusplus < 201103L
-    void construct(pointer ptr, const_reference value) {
-        *ptr = value;   // because *ptr was already contructed by new[].
-    }
-    void construct(pointer) {} // do nothing because new T[] does
-#else
   template<typename U, typename... Args>
   void construct(U *, Args&&... ) {} // do nothing because new T[] does
   template<typename U>
@@ -234,7 +189,6 @@ struct new_del_allocator: public std11_allocator<T> {
   void construct(U *ptr, U const &value) {
       *ptr = value;     // because *ptr was already contructed by new[].
   }
-#endif
 
   template<typename U>
   void destroy(U *) {} // do nothing because delete[] will do.
@@ -285,14 +239,14 @@ class Allocator_private {
     typedef typename Allocator::pointer pointer;
     typedef typename Allocator::const_pointer const_pointer;
     typedef typename Allocator::value_type value_type;
-    virtual pointer allocate(size_type elements, const void *ptr = 0) {
+    virtual pointer allocate(size_type elements, const void *ptr = 0) override {
       return allocator.allocate(elements, ptr);
     }
-    virtual void deallocate(pointer ptr, size_type size) {
+    virtual void deallocate(pointer ptr, size_type size) override {
       allocator.deallocate(ptr, size);
     }
 
-    virtual void construct(pointer ptr, size_type n, const_pointer src) {
+    virtual void construct(pointer ptr, size_type n, const_pointer src) override {
       size_type i = 0;
       try {
         for (i = 0; i < n; ++i) {
@@ -304,7 +258,7 @@ class Allocator_private {
       }
     }
     virtual void construct(pointer ptr, size_type n,
-        value_type const &initial_value) {
+        value_type const &initial_value) override {
       size_type i = 0;
       try {
         for (i = 0; i < n; ++i) {
@@ -315,7 +269,7 @@ class Allocator_private {
         throw;
       }
     }
-    virtual void construct(pointer ptr, size_type n) {
+    virtual void construct(pointer ptr, size_type n) override {
       size_type i = 0;
       try {
         for (i = 0; i < n; ++i) {
@@ -326,7 +280,7 @@ class Allocator_private {
         throw;
       }
     }
-    virtual void destroy(pointer ptr, size_type n) {
+    virtual void destroy(pointer ptr, size_type n) override {
       for (size_type i = n; i > 0;) {
         --i;
         try {
@@ -336,10 +290,10 @@ class Allocator_private {
         }
       }
     }
-    virtual std::type_info const &allocator_typeid() const {
+    virtual std::type_info const &allocator_typeid() const override {
       return typeid(Allocator);
     }
-    virtual ~BulkAllocatorImpl() {}
+    virtual ~BulkAllocatorImpl() override {}
 
   private:
     static Allocator allocator;
@@ -349,29 +303,15 @@ class Allocator_private {
   static BulkAllocator<typename Allocator::value_type> *get_allocator() {
     return get_allocator_raw<Allocator>();
   }
-  template<typename Allocator>
-  class BulkAllocatorInitializer {
-    BulkAllocatorInitializer() {
-      get_allocator_raw<Allocator>();
-    }
-    static BulkAllocatorInitializer<Allocator> instance;
-  };
+
   template<typename Allocator>
   static BulkAllocatorImpl<Allocator> *get_allocator_raw() {
-    static union {
-      void *dummy;
-      char alloc_obj[sizeof(BulkAllocatorImpl<Allocator> )];
-    } u;
-    static BulkAllocatorImpl<Allocator> *ptr = 0;
-    // Probably this method is called from BulkAllocatorInitializer<Allocator> first
-    // while static initialization
-    // and other threads are not started yet.
-    if (ptr == 0) {
-      // Use construct below to avoid https://gcc.gnu.org/bugzilla/show_bug.cgi?id=42032 
-      ::new (reinterpret_cast<BulkAllocatorImpl<Allocator>*>(u.alloc_obj)) BulkAllocatorImpl<Allocator>(); // this instance will never be destructed.
-      //      ::new (u.alloc_obj) BulkAllocatorImpl<Allocator>(); // this instance will never be destructed.
-      ptr = reinterpret_cast<BulkAllocatorImpl<Allocator> *>(u.alloc_obj);
-    }
+    // Because this function gets called from destructors of statically allocated objects that get destructed
+    // after the program finishes, the allocator is constructed in a static storage space and is never
+    // destructed.
+    static typename std::aligned_storage<sizeof(BulkAllocatorImpl<Allocator>), alignof(BulkAllocatorImpl<Allocator>)>::type storage;
+    static BulkAllocatorImpl<Allocator>* ptr =
+      new (reinterpret_cast<BulkAllocatorImpl<Allocator>*>(&storage)) BulkAllocatorImpl<Allocator>();
     return ptr;
   }
 
@@ -388,9 +328,6 @@ class Allocator_private {
 
 template<typename Allocator>
 Allocator Allocator_private::BulkAllocatorImpl<Allocator>::allocator;
-
-template<typename Allocator>
-Allocator_private::BulkAllocatorInitializer<Allocator> Allocator_private::BulkAllocatorInitializer<Allocator>::instance;
 
 template<typename T>
 class AbstractAllocator {
@@ -414,7 +351,7 @@ public:
 protected:
   BaseAllocator() {}
 
-  virtual typename Allocator_private::BulkAllocator<T> *getAllocator() const {
+  virtual typename Allocator_private::BulkAllocator<T> *getAllocator() const override {
     return Allocator_private::get_allocator<typename facade_type::type>();
   }
 };
@@ -476,10 +413,6 @@ struct AllocSpec {
 template<typename T>
 AllocSpec<T> const AllocSpec<T>::value = AllocSpec<T>();
 
-#if defined(CASA_UNDEF_noexcept)
-# undef noexcept
-# undef CASA_UNDEF_noexcept
-#endif
 
 } //# NAMESPACE CASACORE - END
 

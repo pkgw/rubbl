@@ -1,5 +1,5 @@
 //# UnitMap.cc: defines the UnitMap class containing standard unit definitions
-//# Copyright (C) 1994-2002,2007
+//# Copyright (C) 1994-2002,2007,2016
 //# Associated Universities, Inc. Washington DC, USA.
 //#
 //# This library is free software; you can redistribute it and/or modify it
@@ -38,65 +38,17 @@ namespace casacore { //# NAMESPACE CASACORE - BEGIN
 Mutex UnitMap::fitsMutex;
 
 
-void UnitMap::initUM() {
-  // Mutex for map initializations.
-  static Mutex umMutex;
-  static Bool needInit = True;
-  if (needInit) {
-    ScopedMutexLock lock(umMutex);
-    if (needInit) {
-      // Initialise lists
-      UnitMap::mapPref = 
-        new map<String, UnitName>;
-      UnitMap::mapDef =
-        new map<String, UnitName>;
-      UnitMap::mapSI =
-        new map<String, UnitName>;
-      UnitMap::mapCust =
-        new map<String, UnitName>;
-      UnitMap::mapUser =
-        new map<String, UnitName>;
-      UnitMap::mapCache =
-        new map<String, UnitVal>;
-      UnitMap::doneFITS = False;
-      // Define the map
-      // Known prefixes
-      UnitMap::initUMPrefix();
-      // Set needInit here, because the following functions may use
-      // clearCache, which calls initUM.
-      needInit = False;
-      // Defining SI units
-      UnitMap::initUMSI1();
-      UnitMap::initUMSI2();
-      // non-SI customary units
-      UnitMap::initUMCust1();
-      UnitMap::initUMCust2();
-      UnitMap::initUMCust3();
-      //# Start with clean cache
-      UnitMap::mapCache->clear();
-    }
-  }
-}
+  
 
 UnitMap::UnitMap() {}
 
 UnitMap::~UnitMap() {
-  releaseUM();
-}
-
-void UnitMap::releaseUM() {
-  delete UnitMap::mapPref;	mapPref = 0;
-  delete UnitMap::mapDef;	mapDef = 0;
-  delete UnitMap::mapSI;	mapSI = 0;
-  delete UnitMap::mapCust;	mapCust = 0;
-  delete UnitMap::mapUser;	mapUser = 0;
-  delete UnitMap::mapCache;	mapCache = 0;
 }
 
 Bool UnitMap::getCache(const String& s, UnitVal &val) {
-  UnitMap::initUM();
-  map<String, UnitVal>::iterator pos = mapCache->find(s);
-  if (pos == mapCache->end()) {
+  map<String, UnitVal>& mapCache = getMapCache();
+  map<String, UnitVal>::iterator pos = mapCache.find(s);
+  if (pos == mapCache.end()) {
     val = UnitVal();
     return False;
   }
@@ -104,10 +56,12 @@ Bool UnitMap::getCache(const String& s, UnitVal &val) {
   return True;
 }
 
-Bool UnitMap::getPref(const String& s, UnitName &name) {
-  UnitMap::initUM();
-  map<String, UnitName>::iterator pos = mapPref->find(s);
-  if (pos == mapPref->end()) {
+Bool UnitMap::getPref(const String& s, UnitName &name, UMaps* maps) {
+  // maps can be passed in to avoid recursive getUnit calls during static initialization.
+  UMaps& mapsref = (maps ? *maps : getMaps());
+  map<String, UnitName>& mapPref = mapsref.mapPref;
+  map<String, UnitName>::iterator pos = mapPref.find(s);
+  if (pos == mapPref.end()) {
     name = UnitName();
     return False;
   }
@@ -115,12 +69,16 @@ Bool UnitMap::getPref(const String& s, UnitName &name) {
   return True;
 }
 
-Bool UnitMap::getUnit(const String& s, UnitName &name) {
-  UnitMap::initUM();
+Bool UnitMap::getUnit(const String& s, UnitName &name, UMaps* maps) {
+  // maps can be passed in to avoid recursive getUnit calls during static initialization.
+  UMaps& mapsref = (maps ? *maps : getMaps());
+  map<String, UnitName>& mapUser = mapsref.mapUser;
+  map<String, UnitName>& mapCust = mapsref.mapCust;
+  map<String, UnitName>& mapSI   = mapsref.mapSI;
   map<String, UnitName>::iterator pos;
-  if ((pos = mapUser->find(s)) != mapUser->end() ||
-      (pos = mapCust->find(s)) != mapCust->end() ||
-      (pos = mapSI->find(s)) != mapSI->end()) {
+  if ((pos = mapUser.find(s)) != mapUser.end() ||
+      (pos = mapCust.find(s)) != mapCust.end() ||
+      (pos = mapSI.find(s)) != mapSI.end()) {
   } else {    
     name = UnitName();
     return False;
@@ -130,10 +88,9 @@ Bool UnitMap::getUnit(const String& s, UnitName &name) {
 }
 
 void UnitMap::putCache(const String& s, const UnitVal& val) {
-  UnitMap::initUM();
+  map<String, UnitVal>& mapCache = getMapCache();
   if (! s.empty()) {
-    if (mapCache->size() > 200) clearCache();
-    mapCache->insert(map<String, UnitVal>::value_type(s,val));
+    mapCache.insert(map<String, UnitVal>::value_type(s,val));
   }
 }
 
@@ -149,19 +106,21 @@ void UnitMap::putUser(const String& s, const UnitVal& val,
 }
 
 void UnitMap::putUser(const UnitName& name) {
-  UnitMap::initUM();
+  map<String, UnitName>& mapUser = getMaps().mapUser;
+  map<String, UnitName>& mapCust = getMaps().mapCust;
+  map<String, UnitName>& mapSI   = getMaps().mapSI;
   map<String, UnitName>::iterator pos;
-  if ((pos = mapUser->find(name.getName())) != mapUser->end() ||
-      (pos = mapCust->find(name.getName())) != mapCust->end() ||
-      (pos = mapSI->find(name.getName())) != mapSI->end()) clearCache();
-  mapUser->insert(map<String, UnitName>::value_type(name.getName(), name));
+  if ((pos = mapUser.find(name.getName())) != mapUser.end() ||
+      (pos = mapCust.find(name.getName())) != mapCust.end() ||
+      (pos = mapSI.find(name.getName())) != mapSI.end()) clearCache();
+  mapUser.insert(map<String, UnitName>::value_type(name.getName(), name));
 }
 
 void UnitMap::removeUser(const String& s) {
-  UnitMap::initUM();
-  map<String, UnitName>::iterator pos = mapUser->find(s);
-  if (pos != mapUser->end()) {
-    mapUser->erase(pos);
+  map<String, UnitName>& mapUser = getMaps().mapUser;
+  map<String, UnitName>::iterator pos = mapUser.find(s);
+  if (pos != mapUser.end()) {
+    mapUser.erase(pos);
     clearCache();
   }
 }
@@ -225,34 +184,33 @@ Bool UnitMap::getNameFITS(const UnitName *&name, uInt which) {
 }
 
 void UnitMap::addFITS() {
-  UnitMap::initUM();
-  if (! UnitMap::doneFITS) {
-    ScopedMutexLock lock(UnitMap::fitsMutex);
-    if (! UnitMap::doneFITS) {
-      uInt cnt = 0;
-      const UnitName *Fname;
-      while (UnitMap::getNameFITS(Fname, cnt)) {
-        UnitMap::putUser(*Fname);
-        cnt++;
-      }
-      UnitMap::doneFITS = True;
+  UMaps& maps = getMaps();
+  // Could be optimized using C++11 std::call_once(), but infrequently called.
+  // If to be optimized, do note clearFITS() below (but not used atm).
+  // Double checked locking is unsafe pre-C++11!
+  ScopedMutexLock lock(UnitMap::fitsMutex);
+  if (! maps.doneFITS) {
+    uInt cnt = 0;
+    const UnitName *Fname;
+    while (UnitMap::getNameFITS(Fname, cnt)) {
+      UnitMap::putUser(*Fname);
+      cnt++;
     }
+    maps.doneFITS = True;
   }
 }
 
 void UnitMap::clearFITS() {
-  UnitMap::initUM();
-  if (UnitMap::doneFITS) {
-    ScopedMutexLock lock(UnitMap::fitsMutex);
-    if (UnitMap::doneFITS) {
-      uInt cnt = 0;
-      const UnitName *Fname;
-      while (UnitMap::getNameFITS(Fname, cnt)) {
-        UnitMap::removeUser(*Fname);
-        cnt++;
-      }
-      UnitMap::doneFITS = False;
+  UMaps& maps = getMaps();
+  ScopedMutexLock lock(UnitMap::fitsMutex);
+  if (maps.doneFITS) {
+    uInt cnt = 0;
+    const UnitName *Fname;
+    while (UnitMap::getNameFITS(Fname, cnt)) {
+      UnitMap::removeUser(*Fname);
+      cnt++;
     }
+    maps.doneFITS = False;
   }
 }
 
@@ -303,8 +261,7 @@ Unit UnitMap::toFITS(const Unit &un) {
 }
 
 void UnitMap::clearCache() {
-  UnitMap::initUM();
-  mapCache->clear();
+  getMapCache().clear();
 }
 
 void UnitMap::listPref() {
@@ -312,9 +269,9 @@ void UnitMap::listPref() {
 }
 
 void UnitMap::listPref(ostream &os) {
-  UnitMap::initUM();
-  for (map<String, UnitName>::iterator i=mapPref->begin();
-       i != mapPref->end(); ++i) {
+  map<String, UnitName>& mapPref = getMaps().mapPref;
+  for (map<String, UnitName>::iterator i=mapPref.begin();
+       i != mapPref.end(); ++i) {
     os << "    " << i->second << endl;
   }
 }
@@ -324,9 +281,9 @@ void UnitMap::listDef() {
 }
 
 void UnitMap::listDef(ostream &os) {
-  UnitMap::initUM();
-  for (map<String, UnitName>::iterator i=mapDef->begin();
-       i != mapDef->end(); ++i) {
+  map<String, UnitName>& mapDef = getMaps().mapDef;
+  for (map<String, UnitName>::iterator i=mapDef.begin();
+       i != mapDef.end(); ++i) {
     os << "    " << i->second << endl;
   }
 }
@@ -336,9 +293,9 @@ void UnitMap::listSI() {
 }
 
 void UnitMap::listSI(ostream &os) {
-  UnitMap::initUM();
-  for (map<String, UnitName>::iterator i=mapSI->begin();
-       i != mapSI->end(); ++i) {
+  map<String, UnitName>& mapSI = getMaps().mapSI;
+  for (map<String, UnitName>::iterator i=mapSI.begin();
+       i != mapSI.end(); ++i) {
     os << "    " << i->second << endl;
   }
 }
@@ -348,9 +305,9 @@ void UnitMap::listCust() {
 }
 
 void UnitMap::listCust(ostream &os) {
-  UnitMap::initUM();
-  for (map<String, UnitName>::iterator i=mapCust->begin();
-       i != mapCust->end(); ++i) {
+  map<String, UnitName>& mapCust = getMaps().mapCust;
+  for (map<String, UnitName>::iterator i=mapCust.begin();
+       i != mapCust.end(); ++i) {
     os << "    " << i->second << endl;
   }
 }
@@ -360,9 +317,9 @@ void UnitMap::listUser() {
 }
 
 void UnitMap::listUser(ostream &os) {
-  UnitMap::initUM();
-  for (map<String, UnitName>::iterator i=mapUser->begin();
-       i != mapUser->end(); ++i) {
+  map<String, UnitName>& mapUser = getMaps().mapUser;
+  for (map<String, UnitName>::iterator i=mapUser.begin();
+       i != mapUser.end(); ++i) {
     os << "    " << i->second << endl;
   }
 }
@@ -372,16 +329,16 @@ void UnitMap::list() {
 }
 
 void UnitMap::list(ostream &os) {
-  UnitMap::initUM();
-  os  << "Prefix table (" << mapPref->size() << "):" << endl;
+  UMaps& maps = getMaps();
+  os  << "Prefix table (" << maps.mapPref.size() << "):" << endl;
   listPref(os);
-  os  << "Defining unit table (" << mapDef->size() << "):" << endl;
+  os  << "Defining unit table (" << maps.mapDef.size() << "):" << endl;
   listDef(os);
-  os << "SI unit table (" << mapSI->size() << "):" << endl;
+  os << "SI unit table (" << maps.mapSI.size() << "):" << endl;
   listSI(os);
-  os  << "Customary unit table (" << mapCust->size() << "):" << endl;
+  os  << "Customary unit table (" << maps.mapCust.size() << "):" << endl;
   listCust(os);
-  os  << "User unit table (" << mapUser->size() << "):" << endl;
+  os  << "User unit table (" << maps.mapUser.size() << "):" << endl;
   listUser(os);
 }
 
@@ -390,51 +347,70 @@ void UnitMap::listCache() {
 }
 
 void UnitMap::listCache(ostream &os) {
-  UnitMap::initUM();
-  os  << "Cached unit table (" << mapCache->size() << "):" << endl;
-  for (map<String, UnitVal>::iterator i=mapCache->begin();
-       i != mapCache->end(); ++i) {
+  map<String, UnitVal>& mapCache = getMapCache();
+  os  << "Cached unit table (" << mapCache.size() << "):" << endl;
+  for (map<String, UnitVal>::iterator i=mapCache.begin();
+       i != mapCache.end(); ++i) {
     os << "    " <<
       UnitName(i->first, i->second) << endl;
   }
 }
 
 const map<String, UnitName> &UnitMap::givePref() {
-  UnitMap::initUM();
-  return *mapPref;
+  return getMaps().mapPref;
 }
 
 const map<String, UnitName> &UnitMap::giveDef() {
-  UnitMap::initUM();
-  return *mapDef;
+  return getMaps().mapDef;
 }
 const map<String, UnitName> &UnitMap::giveSI() {
-  UnitMap::initUM();
-  return *mapSI;
+  return getMaps().mapSI;
 }
 
 const map<String, UnitName> &UnitMap::giveCust() {
-  UnitMap::initUM();
-  return *mapCust;
+  return getMaps().mapCust;
 }
 
 const map<String, UnitName> &UnitMap::giveUser() {
-  UnitMap::initUM();
-  return *mapUser;
+  return getMaps().mapUser;
 }
 
 const map<String, UnitVal> &UnitMap::giveCache() {
-  UnitMap::initUM();
-  return *mapCache;
+  return getMapCache();
 }
 
-map<String, UnitName> *UnitMap::mapPref;
-map<String, UnitName> *UnitMap::mapDef;
-map<String, UnitName> *UnitMap::mapSI;
-map<String, UnitName> *UnitMap::mapCust;
-map<String, UnitName> *UnitMap::mapUser;
-map<String, UnitVal> *UnitMap::mapCache;
-Bool UnitMap::doneFITS;
+UMaps& UnitMap::getMaps()
+{
+  // Note that C++11 guarantees that the static is initialized only once,
+  // even in a multi-threaded program.
+  // But no recursivity should occur.
+  static UMaps maps;
+  return maps;
+}
+
+map<String, UnitVal>& UnitMap::getMapCache()
+{
+  // Note that C++11 guarantees that the static is initialized only once,
+  // even in a multi-threaded program.
+  static map<String, UnitVal> mapCache;
+  return mapCache;
+}
+
+void UMaps::init()
+{
+  // Initialize the maps
+  // Known prefixes
+  UnitMap::initUMPrefix (*this);
+  // Defining SI units
+  UnitMap::initUMSI1 (*this);
+  UnitMap::initUMSI2 (*this);
+  // non-SI customary units
+  UnitMap::initUMCust1 (*this);
+  UnitMap::initUMCust2 (*this);
+  UnitMap::initUMCust3 (*this);
+  // FITS not done yet.
+  doneFITS = False;
+}
 
 } //# NAMESPACE CASACORE - END
 

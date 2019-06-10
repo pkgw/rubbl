@@ -29,7 +29,6 @@
 #include <casacore/tables/Tables/ArrayColumn.h>
 
 //# Instantiate extern templates for often used types.
-#ifdef AIPS_CXX11
 namespace casacore {
   template class ArrayColumn<Bool>;
   template class ArrayColumn<Char>;
@@ -37,10 +36,10 @@ namespace casacore {
   template class ArrayColumn<uShort>;
   template class ArrayColumn<Int>;
   template class ArrayColumn<uInt>;
+  template class ArrayColumn<Int64>;
   template class ArrayColumn<Float>;
   template class ArrayColumn<Double>;
   template class ArrayColumn<Complex>;
   template class ArrayColumn<DComplex>;
   template class ArrayColumn<String>;
 }
-#endif

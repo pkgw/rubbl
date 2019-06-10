@@ -22,7 +22,7 @@ ndarray = "^0.12"
 nom = "^4.2"
 num-traits = "^0.2"
 pbr = "^1.0"
-rubbl_casatables_impl = { version = "0.1.1", path = "../casatables_impl" }
+rubbl_casatables_impl = { version = "0.2.311", path = "../casatables_impl" }
 rubbl_core = { version = "0.1.2", path = "../core" }
 
 [build-dependencies]

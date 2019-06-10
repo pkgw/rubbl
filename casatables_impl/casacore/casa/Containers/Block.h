@@ -37,11 +37,7 @@
 #include <casacore/casa/Containers/Allocator.h>
 #include <cstddef>                  // for ptrdiff_t
 #include <algorithm> // for std:min/max
-#if __cplusplus < 201103L
-#include <cwchar>
-#else
 #include <type_traits>
-#endif
 
 //# For index checking
 #if defined(AIPS_ARRAY_INDEX_CHECK)
@@ -127,47 +123,6 @@ protected:
 
 template<typename T> class Block;
 
-#if __cplusplus < 201103L
-
-template<typename T>
-class Block_internal_IsFundamental {
-  template<typename U> friend class Block;
-  enum {value = 0};
-};
-
-template<typename T>
-class Block_internal_IsPointer {
-  template<typename U> friend class Block;
-  enum {value = 0};
-};
-
-#define CASA_TMP_939727(x) template<> class Block_internal_IsFundamental<x> { template<typename U> friend class Block; enum { value = 1 }; }
-CASA_TMP_939727(void);
-/*
-CASA_TMP_939727(char16_t);
-CASA_TMP_939727(char32_t);
-*/
-CASA_TMP_939727(bool);
-CASA_TMP_939727(wchar_t);
-CASA_TMP_939727(signed char);
-CASA_TMP_939727(unsigned char);
-CASA_TMP_939727(float);
-CASA_TMP_939727(double);
-CASA_TMP_939727(long double);
-#define CASA_TMP_939727_int(x) CASA_TMP_939727(x); CASA_TMP_939727(unsigned x)
-CASA_TMP_939727_int(int);
-CASA_TMP_939727_int(long int);
-CASA_TMP_939727_int(long long int);
-#undef CASA_TMP_939727_int
-#undef CASA_TMP_939727
-
-template<typename T>
-class Block_internal_IsPointer<T *> {
-  template<typename U> friend class Block;
-  enum { value = 1 };
-};
-
-#else // __cplusplus < 201103L
 
 template<typename T>
 class Block_internal_IsFundamental {
@@ -180,8 +135,6 @@ class Block_internal_IsPointer {
   template<typename U> friend class Block;
   static constexpr int value = static_cast<int>(std::is_pointer<T>::value);
 };
-
-#endif // __cplusplus < 201103L
 
 
 
@@ -267,7 +220,7 @@ public:
   explicit Block(size_t n) :
       allocator_p(get_allocator<typename DefaultAllocator<T>::type>()), used_p(
           n), destroyPointer(True), keep_allocator_p(False) {
-    init(init_anyway() ? ArrayInitPolicy::INIT : ArrayInitPolicy::NO_INIT);
+    init(init_anyway() ? ArrayInitPolicies::INIT : ArrayInitPolicies::NO_INIT);
   }
 
   // Create a Block with the given number of points. The values in Block
@@ -276,7 +229,7 @@ public:
   Block(size_t n, AllocSpec<Allocator> const &) :
       allocator_p(get_allocator<typename Allocator::type>()), used_p(n), destroyPointer(
           True), keep_allocator_p(False) {
-    init(init_anyway() ? ArrayInitPolicy::INIT : ArrayInitPolicy::NO_INIT);
+    init(init_anyway() ? ArrayInitPolicies::INIT : ArrayInitPolicies::NO_INIT);
   }
 
   // Create a Block with the given number of points. The values in Block
@@ -304,7 +257,7 @@ public:
   Block(size_t n, T const &val) :
       allocator_p(get_allocator<typename DefaultAllocator<T>::type>()), used_p(
           n), destroyPointer(True), keep_allocator_p(False) {
-    init(ArrayInitPolicy::NO_INIT);
+    init(ArrayInitPolicies::NO_INIT);
     try {
       allocator_p->construct(array, get_size(), val);
     } catch (...) {
@@ -319,7 +272,7 @@ public:
   Block(size_t n, T const &val, AllocSpec<Allocator> const &) :
       allocator_p(get_allocator<typename Allocator::type>()), used_p(n), destroyPointer(
           True), keep_allocator_p(False) {
-    init(ArrayInitPolicy::NO_INIT);
+    init(ArrayInitPolicies::NO_INIT);
     try {
       allocator_p->construct(array, get_size(), val);
     } catch (...) {
@@ -364,7 +317,7 @@ public:
   Block(const Block<T> &other) :
       allocator_p(other.allocator_p), used_p(other.size()), destroyPointer(
           True), keep_allocator_p(False) {
-    init(ArrayInitPolicy::NO_INIT);
+    init(ArrayInitPolicies::NO_INIT);
 
     try {
       //objcopy(array, other.array, get_size());
@@ -381,7 +334,7 @@ public:
   Block<T> &operator=(const Block<T> &other) {
     if (&other != this) {
       T *old = array;
-      this->resize(other.size(), True, False, ArrayInitPolicy::NO_INIT);
+      this->resize(other.size(), True, False, ArrayInitPolicies::NO_INIT);
       if (array == old) {
         objcopy(array, other.array, get_size());
       } else {
@@ -423,7 +376,7 @@ public:
   // <group>
   void resize(size_t n, Bool forceSmaller = False, Bool copyElements = True) {
     resize(n, forceSmaller, copyElements,
-        init_anyway() ? ArrayInitPolicy::INIT : ArrayInitPolicy::NO_INIT);
+        init_anyway() ? ArrayInitPolicies::INIT : ArrayInitPolicies::NO_INIT);
   }
   void resize(size_t n, Bool forceSmaller, Bool copyElements,
       ArrayInitPolicy initPolicy) {
@@ -459,7 +412,7 @@ public:
         }
         start = nmin;
       }
-      if (initPolicy == ArrayInitPolicy::INIT) {
+      if (initPolicy == ArrayInitPolicies::INIT) {
         try {
           allocator_p->construct(&tp[start], n - start);
         } catch (...) {
@@ -490,7 +443,7 @@ public:
   // <group>
   void remove(size_t whichOne, Bool forceSmaller = True) {
     remove(whichOne, forceSmaller,
-        init_anyway() ? ArrayInitPolicy::INIT : ArrayInitPolicy::NO_INIT);
+        init_anyway() ? ArrayInitPolicies::INIT : ArrayInitPolicies::NO_INIT);
   }
   void remove(size_t whichOne, Bool forceSmaller, ArrayInitPolicy initPolicy) {
     if (whichOne >= get_size()) {
@@ -505,7 +458,7 @@ public:
     if (forceSmaller == True) {
       T *tp = n > 0 ? allocator_p->allocate(n) : 0;
       traceAlloc(array, n);
-      if (initPolicy == ArrayInitPolicy::INIT && n > 0) {
+      if (initPolicy == ArrayInitPolicies::INIT && n > 0) {
         try {
           allocator_p->construct(tp, n);
         } catch (...) {
@@ -725,7 +678,7 @@ public:
   Block(size_t n, Allocator_private::AllocSpec<T> allocator) :
       allocator_p(allocator.allocator), used_p(n), destroyPointer(
           True), keep_allocator_p(False) {
-    init(init_anyway() ? ArrayInitPolicy::INIT : ArrayInitPolicy::NO_INIT);
+    init(init_anyway() ? ArrayInitPolicies::INIT : ArrayInitPolicies::NO_INIT);
   }
   Block(size_t n, T *&storagePointer, Bool takeOverStorage,
           Allocator_private::BulkAllocator<T> *allocator) :
@@ -764,7 +717,7 @@ public:
     if (get_capacity() > 0) {
       array = allocator_p->allocate(get_capacity());
       traceAlloc(array, get_capacity());
-      if (initPolicy == ArrayInitPolicy::INIT) {
+      if (initPolicy == ArrayInitPolicies::INIT) {
         try {
           allocator_p->construct(array, get_size());
         } catch (...) {
@@ -894,7 +847,6 @@ public:
 
 
 //# Instantiate extern templates for often used types.
-#ifdef AIPS_CXX11
   extern template class Block<Bool>;
   extern template class Block<Char>;
   extern template class Block<Short>;
@@ -908,7 +860,6 @@ public:
   extern template class Block<DComplex>;
   extern template class Block<String>;
   extern template class Block<void*>;
-#endif
 
 
 } //# NAMESPACE CASACORE - END

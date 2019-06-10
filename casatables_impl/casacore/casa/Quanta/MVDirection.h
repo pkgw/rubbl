@@ -146,6 +146,9 @@ public:
   MVDirection(const Vector<Double> &other);
   MVDirection(const Vector<Quantity> &other);
   // </group>
+
+  MVDirection(const MVDirection&) = default;
+
   // Copy assignment
   MVDirection &operator=(const MVDirection &other);
   

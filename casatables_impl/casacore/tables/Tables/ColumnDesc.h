@@ -1,5 +1,5 @@
 //# ColumnDesc.h: an envelope class for column descriptions in tables
-//# Copyright (C) 1994,1995,1996,1997,1998,1999,2000,2001
+//# Copyright (C) 1994,1995,1996,1997,1998,1999,2000,2001,2016
 //# Associated Universities, Inc. Washington DC, USA.
 //#
 //# This library is free software; you can redistribute it and/or modify it
@@ -32,10 +32,10 @@
 //# Includes
 #include <casacore/casa/aips.h>
 #include <casacore/tables/Tables/BaseColDesc.h>
-#include <casacore/casa/Containers/SimOrdMap.h>
 #include <casacore/casa/BasicSL/String.h>
 #include <casacore/casa/Arrays/IPosition.h>
 #include <casacore/casa/OS/Mutex.h>
+#include <map>
 
 namespace casacore { //# NAMESPACE CASACORE - BEGIN
 
@@ -354,18 +354,12 @@ public:
     static ColumnDescCtor* getCtor (const String& name);
 
     // Register a "XXColumnDesc" constructor (thread-safe).
-    static void registerCtor (const String& name, ColumnDescCtor*);
-
-    // Register the main data managers (if not done yet).
-    // It is fully thread-safe.
-    static void registerMainCtor()
-      { theirMutexedInit.exec(); }
+    static void registerCtor (const String& name, ColumnDescCtor* func);
 
 private:
-    // Register a constructor without doing a mutex lock.
-    static void unlockedRegisterCtor (const String& type, ColumnDescCtor* func)
-      { theirRegisterMap.define (type, func); }
-
+    // A mutex for additions to the constructor map.
+    static Mutex theirMutex;
+  
     // Define a map which maps the name of the various XXColumnDesc
     // classes to a static function constructing them.
     // This is used when reading a column description back; it in fact
@@ -374,20 +368,11 @@ private:
     // The map is filled with the main XXColumnDesc construction functions
     // by the function registerColumnDesc upon the first call of
     // <src>ColumnDesc::getFile</src>.
-    static MutexedInit theirMutexedInit;
-    static SimpleOrderedMap<String, BaseColumnDesc* (*)(const String&)> theirRegisterMap;
+    static std::map<String, ColumnDescCtor*>& getRegisterMap();
 
-    // Serve as default function for theirRegisterMap (see below),
-    // which catches all unknown XXColumnDesc class names.
-    // <thrown>
-    //   <li> TableUnknownDesc
-    // </thrown>
-    static BaseColumnDesc* unknownColumnDesc (const String& name);
+    // Register the main data managers.
+    static std::map<String, ColumnDescCtor*> initRegisterMap();
 
-    // Do the actual (thread-safe) registration of the main data managers.
-    static void doRegisterMainCtor (void*);
-
-private:
     // Construct from a pointer (for class BaseColumn).
     ColumnDesc (BaseColumnDesc*);
 

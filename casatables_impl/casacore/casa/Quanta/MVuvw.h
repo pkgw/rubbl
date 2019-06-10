@@ -149,7 +149,9 @@ public:
   // </group>
   // Copy assignment
   MVuvw &operator=(const MVuvw &other);
-  
+
+  MVuvw(const MVuvw&) = default;
+
   // Destructor
   ~MVuvw();
   

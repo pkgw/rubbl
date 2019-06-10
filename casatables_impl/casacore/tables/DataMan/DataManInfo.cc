@@ -28,10 +28,11 @@
 
 //# Includes
 #include <casacore/tables/DataMan/DataManInfo.h>
+#include <casacore/tables/DataMan/DataManAccessor.h>
+#include <casacore/tables/Tables/Table.h>
 #include <casacore/tables/Tables/TableDesc.h>
 #include <casacore/tables/DataMan/DataManager.h>
 #include <casacore/casa/Containers/Record.h>
-#include <casacore/casa/Containers/SimOrdMap.h>
 #include <casacore/casa/Arrays/Vector.h>
 #include <casacore/casa/BasicSL/String.h>
 
@@ -40,14 +41,14 @@ namespace casacore { //# NAMESPACE CASACORE - BEGIN
 
 void DataManInfo::removeHypercolumns (TableDesc& tabDesc)
 {
-  tabDesc.adjustHypercolumns (SimpleOrderedMap<String,String>(String()));
+  tabDesc.adjustHypercolumns (std::map<String,String>());
 }
 
 void DataManInfo::adjustDesc (TableDesc& tdesc, const Record& dminfo)
 {
   // Find out the columns and data manager groups of the fields.
-  SimpleOrderedMap<String,String> dmTypeMap("", tdesc.ncolumn());
-  SimpleOrderedMap<String,String> dmGroupMap("", tdesc.ncolumn());
+  std::map<String,String> dmTypeMap;
+  std::map<String,String> dmGroupMap;
   for (uInt i=0; i<dminfo.nfields(); i++) {
     const Record& sub = dminfo.asRecord (i);
     if (sub.isDefined("COLUMNS")) {
@@ -61,29 +62,31 @@ void DataManInfo::adjustDesc (TableDesc& tdesc, const Record& dminfo)
       }
       Vector<String> cols = sub.asArrayString ("COLUMNS");
       for (uInt j=0; j<cols.nelements(); j++) {
-	dmTypeMap(cols[j]) = dmType;
-	dmGroupMap(cols[j]) = dmGroup;
+	dmTypeMap.insert (std::make_pair(cols[j], dmType));
+        dmGroupMap.insert (std::make_pair(cols[j], dmGroup));
       }
     }
   }
   // Exit if no columns in dminfo.
-  if (dmTypeMap.ndefined() == 0) {
+  if (dmTypeMap.empty()) {
     return;
   }
   // Change data manager type and group as needed.
   for (uInt i=0; i<tdesc.ncolumn(); i++) {
     ColumnDesc& cdesc = tdesc.rwColumnDesc(i);
     const String& name = cdesc.name();
-    String* v = dmTypeMap.isDefined (name);
-    if (v) {
-      if (! v->empty()) {
-	cdesc.dataManagerType() = *v;
+    std::map<String,String>::iterator iter1 = dmTypeMap.find (name);
+    if (iter1 != dmTypeMap.end()) {
+      String v = iter1->second;
+      if (! v.empty()) {
+	cdesc.dataManagerType() = v;
       }
     }
-    v = dmGroupMap.isDefined (name);
-    if (v) {
-      if (! v->empty()) {
-	cdesc.dataManagerGroup() = *v;
+    std::map<String,String>::iterator iter2 = dmGroupMap.find (name);
+    if (iter2 != dmTypeMap.end()) {
+      String v = iter2->second;
+      if (! v.empty()) {
+	cdesc.dataManagerGroup() = v;
       }
     }
   }
@@ -267,6 +270,26 @@ void DataManInfo::setTiledStMan (Record& dminfo, const Vector<String>& columns,
     dminfo.defineRecord (dminfo.nfields(), dm);
   }
 }
+
+void DataManInfo::showDataManStats (const Table& tab, ostream& os)
+{
+  Record dmInfo = tab.dataManagerInfo();
+  // Loop through all data managers.
+  // Not all of them might have a name, so use the first column in
+  // each of them to construct the Accessor object.
+  for (uInt i=0; i<dmInfo.nfields(); ++i) {
+    String col = dmInfo.subRecord(i).asArrayString("COLUMNS").data()[0];
+    RODataManAccessor acc(tab, col, True);
+    os << "  Statistics for column " << col << " e.a.: ";
+    Int64 pos = os.tellp();
+    acc.showCacheStatistics (os);
+    if (os.tellp() == pos) {
+      // Nothing written, thus end the line.
+      os << endl;
+    }
+  }
+}
+
 
 } //# NAMESPACE CASACORE - END
 
