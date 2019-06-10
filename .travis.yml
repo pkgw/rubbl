@@ -19,6 +19,9 @@ matrix:
       sudo: required
       dist: xenial
       rust: nightly
+    - os: osx
+      osx_image: xcode9.3
+      rust: stable
   allow_failures:
     - rust: nightly
 
@@ -35,4 +38,4 @@ script:
   - |
     cargo fmt --all -- --check &&
     cargo build --verbose &&
-    cargo test
+    cargo test --all
