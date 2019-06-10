@@ -39,11 +39,8 @@
 #include <casacore/casa/Arrays/IPosition.h>
 #include <casacore/casa/ostream.h>
 #include <iterator>
-#if defined(WHATEVER_VECTOR_FORWARD_DEC)
-WHATEVER_VECTOR_FORWARD_DEC;
-#else
 #include <casacore/casa/stdvector.h>
-#endif
+
 
 namespace casacore { //#Begin casa namespace
 //# Forward Declarations
@@ -196,7 +193,7 @@ public:
     // initialize elements before they are referred, especially when <src>T</src> is such type like <src>std::string</src>.
     // <srcblock>
     //   IPosition shape(1, 10);
-    //   Array<Int> ai(shape, ArrayInitPolicy::NO_INIT);
+    //   Array<Int> ai(shape, ArrayInitPolicies::NO_INIT);
     //   size_t nread = fread(ai.data(), sizeof(Int), ai.nelements(), fp);
     // </srcblock>
     Array(const IPosition &shape, ArrayInitPolicy initPolicy);
@@ -223,7 +220,7 @@ public:
     // Otherwise, <src>allocator</src> is ignored.
     // It is strongly recommended to allocate and initialize <src>storage</src> with <src>DefaultAllocator<T></src>
     // rather than new[] or <src>NewDelAllocator<T></src> because new[] can't decouple allocation and initialization.
-    // <src>DefaultAllocator<T>::type</src> is a subclass of std::allocator. You can allocate <src>storage</src> via
+    // <src>DefaultAllocator<T></src> is a subclass of std::allocator. You can allocate <src>storage</src> via
     // the allocator as below.
     // <srcblock>
     //   FILE *fp = ...;
@@ -338,7 +335,7 @@ public:
     // which likely would be simpler to understand. (Should copy() 
     // be deprecated and removed?)
     //
-    Array<T> copy(ArrayInitPolicy policy = ArrayInitPolicy::NO_INIT) const;                         // Make a copy of this
+    Array<T> copy(ArrayInitPolicy policy = ArrayInitPolicies::NO_INIT) const;                         // Make a copy of this
 
     // This function copies the matching part of from array to this array.
     // The matching part is the part with the minimum size for each axis.
@@ -782,7 +779,7 @@ public:
   class ConstIteratorSTL: public BaseIteratorSTL
     {
     public:
-      // <group name=STL-iterator-typedefs>
+      // <group name=STL-const-iterator-typedefs>
       typedef T                 value_type;
       typedef const value_type* pointer;
       typedef const value_type& reference;
@@ -845,7 +842,7 @@ public:
     // If the array is contiguous, it is possible to use the
     // <src>cbegin</src> and <src>cend</src> functions which are
     // about 10% faster.
-    // <group name=STL-iterator>
+    // <group name=iterator-typedefs>
     // STL-style typedefs.
     // <group>
     typedef T                value_type;
@@ -891,7 +888,7 @@ private:
     Allocator_private::BulkAllocator<T> *nonNewDelAllocator() const;
 protected:
     static ArrayInitPolicy defaultArrayInitPolicy() {
-        return Block<T>::init_anyway() ? ArrayInitPolicy::INIT : ArrayInitPolicy::NO_INIT;
+        return Block<T>::init_anyway() ? ArrayInitPolicies::INIT : ArrayInitPolicies::NO_INIT;
     }
     // pre/post processing hook of takeStorage() for subclasses.
     virtual void preTakeStorage(const IPosition &) {}
@@ -931,7 +928,6 @@ protected:
 
 
 //# Declare extern templates for often used types.
-#ifdef AIPS_CXX11
   extern template class Array<Bool>;
   extern template class Array<Char>;
   extern template class Array<uChar>;
@@ -945,7 +941,6 @@ protected:
   extern template class Array<Complex>;
   extern template class Array<DComplex>;
   extern template class Array<String>;
-#endif
 
 }//#End casa namespace
 

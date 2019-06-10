@@ -539,7 +539,7 @@ public:
   Bool isScalarColumn (const String& columnName);
 
   // Return the data type of the column as:
-  //  Bool, UChar, Short, UShort, Int, UInt, 
+  //  Bool, UChar, Short, UShort, Int, UInt, Int64,
   //  Float, Double, Complex, DComplex, String, Table, or unknown.
   String columnDataType (const String& columnName);
 
@@ -561,8 +561,8 @@ public:
   Record getProperties (const String& name, Bool byColumn);
 
   // Set the properties of a data manager given by column or data manager name.
-  void setProperties (const String& name, Bool byColumn,
-                      const Record& properties);
+  void setProperties (const String& name, const Record& properties,
+                      Bool byColumn);
 
   // Get the table description of the table.
   // It returns a record containing the description.
@@ -737,6 +737,9 @@ private:
 		      const String& colName,
 		      Int64 rownr, Int64 nrow, Int64 incr,
 		      const String& caller);
+
+  // Make an empty array (with 1 axis) of the correct datatype.
+  ValueHolder makeEmptyArray (DataType dtype);
 
   // Get values from the column.
   // Nrow<0 means till the end of the column.

@@ -88,37 +88,38 @@ LockFile::LockFile (const String& fileName, double inspectInterval,
     AlwaysAssert (SIZEINT == CanonicalConversion::canonicalSize (static_cast<Int*>(0)),
 		  AipsError);
     itsName = Path(fileName).absoluteName();
-    if (!noLocking) {
-      //# Create the file if it does not exist yet.
-      //# When the flag is set, it is allowed that the file does not
-      //# exist and cannot be created. In that case it is assumed that
-      //# later on each locking request is successful (without doing actual
-      //# locking).
-      if (! create) {
-	File f (itsName);
-	if (! f.exists()) {
-	    if (!f.canCreate()  &&  !mustExist) {
-		return;
-	    }
-	    create = True;
-	}
+    //# If needed, create the file if it does not exist yet.
+    //# If the flag is set, it is allowed that the file does not
+    //# exist and cannot be created. In that case it is assumed that
+    //# later on each locking request is successful (without doing actual
+    //# locking).
+    if (!noLocking  &&  !create) {
+      File f (itsName);
+      if (! f.exists()) {
+        if (!f.canCreate()  &&  !mustExist) {
+          return;    // Acceptable that lock file does not exist
+        }
+        create = True;
       }
-      //# Open the lock file as read/write if it exists.
-      //# If it did not succeed, open as readonly.
-      int fd;
-      if (!create) {
-	fd = FiledesIO::open (itsName.chars(), True, False);
-	if (fd == -1) {
-	    fd = FiledesIO::open (itsName.chars(), False);
-	    itsWritable  = False;
-	    itsAddToList = False;
-	}
-      }else{
-	//# Create a new file with world write access.
-	//# Initialize the values in it.
-	fd = FiledesIO::create (itsName.chars(), 0666);
-	putReqId (fd);
+    }
+    //# Open the lock file as read/write if it exists.
+    //# If it did not succeed, open as readonly.
+    //# For noLocking, it does not need to exist.
+    int fd = -1;
+    if (!create) {
+      fd = FiledesIO::open (itsName.chars(), True, False);
+      if (fd == -1) {
+        fd = FiledesIO::open (itsName.chars(), False, !noLocking);
+        itsWritable  = False;
+        itsAddToList = False;
       }
+    } else if (!noLocking) {
+      //# Create a new file with world write access.
+      //# Initialize the values in it.
+      fd = FiledesIO::create (itsName.chars(), 0666);
+      putReqId (fd);
+    }
+    if (fd >= 0) {
       //# Create FileLocker objects for this lock file.
       //# The first one is for read/write locks.
       //# The second one is to set the file to "in use" and to tell if
@@ -129,10 +130,12 @@ LockFile::LockFile (const String& fileName, double inspectInterval,
       } else {
         itsUseLocker = FileLocker (fd, 4*seqnr+1, 1);
       }
-      itsFileIO = new FiledesIO (fd, itsName);
-      itsCanIO  = new CanonicalIO (itsFileIO);
-      // Set the file to in use by acquiring a read lock.
-      itsUseLocker.acquire (FileLocker::Read, 1);
+      if (!noLocking) {
+        itsFileIO = new FiledesIO (fd, itsName);
+        itsCanIO  = new CanonicalIO (itsFileIO);
+        // Set the file to in use by acquiring a read lock.
+        itsUseLocker.acquire (FileLocker::Read, 1);
+      }
     }
 }
 
@@ -284,23 +287,27 @@ void LockFile::getInfo (MemoryIO& info)
 
 void LockFile::putInfo (const MemoryIO& info) const
 {
-    uInt infoLeng = ((MemoryIO&)info).length();
+    uInt infoLeng = const_cast<MemoryIO&>(info).length();
     if (itsLocker.fd() < 0  ||  !itsWritable  ||  infoLeng == 0) {
 	return;
     }
+    // Write the info into the lock file preceeded by its length.
     uChar buffer[1024];
     uInt leng = CanonicalConversion::fromLocal (buffer, infoLeng);
     if (infoLeng > 1024 - leng) {
+      // Too large for the buffer, so write length and info separately.
       traceLSEEK (itsLocker.fd(), SIZEREQID, SEEK_SET);
       AlwaysAssert (traceWRITE (itsLocker.fd(), (Char *)buffer, leng) ==
                     Int(leng), AipsError);
       AlwaysAssert (traceWRITE (itsLocker.fd(), (Char *)info.getBuffer(),
                                 infoLeng) == Int(infoLeng), AipsError);
     }else{
+      // Info fits in the buffer, so copy and do a single write.
       memcpy (buffer+leng, info.getBuffer(), infoLeng);
       AlwaysAssert (tracePWRITE (itsLocker.fd(), (Char *)buffer, leng+infoLeng,
                                  SIZEREQID) == Int(leng+infoLeng), AipsError);
     }
+    // Do an fsync to achieve NFS synchronization.
     fsync (itsLocker.fd());
 }
 

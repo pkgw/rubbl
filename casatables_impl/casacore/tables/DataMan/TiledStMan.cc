@@ -310,14 +310,14 @@ Record TiledStMan::dataManagerSpec() const
 Record TiledStMan::getProperties() const
 {
     Record rec;
-    rec.define ("ActualMaxCacheSize", Int(maxCacheSize_p));
+    rec.define ("MaxCacheSize", Int(maxCacheSize_p));
     return rec;
 }
 
 void TiledStMan::setProperties (const Record& rec)
 {
-    if (rec.isDefined("ActualMaxCacheSize")) {
-        setMaximumCacheSize (rec.asInt("ActualCacheSize"));
+    if (rec.isDefined("MaxCacheSize")) {
+        setMaximumCacheSize (rec.asInt("MaxCacheSize"));
     }
 }
 
@@ -353,8 +353,8 @@ void TiledStMan::deleteManager()
     DOos::remove (fileName(), False, False);
 }
 
-void TiledStMan::setMaximumCacheSize (uInt nbytes)
-    { maxCacheSize_p = nbytes; }
+void TiledStMan::setMaximumCacheSize (uInt nMiB)
+    { maxCacheSize_p = nMiB; }
 
 
 Bool TiledStMan::canChangeShape() const
@@ -615,6 +615,8 @@ int TiledStMan::arrayDataType (int dataType) const
 	return TpArrayInt;
     case TpUInt:
 	return TpArrayUInt;
+    case TpInt64:
+	return TpArrayInt64;
     case TpFloat:
 	return TpArrayFloat;
     case TpDouble:

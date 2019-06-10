@@ -1,5 +1,5 @@
 //# ColumnDesc.cc: Envelope class for description of a table column
-//# Copyright (C) 1994,1995,1996,1997,1998,2001
+//# Copyright (C) 1994,1995,1996,1997,1998,2001,2016
 //# Associated Universities, Inc. Washington DC, USA.
 //#
 //# This library is free software; you can redistribute it and/or modify it
@@ -44,6 +44,10 @@
 
 namespace casacore { //# NAMESPACE CASACORE - BEGIN
 
+// Initialize the statics.
+Mutex ColumnDesc::theirMutex;
+
+  
 ColumnDesc::ColumnDesc (const BaseColumnDesc& cold)
 : colPtr_p   (cold.clone()),
   allocated_p(True)
@@ -106,7 +110,7 @@ Bool ColumnDesc::operator== (const ColumnDesc& that) const
 
 Bool ColumnDesc::operator!= (const ColumnDesc& that) const
 {
-    return (*this==that  ?  False : True);
+    return !(*this == that);
 }
 
 
@@ -143,6 +147,8 @@ DataType ColumnDesc::trueDataType() const
 	return TpArrayInt;
     case TpUInt:
 	return TpArrayUInt;
+    case TpInt64:
+	return TpArrayInt64;
     case TpFloat:
 	return TpArrayFloat;
     case TpDouble:
@@ -191,8 +197,6 @@ void ColumnDesc::putFile (AipsIO& ios, const TableAttr& parentAttr) const
 //# Get from AipsIO.
 void ColumnDesc::getFile (AipsIO& ios, const TableAttr& parentAttr)
 {
-    //# First register all subclasses if not done yet.
-    theirMutexedInit.exec();
     uInt version;
     ios >> version;
     String tp;
@@ -200,8 +204,10 @@ void ColumnDesc::getFile (AipsIO& ios, const TableAttr& parentAttr)
     if (allocated_p) {
 	delete colPtr_p;
     }
+    // If tp is not in the map, (tp, unknownColumnDesc) is added and called (throws).
+    ColumnDesc::ColumnDescCtor* cdFunc = getCtor(tp);
+    colPtr_p = (*cdFunc)(tp);
     allocated_p = True;
-    colPtr_p = theirRegisterMap(tp)(tp);
     colPtr_p->getFile (ios, parentAttr);
 }
 
@@ -211,10 +217,12 @@ ostream& operator<< (ostream& ios, const ColumnDesc& cd)
     cd.show (ios);
     return ios;
 }
+
 void ColumnDesc::show() const
 {
     show (cout);
 }
+
 void ColumnDesc::show (ostream& os) const
 {
     if (colPtr_p) {
@@ -227,87 +235,95 @@ void ColumnDesc::show (ostream& os) const
 }
 
 
-//# Initialize the static variables for the class registration.
-MutexedInit ColumnDesc::theirMutexedInit (doRegisterMainCtor);
-SimpleOrderedMap<String, BaseColumnDesc* (*)(const String&)>
-                  ColumnDesc::theirRegisterMap (ColumnDesc::unknownColumnDesc);
-
-//# The default "ctor" function for unknown types.
-BaseColumnDesc* ColumnDesc::unknownColumnDesc (const String& name)
-{
-    throw (TableUnknownDesc(name));
-    return 0;
-}
-
 //# Register a mapping.
-void ColumnDesc::registerCtor (const String& name, ColumnDescCtor* func)
+void ColumnDesc::registerCtor (const String& name,
+                               ColumnDesc::ColumnDescCtor* func)
 {
-    ScopedMutexLock lock(theirMutexedInit.mutex());
-    unlockedRegisterCtor (name, func);
+    ScopedMutexLock lock(theirMutex);
+    getRegisterMap().insert (std::make_pair(name, func));
 }
 
 //# Get a ColumnDesc constructor.
 //# Return default function if undefined.
 ColumnDesc::ColumnDescCtor* ColumnDesc::getCtor (const String& name)
 {
-    ScopedMutexLock lock(theirMutexedInit.mutex());
-    return *(theirRegisterMap.isDefined (name));
+  std::map<String, ColumnDesc::ColumnDescCtor*>& regMap = getRegisterMap();
+  std::map<String, ColumnDesc::ColumnDescCtor*>::iterator iter = regMap.find (name);
+  if (iter == regMap.end()) {
+    throw;
+  }
+  return iter->second;
+}
+
+std::map<String, ColumnDesc::ColumnDescCtor*>& ColumnDesc::getRegisterMap()
+{
+  static std::map<String, ColumnDesc::ColumnDescCtor*> regMap(initRegisterMap());
+  return regMap;
 }
 
 //# Register the main "static constructors" of all XColumnDesc classes.
-void ColumnDesc::doRegisterMainCtor (void*)
+// No locking since private and only called by ctor of static member init.
+std::map<String, ColumnDesc::ColumnDescCtor*> ColumnDesc::initRegisterMap()
 {
+  std::map<String, ColumnDesc::ColumnDescCtor*> regMap;
+
   ScalarColumnDesc<Bool>     scdb("x");
-  unlockedRegisterCtor (scdb.className(), scdb.makeDesc);
+  regMap.insert (std::make_pair(scdb.className(), &scdb.makeDesc));
   ScalarColumnDesc<uChar>    scduc("x");
-  unlockedRegisterCtor (scduc.className(), scduc.makeDesc);
+  regMap.insert (std::make_pair(scduc.className(), &scduc.makeDesc));
   ScalarColumnDesc<Short>    scds("x");
-  unlockedRegisterCtor (scds.className(), scds.makeDesc);
+  regMap.insert (std::make_pair(scds.className(), &scds.makeDesc));
   ScalarColumnDesc<uShort>   scdus("x");
-  unlockedRegisterCtor (scdus.className(), scdus.makeDesc);
+  regMap.insert (std::make_pair(scdus.className(), &scdus.makeDesc));
   ScalarColumnDesc<Int>      scdi("x");
-  unlockedRegisterCtor (scdi.className(), scdi.makeDesc);
+  regMap.insert (std::make_pair(scdi.className(), &scdi.makeDesc));
   ScalarColumnDesc<uInt>     scdui("x");
-  unlockedRegisterCtor (scdui.className(), scdui.makeDesc);
+  regMap.insert (std::make_pair(scdui.className(), &scdui.makeDesc));
+  ScalarColumnDesc<Int64>    scdi64("x");
+  regMap.insert (std::make_pair(scdi64.className(), &scdi64.makeDesc));
   ScalarColumnDesc<float>    scdf("x");
-  unlockedRegisterCtor (scdf.className(), scdf.makeDesc);
+  regMap.insert (std::make_pair(scdf.className(), &scdf.makeDesc));
   ScalarColumnDesc<double>   scdd("x");
-  unlockedRegisterCtor (scdd.className(), scdd.makeDesc);
+  regMap.insert (std::make_pair(scdd.className(), &scdd.makeDesc));
   ScalarColumnDesc<Complex>  scdcx("x");
-  unlockedRegisterCtor (scdcx.className(), scdcx.makeDesc);
+  regMap.insert (std::make_pair(scdcx.className(), &scdcx.makeDesc));
   ScalarColumnDesc<DComplex> scddx("x");
-  unlockedRegisterCtor (scddx.className(), scddx.makeDesc);
+  regMap.insert (std::make_pair(scddx.className(), &scddx.makeDesc));
   ScalarColumnDesc<String>   scdst("x");
-  unlockedRegisterCtor (scdst.className(), scdst.makeDesc);
+  regMap.insert (std::make_pair(scdst.className(), &scdst.makeDesc));
 
   ScalarRecordColumnDesc     srcd ("x");
-  unlockedRegisterCtor (srcd.className(), srcd.makeDesc);
+  regMap.insert (std::make_pair(srcd.className(), &srcd.makeDesc));
 
   ArrayColumnDesc<Bool>     acdb("x");
-  unlockedRegisterCtor (acdb.className(), acdb.makeDesc);
+  regMap.insert (std::make_pair(acdb.className(), &acdb.makeDesc));
   ArrayColumnDesc<uChar>    acduc("x");
-  unlockedRegisterCtor (acduc.className(), acduc.makeDesc);
+  regMap.insert (std::make_pair(acduc.className(), &acduc.makeDesc));
   ArrayColumnDesc<Short>    acds("x");
-  unlockedRegisterCtor (acds.className(), acds.makeDesc);
+  regMap.insert (std::make_pair(acds.className(), &acds.makeDesc));
   ArrayColumnDesc<uShort>   acdus("x");
-  unlockedRegisterCtor (acdus.className(), acdus.makeDesc);
+  regMap.insert (std::make_pair(acdus.className(), &acdus.makeDesc));
   ArrayColumnDesc<Int>      acdi("x");
-  unlockedRegisterCtor (acdi.className(), acdi.makeDesc);
+  regMap.insert (std::make_pair(acdi.className(), &acdi.makeDesc));
   ArrayColumnDesc<uInt>     acdui("x");
-  unlockedRegisterCtor (acdui.className(), acdui.makeDesc);
+  regMap.insert (std::make_pair(acdui.className(), &acdui.makeDesc));
+  ArrayColumnDesc<Int64>    acdi64("x");
+  regMap.insert (std::make_pair(acdi64.className(), &acdi64.makeDesc));
   ArrayColumnDesc<float>    acdf("x");
-  unlockedRegisterCtor (acdf.className(), acdf.makeDesc);
+  regMap.insert (std::make_pair(acdf.className(), &acdf.makeDesc));
   ArrayColumnDesc<double>   acdd("x");
-  unlockedRegisterCtor (acdd.className(), acdd.makeDesc);
+  regMap.insert (std::make_pair(acdd.className(), &acdd.makeDesc));
   ArrayColumnDesc<Complex>  acdcx("x");
-  unlockedRegisterCtor (acdcx.className(), acdcx.makeDesc);
+  regMap.insert (std::make_pair(acdcx.className(), &acdcx.makeDesc));
   ArrayColumnDesc<DComplex> acddx("x");
-  unlockedRegisterCtor (acddx.className(), acddx.makeDesc);
+  regMap.insert (std::make_pair(acddx.className(), &acddx.makeDesc));
   ArrayColumnDesc<String>   acdst("x");
-  unlockedRegisterCtor (acdst.className(), acdst.makeDesc);
+  regMap.insert (std::make_pair(acdst.className(), &acdst.makeDesc));
 
   SubTableDesc std("x", "", TableDesc());
-  unlockedRegisterCtor (std.className(), std.makeDesc);
+  regMap.insert (std::make_pair(std.className(), &std.makeDesc));
+
+  return regMap;
 }
 
 } //# NAMESPACE CASACORE - END
