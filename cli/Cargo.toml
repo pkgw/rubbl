@@ -1,4 +1,4 @@
-# Copyright 2017 Peter Williams <peter@newton.cx> and collaborators
+# Copyright 2017-2019 Peter Williams <peter@newton.cx> and collaborators
 # Licensed under the MIT License.
 
 [package]
@@ -11,4 +11,4 @@ license = "MIT"
 clap = "^2.33"
 failure = "^0.1"
 failure_derive = "^0.1"
-rubbl_core = { version = "0.1.1", path = "../core" }
+rubbl_core = { version = "0.1.2", path = "../core" }

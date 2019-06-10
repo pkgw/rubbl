@@ -1,4 +1,4 @@
-# Copyright 2017 Peter Williams <peter@newton.cx> and collaborators
+# Copyright 2017-2019 Peter Williams <peter@newton.cx> and collaborators
 # Licensed under the MIT License.
 
 [package]
@@ -8,4 +8,4 @@ authors = ["Peter Williams <peter@newton.cx>"]
 license = "MIT"
 
 [dependencies]
-rubbl_core = { path = "../core", version = "0.1.1" }
+rubbl_core = { path = "../core", version = "0.1.2" }

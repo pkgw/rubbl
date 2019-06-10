@@ -1,9 +1,9 @@
-# Copyright 2017-2018 Peter Williams <peter@newton.cx> and collaborators
+# Copyright 2017-2019 Peter Williams <peter@newton.cx> and collaborators
 # Licensed under the MIT License.
 
 [package]
 name = "rubbl_core"
-version = "0.1.1"
+version = "0.1.2"
 authors = ["Peter Williams <peter@newton.cx>"]
 license = "MIT"
 homepage = "https://github.com/pkgw/rubbl"
