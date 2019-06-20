@@ -20,7 +20,7 @@ matrix:
       dist: xenial
       rust: nightly
     - os: osx
-      osx_image: xcode9.3
+      osx_image: xcode10.2
       rust: stable
   allow_failures:
     - rust: nightly
