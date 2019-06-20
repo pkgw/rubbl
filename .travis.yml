@@ -19,6 +19,9 @@ matrix:
       sudo: required
       dist: xenial
       rust: nightly
+    - os: osx
+      osx_image: xcode10.2
+      rust: stable
   allow_failures:
     - rust: nightly
 
@@ -30,9 +33,13 @@ branches:
 
 before_script:
   - rustup component add rustfmt
+  - |
+    if [[ "$TRAVIS_OS_NAME" == osx ]]; then
+        ./ci/osx-specifics.sh
+    fi
 
 script:
   - |
     cargo fmt --all -- --check &&
     cargo build --verbose &&
-    cargo test
+    cargo test --all
