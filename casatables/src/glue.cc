@@ -207,7 +207,11 @@ extern "C" {
             casacore::uInt n_kws = rec.nfields();
 
             for (casacore::uInt i = 0; i < n_kws; i++) {
-                unbridge_string(rec.name(i), name);
+                // Note: must preserve string variable as a local until after
+                // the callback is called; otherwise it can be deleted before
+                // we copy its data.
+                const casacore::String n = rec.name(i);
+                unbridge_string(n, name);
                 callback(&name, rec.type(i), ctxt);
             }
         } catch (...) {
