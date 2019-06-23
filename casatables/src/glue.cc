@@ -164,13 +164,17 @@ extern "C" {
 
     // We assume the caller has allocated col_names of sufficient size.
     int
-    table_get_column_names(const GlueTable &table, StringBridge *col_names, ExcInfo &exc)
+    table_get_column_names(const GlueTable &table, StringBridgeCallback callback,
+                           void *ctxt, ExcInfo &exc)
     {
         try {
+            StringBridge name;
             casacore::Vector<casacore::String> cnames = table.actualTableDesc().columnNames();
 
-            for (size_t i = 0; i < cnames.size(); i++)
-                unbridge_string(cnames[i], col_names[i]);
+            for (size_t i = 0; i < cnames.size(); i++) {
+                unbridge_string(cnames[i], name);
+                callback(&name, ctxt);
+            }
         } catch (...) {
             handle_exception(exc);
             return 1;
