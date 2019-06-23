@@ -343,13 +343,6 @@ mod data_type_tests {
 // String bridge
 
 impl glue::StringBridge {
-    fn zeroed() -> Self {
-        Self {
-            data: 0 as _,
-            n_bytes: 0,
-        }
-    }
-
     fn from_rust(s: &str) -> Self {
         Self {
             data: s.as_ptr() as _,
@@ -431,22 +424,59 @@ impl Table {
     }
 
     pub fn column_names(&mut self) -> Result<Vec<String>, CasacoreError> {
-        let n_cols = self.n_columns();
-        let mut cnames: Vec<glue::StringBridge> = Vec::with_capacity(n_cols);
+        // The C++ code behind this functionality reports creates a vector of
+        // casa::String (<=> std::string) objects, but they are only
+        // temporary, so we need to copy the strings before the C++ glue
+        // function exits and deallocates its locals. So we need a callback.
+        // We use an `extern "C" fn` callback that the C++ code can call
+        // explicitly, combined with a Rust closure that handles the task at
+        // hand.
 
-        for _ in 0..n_cols {
-            cnames.push(glue::StringBridge::zeroed());
+        unsafe extern "C" fn casatables_cb_table_column_names<F>(
+            name: *const glue::StringBridge,
+            ctxt: *mut std::os::raw::c_void,
+        ) where
+            F: FnMut(String),
+        {
+            let f: &mut F = &mut *(ctxt as *mut F);
+            f((&*name).to_rust())
         }
 
+        // I think we basically need this wrapper to give us a way to name the
+        // type `F` of our closure.
+
+        unsafe fn invoke<F>(
+            handle: *mut glue::GlueTable,
+            exc_info: &mut glue::ExcInfo,
+            mut f: F,
+        ) -> std::os::raw::c_int
+        where
+            F: FnMut(String),
+        {
+            glue::table_get_column_names(
+                handle,
+                Some(casatables_cb_table_column_names::<F>),
+                &mut f as *mut _ as *mut std::os::raw::c_void,
+                exc_info,
+            )
+        }
+
+        // Here's where we actually do stuff.
+
+        let n_cols = self.n_columns();
+        let mut cnames = Vec::with_capacity(n_cols);
+
         let rv = unsafe {
-            glue::table_get_column_names(self.handle, cnames.as_mut_ptr(), &mut self.exc_info)
+            invoke(self.handle, &mut self.exc_info, |name| {
+                cnames.push(name);
+            })
         };
 
         if rv != 0 {
             return self.exc_info.as_err();
         }
 
-        Ok(cnames.iter().map(|cstr| cstr.to_rust()).collect())
+        Ok(cnames)
     }
 
     pub fn remove_column(&mut self, col_name: &str) -> Result<(), CasacoreError> {

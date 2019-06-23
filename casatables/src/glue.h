@@ -54,9 +54,17 @@ typedef struct GlueTable GlueTable;
 typedef struct GlueTableRow GlueTableRow;
 #endif
 
-// OMG, strings. I tried to map directly to std::string, but different
-// versions of the STL have different semantics that I could never make work
-// consistently.
+// OMG, strings. First of all: casacore::String is a subclass of std::string,
+// and the two are interchangeable for our purposes. I first tried to send
+// std::strings directly into the Rust layer, but different versions of the
+// STL have different semantics that I could never make work consistently.
+// Note also that, to the best of my knowledge, there is no reliable mechanism
+// to take ownership of a std::string's underlying buffer, which is what would
+// be necessary for zero-copy transfer of strings from C++ to Rust. (Some STLs
+// use a "small string optimization" that means that for short strings there
+// *is no* underyling buffer anyway.) So we have to copy data, and often need
+// to use C++->Rust callbacks to be able to copy string contents before they
+// are deallocated at the C++ layer.
 
 typedef struct StringBridge {
     const void *data;
@@ -67,10 +75,12 @@ typedef struct ExcInfo {
     char message[512];
 } ExcInfo;
 
-// The C++ code behind table_get_keyword_info gives us string pointers that do
-// have lifetimes that are short compared to the table object, so we need to
-// copy out each string as we see it. Therefore we need a callback. Took me a
-// while to get this working but I think it's good now.
+// Generic callback prototype when handing off owned strings from C++ to Rust.
+// See, e.g., table_get_column_names.
+typedef void (*StringBridgeCallback)(const StringBridge *name, void *ctxt);
+
+// A more specific callback type for table_get_keyword_info, in which there is
+// additional information we'd like to to transfer.
 typedef void (*KeywordInfoCallback)(const StringBridge *name, GlueDataType dtype, void *ctxt);
 
 typedef enum TableOpenMode {
@@ -86,7 +96,8 @@ extern "C" {
     void table_close_and_free(GlueTable *table, ExcInfo &exc);
     unsigned long table_n_rows(const GlueTable &table);
     unsigned long table_n_columns(const GlueTable &table);
-    int table_get_column_names(const GlueTable &table, StringBridge *col_names, ExcInfo &exc);
+    int table_get_column_names(const GlueTable &table, StringBridgeCallback callback,
+                               void *ctxt, ExcInfo &exc);
     unsigned long table_n_keywords(const GlueTable &table);
     int table_get_keyword_info(const GlueTable &table, KeywordInfoCallback callback,
                                void *ctxt, ExcInfo &exc);

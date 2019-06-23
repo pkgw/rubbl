@@ -123,6 +123,9 @@ impl Clone for ExcInfo {
         *self
     }
 }
+pub type StringBridgeCallback = ::std::option::Option<
+    unsafe extern "C" fn(name: *const StringBridge, ctxt: *mut ::std::os::raw::c_void),
+>;
 pub type KeywordInfoCallback = ::std::option::Option<
     unsafe extern "C" fn(
         name: *const StringBridge,
@@ -159,7 +162,8 @@ extern "C" {
 extern "C" {
     pub fn table_get_column_names(
         table: *const GlueTable,
-        col_names: *mut StringBridge,
+        callback: StringBridgeCallback,
+        ctxt: *mut ::std::os::raw::c_void,
         exc: *mut ExcInfo,
     ) -> ::std::os::raw::c_int;
 }
