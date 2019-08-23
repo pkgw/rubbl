@@ -33,10 +33,6 @@ branches:
 
 before_script:
   - rustup component add rustfmt
-  - |
-    if [[ "$TRAVIS_OS_NAME" == osx ]]; then
-        ./ci/osx-specifics.sh
-    fi
 
 script:
   - |
