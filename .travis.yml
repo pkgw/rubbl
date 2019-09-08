@@ -3,8 +3,6 @@
 
 language: rust
 
-cache: cargo
-
 matrix:
   include:
     - os: linux
@@ -34,8 +32,12 @@ branches:
 before_script:
   - rustup component add rustfmt
 
+# Note: `cc` version 1.0.42 somehow made it so that Travis started thinking
+# the build had stalled; I can fix it with --jobs=4. I think it has to do with
+# a change for `cc` to start using the Cargo jobserver, but I can't reproduce
+# locally and don't feel like I understand what the actual issue is.
 script:
   - |
     cargo fmt --all -- --check &&
-    cargo build --verbose &&
+    cargo build --verbose --jobs=4 &&
     cargo test --all
