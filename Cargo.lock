@@ -200,7 +200,7 @@ dependencies = [
 
 [[package]]
 name = "nom"
-version = "5.0.1"
+version = "5.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "lexical-core 0.4.3 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -363,7 +363,7 @@ dependencies = [
  "failure_derive 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "itertools 0.8.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "ndarray 0.13.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "nom 5.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "nom 5.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "num-traits 0.2.10 (registry+https://github.com/rust-lang/crates.io-index)",
  "pbr 1.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "rubbl_casatables_impl 0.2.31100",
@@ -630,7 +630,7 @@ dependencies = [
 "checksum matrixmultiply 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)" = "d4f7ec66360130972f34830bfad9ef05c6610a43938a467bcc9ab9369ab3478f"
 "checksum memchr 2.2.1 (registry+https://github.com/rust-lang/crates.io-index)" = "88579771288728879b57485cc7d6b07d648c9f0141eb955f8ab7f9d45394468e"
 "checksum ndarray 0.13.0 (registry+https://github.com/rust-lang/crates.io-index)" = "25b001fc2f5df269365fb77bd8396ce6b1f61c9848f7f088c25e57494bacc57b"
-"checksum nom 5.0.1 (registry+https://github.com/rust-lang/crates.io-index)" = "c618b63422da4401283884e6668d39f819a106ef51f5f59b81add00075da35ca"
+"checksum nom 5.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "c433f4d505fe6ce7ff78523d2fa13a0b9f2690e181fc26168bcbe5ccc5d14e07"
 "checksum num-complex 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)" = "fcb0cf31fb3ff77e6d2a6ebd6800df7fdcd106f2ad89113c9130bcd07f93dffc"
 "checksum num-integer 0.1.41 (registry+https://github.com/rust-lang/crates.io-index)" = "b85e541ef8255f6cf42bbfe4ef361305c6c135d10919ecc26126c4e5ae94bc09"
 "checksum num-traits 0.2.10 (registry+https://github.com/rust-lang/crates.io-index)" = "d4c81ffc11c212fa327657cb19dd85eb7419e163b5b076bede2bdb5c974c07e4"
