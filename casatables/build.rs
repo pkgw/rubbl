@@ -20,4 +20,10 @@ fn main() {
     for file in FILES {
         println!("cargo:rerun-if-changed={}", file);
     }
+
+    // Because our glue.cc references casatables C++ directly, we need to make
+    // sure to explicitly link with it. If not, it looks like the dead code
+    // elimination may cause link issues when we actually try to link
+    // executables.
+    println!("cargo:rustc-link-lib=static=casatables_impl");
 }
