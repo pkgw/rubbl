@@ -1,9 +1,9 @@
-# Copyright 2017-2019 Peter Williams <peter@newton.cx> and collaborators
+# Copyright 2017-2020 Peter Williams <peter@newton.cx> and collaborators
 # Licensed under the MIT License.
 
 [package]
 name = "rubbl_casatables"
-version = "0.1.4"
+version = "0.1.5"
 authors = ["Peter Williams <peter@newton.cx>"]
 license = "MIT"
 homepage = "https://github.com/pkgw/rubbl"
@@ -12,10 +12,8 @@ description = """
 Interfacing to the CASA table format within the Rubbl framework.
 """
 
-[package.metadata]
-
 [package.metadata.internal_dep_versions]
-rubbl_casatables_impl = "manual:^0.2.31100"
+rubbl_casatables_impl = "1d861e38cc1a40a6f0c984a58ae3dee54c27d127"
 rubbl_core = "manual:^0.1.2"
 
 [dependencies]
@@ -28,7 +26,7 @@ ndarray = "^0.13"
 nom = "^5.1"
 num-traits = "^0.2"
 pbr = "^1.0"
-rubbl_casatables_impl = { version ="^0.2.31100", path = "../casatables_impl" }
+rubbl_casatables_impl = { version ="^0.2.31101", path = "../casatables_impl" }
 rubbl_core = { version ="^0.1.2", path = "../core" }
 
 [build-dependencies]
