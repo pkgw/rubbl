@@ -3,9 +3,14 @@
 
 [package]
 name = "rubbl_visdata"
-version = "0.1.0"
+version = "0.0.0-dev.0"
 authors = ["Peter Williams <peter@newton.cx>"]
 license = "MIT"
 
+[package.metadata]
+
+[package.metadata.internal_dep_versions]
+rubbl_core = "manual:^0.1.2"
+
 [dependencies]
-rubbl_core = { path = "../core", version = "0.1.2" }
+rubbl_core = { path = "../core", version ="0.0.0-dev.0"}

@@ -1,0 +1,5 @@
+[repo]
+upstream_urls = [
+  'git@github.com:pkgw/rubbl.git',
+  'https://github.com/pkgw/rubbl.git',
+]

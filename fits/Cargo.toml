@@ -3,14 +3,20 @@
 
 [package]
 name = "rubbl_fits"
-version = "0.1.0"
+version = "0.0.0-dev.0"
 authors = ["Peter Williams <peter@newton.cx>"]
 license = "MIT"
+
+[package.metadata]
+
+[package.metadata.internal_dep_versions]
+rubbl_core = "manual:^0.1.2"
+rubbl_visdata = "manual:^0.1.0"
 
 [dependencies]
 byteorder = "^1.3"
 clap = "^2.33"
 failure = "^0.1"
 failure_derive = "^0.1"
-rubbl_core = { path = "../core", version = "0.1.2" }
-rubbl_visdata = { path = "../visdata", version = "0.1.0" }
+rubbl_core = { path = "../core", version ="0.0.0-dev.0"}
+rubbl_visdata = { path = "../visdata", version ="0.0.0-dev.0"}

@@ -1,0 +1,48 @@
+[[project]]
+qnames = [
+    'rubbl_core',
+    'cargo',
+]
+version = '0.1.2'
+
+[[project]]
+qnames = [
+    'rubbl',
+    'cargo',
+]
+version = '0.1.0'
+
+[[project]]
+qnames = [
+    'rubbl_casatables_impl',
+    'cargo',
+]
+version = '0.2.31100'
+
+[[project]]
+qnames = [
+    'rubbl_casatables',
+    'cargo',
+]
+version = '0.1.4'
+
+[[project]]
+qnames = [
+    'rubbl_visdata',
+    'cargo',
+]
+version = '0.1.0'
+
+[[project]]
+qnames = [
+    'rubbl_miriad',
+    'cargo',
+]
+version = '0.1.0'
+
+[[project]]
+qnames = [
+    'rubbl_fits',
+    'cargo',
+]
+version = '0.1.0'
