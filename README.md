@@ -1,3 +1,15 @@
+[![Build Status](https://dev.azure.com/peter-bulk/Misc/_apis/build/status/pkgw.rubbl?branchName=master)](https://dev.azure.com/peter-bulk/Misc/_build/latest?definitionId=9&branchName=master)
+![rubbl](https://img.shields.io/crates/v/rubbl?label=rubbl)
+![rubbl_casatables](https://img.shields.io/crates/v/rubbl_casatables?label=rubbl_casatables)
+![rubbl_casatables_impl](https://img.shields.io/crates/v/rubbl_casatables_impl?label=rubbl_casatables_impl)
+![rubbl_core](https://img.shields.io/crates/v/rubbl_core?label=rubbl_core)
+
+<!--
+![rubbl_fits](https://img.shields.io/crates/v/rubbl_fits?label=rubbl_fits)
+![rubbl_miriad](https://img.shields.io/crates/v/rubbl_miriad?label=rubbl_miriad)
+![rubbl_visdata](https://img.shields.io/crates/v/rubbl_visdata?label=rubbl_visdata)
+-->
+
 # rubbl
 
 *Rust + Hubble = rubbl = astrophysics in Rust*.
@@ -44,7 +56,7 @@ command `rubbl-foo --bar`. This tool can be installed without even needing to
 check out this repository — run the command:
 
 ```
-cargo install rubbl_cli
+cargo install rubbl
 ```
 
 ## Legalities
