@@ -1,21 +1,8 @@
-# rubbl_casatables 0.1.5 (2020-09-28)
+# See elsewhere for changelog
 
-- Start using the new scheme for finding the C++ headers provided by
-  `rubbl_casatable_impl` as of 0.2.31101.
+This project’s release notes are curated from the Git history of its main
+branch. You can find them by looking at [the version of this file on the
+`release` branch][branch] or the [GitHub release history][gh-releases].
 
-# `rubbl_casatables` 0.1.4 (2019 Jun 23)
-
-- Fix functions to read table column names and table keywords on various C++
-  compilers; the joy of trying to bridge strings between C++ and Rust continues.
-
-# `rubbl_casatables` 0.1.3 (2019 Jun 10)
-
-- Fix compilation with some older C++ compilers.
-- Update to `casatables_impl` 0.2.31100.
-
-# `rubbl_casatables` 0.1.2 (2019 Jun 10)
-
-- Update to `casatables_impl` 0.2.311.
-- Add a couple more routines for row-based data retrieval.
-- Clearly remove the confusing `spwglue` example, superseded by my `rxpackage`
-  version.
+[branch]: https://github.com/pkgw/rubbl/blob/release/casatables/CHANGELOG.md
+[gh-releases]: https://github.com/pkgw/rubbl/releases

@@ -1,8 +1,3 @@
-# See elsewhere for changelog
+# rubbl_visdata 0.1.1 (2020-09-28)
 
-This project’s release notes are curated from the Git history of its main
-branch. You can find them by looking at [the version of this file on the
-`release` branch][branch] or the [GitHub release history][gh-releases].
-
-[branch]: https://github.com/pkgw/rubbl/blob/release/visdata/CHANGELOG.md
-[gh-releases]: https://github.com/pkgw/rubbl/releases
+- No code changes, but switching to Cranko for making releases.
