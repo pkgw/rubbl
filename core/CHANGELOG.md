@@ -1,4 +1,4 @@
-# rc: micro bump
+# rubbl_core 0.1.3 (2020-09-28)
 
 - Start using Cranko for releases
 - Fix some compile warnings

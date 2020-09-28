@@ -3,7 +3,7 @@
 
 [package]
 name = "rubbl_casatables"
-version = "0.0.0-dev.0"
+version = "0.1.4"
 authors = ["Peter Williams <peter@newton.cx>"]
 license = "MIT"
 homepage = "https://github.com/pkgw/rubbl"
@@ -28,8 +28,8 @@ ndarray = "^0.13"
 nom = "^5.1"
 num-traits = "^0.2"
 pbr = "^1.0"
-rubbl_casatables_impl = { version ="0.0.0-dev.0", path = "../casatables_impl" }
-rubbl_core = { version ="0.0.0-dev.0", path = "../core" }
+rubbl_casatables_impl = { version ="^0.2.31100", path = "../casatables_impl" }
+rubbl_core = { version ="^0.1.2", path = "../core" }
 
 [build-dependencies]
 cc = { version = "1.0", features = ["parallel"] }

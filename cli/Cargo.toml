@@ -3,7 +3,7 @@
 
 [package]
 name = "rubbl"
-version = "0.0.0-dev.0"
+version = "0.1.0"
 authors = ["Peter Williams <peter@newton.cx>"]
 license = "MIT"
 
@@ -16,4 +16,4 @@ rubbl_core = "manual:^0.1.2"
 clap = "^2.33"
 failure = "^0.1"
 failure_derive = "^0.1"
-rubbl_core = { version ="0.0.0-dev.0", path = "../core" }
+rubbl_core = { version ="^0.1.2", path = "../core" }
