@@ -68,7 +68,7 @@ jobs:
     - bash: cargo test --all --release
       displayName: "cargo test (release)"
 
-    - ${{ if build.primaryBuild }}:
+    - ${{ if eq(build.primaryBuild, 'True') }}:
       - bash: |
           git add .
           cranko release-workflow commit
