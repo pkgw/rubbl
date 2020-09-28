@@ -233,7 +233,7 @@ impl<'a, 'b> ClapNotificationArgsExt for clap::App<'a, 'b> {
 pub fn run_with_notifications<'a, E, F>(matches: clap::ArgMatches<'a>, inner: F) -> i32
 where
     E: Into<Error>,
-    F: FnOnce(clap::ArgMatches<'a>, &mut NotificationBackend) -> StdResult<i32, E>,
+    F: FnOnce(clap::ArgMatches<'a>, &mut dyn NotificationBackend) -> StdResult<i32, E>,
 {
     let chatter = match matches.value_of("chatter_level").unwrap() {
         "default" => ChatterLevel::Normal,

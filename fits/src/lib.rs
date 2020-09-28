@@ -320,8 +320,8 @@ impl<R: Read> FitsDecoder<R> {
 
             while i < 8 {
                 match record[i] {
-                    0x30...0x39 => {} // 0-9
-                    0x41...0x5A => {} // A-Z
+                    0x30..=0x39 => {} // 0-9
+                    0x41..=0x5A => {} // A-Z
                     b'_' => {}
                     b'-' => {}
                     b' ' => {

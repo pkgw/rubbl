@@ -90,7 +90,7 @@ SUBCOMMANDS:
 }
 
 /// Get help on a subcommand, or on the main program.
-fn do_help(matches: &ArgMatches, _nbe: &mut NotificationBackend) -> Result<i32> {
+fn do_help(matches: &ArgMatches, _nbe: &mut dyn NotificationBackend) -> Result<i32> {
     match matches.value_of("command") {
         None | Some("help") | Some("list") => {
             make_app().print_long_help()?;
@@ -105,7 +105,7 @@ fn do_help(matches: &ArgMatches, _nbe: &mut NotificationBackend) -> Result<i32> 
 }
 
 /// Print out a list of the available sub-commands.
-fn do_list(_matches: &ArgMatches, _nbe: &mut NotificationBackend) -> Result<i32> {
+fn do_list(_matches: &ArgMatches, _nbe: &mut dyn NotificationBackend) -> Result<i32> {
     println!("Currently available \"rubbl\" sub-commands:");
 
     for command in list_commands() {
@@ -116,7 +116,7 @@ fn do_list(_matches: &ArgMatches, _nbe: &mut NotificationBackend) -> Result<i32>
 }
 
 /// Run an external command by executing a subprocess
-fn do_external(cmd: &str, matches: &ArgMatches, _nbe: &mut NotificationBackend) -> Result<i32> {
+fn do_external(cmd: &str, matches: &ArgMatches, _nbe: &mut dyn NotificationBackend) -> Result<i32> {
     // TODO: propagate chatter settings downstream.
     let args: Vec<&str> = match matches.values_of("") {
         Some(v) => v.collect(),
