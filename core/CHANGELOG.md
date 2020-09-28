@@ -1,8 +1,10 @@
-# See elsewhere for changelog
+# rc: micro bump
 
-This project’s release notes are curated from the Git history of its main
-branch. You can find them by looking at [the version of this file on the
-`release` branch][branch] or the [GitHub release history][gh-releases].
+- Start using Cranko for releases
+- Fix some compile warnings
 
-[branch]: https://github.com/pkgw/rubbl/blob/release/core/CHANGELOG.md
-[gh-releases]: https://github.com/pkgw/rubbl/releases
+# `rubbl_core` 0.1.2 (2019 Jun 10)
+
+- Use `Error.iter_chain()` rather than the deprecated `.causes()`
+- Update a bunch of dependencies
+- `rustfmt` all the source
