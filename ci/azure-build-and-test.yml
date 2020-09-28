@@ -1,0 +1,91 @@
+# Main build jobs for CI/CD on Azure Pipelines.
+
+parameters:
+- name: builds
+  type: object
+  default:
+
+  - name: linux_stable
+    vmImage: ubuntu-20.04
+    primaryBuild: true
+    vars:
+      TARGET: x86_64-unknown-linux-gnu
+      TOOLCHAIN: stable
+
+  - name: linux_beta
+    vmImage: ubuntu-20.04
+    primaryBuild: false
+    vars:
+      TARGET: x86_64-unknown-linux-gnu
+      TOOLCHAIN: beta
+
+  - name: macos
+    vmImage: macos-10.15
+    primaryBuild: false
+    vars:
+      TARGET: x86_64-apple-darwin
+      TOOLCHAIN: stable
+
+jobs:
+- ${{ each build in parameters.builds }}:
+  - job: ${{ format('build_{0}', build.name) }}
+    pool:
+      vmImage: ${{ build.vmImage }}
+    steps:
+
+    - checkout: self
+
+    - bash: |
+        set -e
+        rustup set profile minimal
+        rustup component remove --toolchain=$TOOLCHAIN rust-docs || echo "already removed"
+        rustup update --no-self-update $TOOLCHAIN
+        rustup default $TOOLCHAIN
+        # Log versions
+        set -ex
+        rustup -V
+        rustc -Vv
+        cargo -V
+      displayName: Set up Rust
+
+    - bash: |
+        set -euo pipefail
+        d="$(mktemp -d /tmp/cranko.XXXXXX)"
+        cd "$d"
+        curl --proto '=https' --tlsv1.2 -sSf https://pkgw.github.io/cranko/fetch-latest.sh | sh
+        echo "##vso[task.prependpath]$d"
+      displayName: Install latest Cranko
+
+    - bash: cranko release-workflow apply-versions
+      displayName: cranko apply-versions
+
+    - bash: cargo build --all --release
+      displayName: "cargo build (release)"
+
+    - bash: cargo build --all --release --examples
+      displayName: "cargo build examples (release)"
+
+    - bash: cargo test --all --release
+      displayName: "cargo test (release)"
+
+    - ${{ if build.primaryBuild }}:
+      - bash: |
+          git add .
+          cranko release-workflow commit
+          git show HEAD
+        displayName: Make release commit
+
+      - bash: |
+          artifact_dir="$(Build.ArtifactStagingDirectory)/git-release"
+          mkdir -p "$artifact_dir"
+          git bundle create "$artifact_dir/release.bundle" origin/master..HEAD
+        displayName: Bundle release commit
+
+      - task: PublishPipelineArtifact@1
+        displayName: Publish git bundle artifact
+        inputs:
+          targetPath: '$(Build.ArtifactStagingDirectory)/git-release'
+          artifactName: git-release
+
+    variables:
+      ${{ insert }}: ${{ build.vars }}
