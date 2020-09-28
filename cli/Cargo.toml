@@ -6,6 +6,7 @@ name = "rubbl"
 version = "0.0.0-dev.0"
 authors = ["Peter Williams <peter@newton.cx>"]
 license = "MIT"
+edition = "2018"
 homepage = "https://github.com/pkgw/rubbl"
 repository = "https://github.com/pkgw/rubbl"
 description = """

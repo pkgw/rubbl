@@ -1,4 +1,4 @@
-# Copyright 2018-2019 Peter Williams <peter@newton.cx> and collaborators
+# Copyright 2018-2020 Peter Williams <peter@newton.cx> and collaborators
 # Licensed under the MIT License.
 
 [package]
@@ -6,8 +6,7 @@ name = "rubbl_fits"
 version = "0.0.0-dev.0"
 authors = ["Peter Williams <peter@newton.cx>"]
 license = "MIT"
-
-[package.metadata]
+edition = "2018"
 
 [package.metadata.internal_dep_versions]
 rubbl_core = "manual:^0.1.2"

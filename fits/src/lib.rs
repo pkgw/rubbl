@@ -1,25 +1,15 @@
-// Copyright 2018 Peter Williams
+// Copyright 2018-2020 Peter Williams
 // Licensed under the MIT License.
 
-/*!
-
-Access to FITS-format files.
-
-With particular emphasis on UVFITS files, but that comes with more generic
-support for FITS files.
-
- */
+//! Access to FITS-format files.
+//!
+//! With particular emphasis on UVFITS files, but that comes with more generic
+//! support for FITS files.
 
 #![deny(missing_docs)]
 
-extern crate byteorder;
-extern crate failure;
-#[macro_use]
-extern crate failure_derive;
-extern crate rubbl_core;
-//extern crate rubbl_visdata;
-
 use failure::Error;
+use failure_derive::Fail;
 use rubbl_core::io::EofReadExactExt;
 use std::io::prelude::*;
 use std::io::SeekFrom;

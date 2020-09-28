@@ -1,22 +1,11 @@
-// Copyright 2017 Peter Williams
+// Copyright 2017-2020 Peter Williams
 // Licensed under the MIT License.
 
-/*!
-
-Access to MIRIAD-format data sets.
-
- */
-
-extern crate byteorder;
-extern crate failure;
-#[macro_use]
-extern crate failure_derive;
-extern crate openat;
-extern crate rubbl_core;
-extern crate rubbl_visdata;
+//! Access to MIRIAD-format data sets.
 
 use byteorder::{BigEndian, ByteOrder, ReadBytesExt, WriteBytesExt};
 use failure::Error;
+use failure_derive::Fail;
 use rubbl_core::io::{AligningReader, AligningWriter, EofReadExactExt};
 use rubbl_core::Complex;
 use std::collections::HashMap;

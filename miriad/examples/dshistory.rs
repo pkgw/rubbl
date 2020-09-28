@@ -1,14 +1,7 @@
-/*!
-
-Emit the contents of a MIRIAD data set's history item.
-
-This can be done trivially since the history item is a standalone file, but
-this shows how the rubbl MIRIAD API is used.
-
- */
-
-extern crate clap;
-extern crate rubbl_miriad;
+//! Emit the contents of a MIRIAD data set's history item.
+//!
+//! This can be done trivially since the history item is a standalone file, but
+//! this shows how the rubbl MIRIAD API is used.
 
 use clap::{App, Arg};
 

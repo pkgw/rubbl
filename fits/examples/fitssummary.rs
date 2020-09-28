@@ -1,15 +1,7 @@
-/*!
-
-Summarize the structure of a FITS file. This uses the FITS "parser" framework,
-which seeks around a file, rather than the "decoder" framework which doesn't
-seek but therefore has to actually read through all of the data.
-
- */
-
-extern crate clap;
-extern crate failure;
-extern crate rubbl_core;
-extern crate rubbl_fits;
+//! Summarize the structure of a FITS file. This uses the FITS "parser"
+//! framework, which seeks around a file, rather than the "decoder" framework
+//! which doesn't seek but therefore has to actually read through all of the
+//! data.
 
 use clap::{App, Arg};
 use failure::{Error, ResultExt};

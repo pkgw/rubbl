@@ -1,14 +1,8 @@
 // Copyright 2017-2019 Peter Williams <peter@newton.cx> and collaborators
 // Licensed under the MIT License.
 
-extern crate failure;
-#[macro_use]
-extern crate failure_derive;
-extern crate ndarray;
-extern crate rubbl_casatables_impl;
-extern crate rubbl_core;
-
 use failure::{err_msg, Error};
+use failure_derive::Fail;
 use ndarray::Dimension;
 use rubbl_core::num::{DimFromShapeSlice, DimensionMismatchError};
 use rubbl_core::{Array, Complex};

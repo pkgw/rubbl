@@ -1,12 +1,9 @@
-// Copyright 2017 Peter Williams
+// Copyright 2017-2020 Peter Williams
 // Licensed under the MIT License.
 
-/*!
+//! General helpers for numerics.
 
-General helpers for numerics.
-
-*/
-
+use failure_derive::Fail;
 use ndarray::{IntoDimension, Ix0, Ix1, Ix2, Ix3, Ix4, Ix5, Ix6};
 
 /// An error type used when two arrays should have the same dimensionality,
