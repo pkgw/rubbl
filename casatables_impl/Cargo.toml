@@ -1,4 +1,4 @@
-# Copyright 2017-2019 Peter Williams <peter@newton.cx> and collaborators
+# Copyright 2017-2020 Peter Williams <peter@newton.cx> and collaborators
 # Licensed under the MIT License.
 
 [package]
@@ -11,6 +11,7 @@ repository = "https://github.com/pkgw/rubbl"
 description = """
 A bundle of C++ code that can read the CASA table format for Rubbl.
 """
+links = "casa"
 
 [build-dependencies]
 cc = { version = "1.0", features = ["parallel"] }
