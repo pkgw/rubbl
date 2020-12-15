@@ -1,18 +1,8 @@
-/*!
-
-Hack for Paul La Plante: synthesize a 352-antenna dataset from a smaller one,
-so that we can see how our algorithms scale.
-
- */
-
-extern crate clap;
-#[macro_use]
-extern crate failure;
-extern crate pbr;
-extern crate rubbl_miriad;
+//! Hack for Paul La Plante: synthesize a 352-antenna dataset from a smaller
+//! one, so that we can see how our algorithms scale.
 
 use clap::{App, Arg};
-use failure::{Error, ResultExt};
+use failure::{format_err, Error, ResultExt};
 use rubbl_miriad::mask::{MaskDecoder, MaskEncoder};
 use rubbl_miriad::visdata::{
     decode_baseline, encode_baseline, Decoder, Encoder, UvVariableReference,

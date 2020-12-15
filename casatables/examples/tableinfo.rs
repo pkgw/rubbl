@@ -3,18 +3,10 @@
 
 //! Summarize the structure of a CASA table.
 
-extern crate rubbl_casatables;
-#[macro_use]
-extern crate rubbl_core;
-extern crate clap;
-
 use clap::{App, Arg};
 use rubbl_casatables::{Table, TableOpenMode};
-use rubbl_core::notify::ClapNotificationArgsExt;
-use rubbl_core::Error;
-use std::cmp::max;
-use std::path::Path;
-use std::process;
+use rubbl_core::{ctry, notify::ClapNotificationArgsExt, Error};
+use std::{cmp::max, path::Path, process};
 
 fn main() {
     let matches = App::new("tableinfo")

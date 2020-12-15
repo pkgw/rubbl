@@ -1,11 +1,4 @@
-/*!
-
-Describe the contents of a generic MIRIAD data set.
-
- */
-
-extern crate clap;
-extern crate rubbl_miriad;
+//! Describe the contents of a generic MIRIAD data set.
 
 use clap::{App, Arg};
 

@@ -10,23 +10,20 @@ Heavily modeled on Cargo's implementation of the same sort of functionality.
 
 */
 
-#[macro_use]
-extern crate clap;
-#[macro_use]
-extern crate failure_derive;
-extern crate failure;
-extern crate rubbl_core;
-
-use clap::{App, AppSettings, Arg, ArgMatches, SubCommand};
+use clap::{crate_version, App, AppSettings, Arg, ArgMatches, SubCommand};
 use failure::Error;
-use rubbl_core::notify::{ClapNotificationArgsExt, NotificationBackend};
-use rubbl_core::Result;
-use std::collections::BTreeSet;
-use std::env;
-use std::fs;
-use std::os::unix::process::CommandExt;
-use std::path::{Path, PathBuf};
-use std::process;
+use failure_derive::Fail;
+use rubbl_core::{
+    notify::{ClapNotificationArgsExt, NotificationBackend},
+    Result,
+};
+use std::{
+    collections::BTreeSet,
+    env, fs,
+    os::unix::process::CommandExt,
+    path::{Path, PathBuf},
+    process,
+};
 
 // Some error help.
 

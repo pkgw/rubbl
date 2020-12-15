@@ -110,11 +110,20 @@ extern "C" {
     int table_remove_column(GlueTable &table, const StringBridge &col_name, ExcInfo &exc);
     int table_get_scalar_column_data(const GlueTable &table, const StringBridge &col_name,
                                      void *data, ExcInfo &exc);
+    int table_get_scalar_column_data_string(const GlueTable &table, const StringBridge &col_name,
+                                            StringBridgeCallback callback, void *ctxt,
+                                            ExcInfo &exc);
     int table_get_cell_info(const GlueTable &table, const StringBridge &col_name,
                             unsigned long row_number, GlueDataType *data_type,
                             int *n_dim, unsigned long dims[8], ExcInfo &exc);
     int table_get_cell(const GlueTable &table, const StringBridge &col_name,
                        const unsigned long row_number, void *data, ExcInfo &exc);
+    int table_get_cell_string(const GlueTable &table, const StringBridge &col_name,
+                              const unsigned long row_number, StringBridgeCallback callback,
+                              void *ctxt, ExcInfo &exc);
+    int table_get_cell_string_array(const GlueTable &table, const StringBridge &col_name,
+                                    const unsigned long row_number, StringBridgeCallback callback,
+                                    void *ctxt, ExcInfo &exc);
     int table_put_cell(GlueTable &table, const StringBridge &col_name,
                        const unsigned long row_number, const GlueDataType data_type,
                        const unsigned long n_dims, const unsigned long *dims,
@@ -131,6 +140,12 @@ extern "C" {
                                 unsigned long dims[8], ExcInfo &exc);
     int table_row_get_cell(const GlueTableRow &row, const StringBridge &col_name,
                            void *data, ExcInfo &exc);
+    int table_row_get_cell_string(const GlueTableRow &row, const StringBridge &col_name,
+                                  StringBridgeCallback callback, void *ctxt,
+                                  ExcInfo &exc);
+    int table_row_get_cell_string_array(const GlueTableRow &row, const StringBridge &col_name,
+                                        StringBridgeCallback callback, void *ctxt,
+                                        ExcInfo &exc);
     int table_row_put_cell(GlueTableRow &row, const StringBridge &col_name,
                            const GlueDataType data_type, const unsigned long n_dims,
                            const unsigned long *dims, void *data, ExcInfo &exc);
