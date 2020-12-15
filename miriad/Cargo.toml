@@ -3,10 +3,15 @@
 
 [package]
 name = "rubbl_miriad"
-version = "0.2.0"
+version = "0.2.1"
 authors = ["Peter Williams <peter@newton.cx>"]
 license = "MIT"
 edition = "2018"
+homepage = "https://github.com/pkgw/rubbl"
+repository = "https://github.com/pkgw/rubbl"
+description = """
+Interfacing to MIRIAD radio astronomy data formats within the Rubbl framework.
+"""
 
 [package.metadata]
 
