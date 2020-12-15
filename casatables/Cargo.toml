@@ -15,7 +15,7 @@ Interfacing to the CASA table format within the Rubbl framework.
 
 [package.metadata.internal_dep_versions]
 rubbl_casatables_impl = "1d861e38cc1a40a6f0c984a58ae3dee54c27d127"
-rubbl_core = "manual:^0.1.2"
+rubbl_core = "thiscommit:2020-12-15:EiT8sa0a"
 
 [dependencies]
 byteorder = "^1.3"

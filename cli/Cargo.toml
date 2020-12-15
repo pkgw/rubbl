@@ -14,7 +14,7 @@ Facade crate and CLI interface for the Rubbl astrophysics data analysis framewor
 """
 
 [package.metadata.internal_dep_versions]
-rubbl_core = "manual:^0.1.2"
+rubbl_core = "thiscommit:2020-12-15:re8eeQu5"
 
 [dependencies]
 clap = "^2.33"
