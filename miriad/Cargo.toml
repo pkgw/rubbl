@@ -11,8 +11,8 @@ edition = "2018"
 [package.metadata]
 
 [package.metadata.internal_dep_versions]
-rubbl_core = "manual:^0.1.2"
-rubbl_visdata = "manual:^0.1.0"
+rubbl_core = "thiscommit:2020-12-15:aishi6Ae"
+rubbl_visdata = "thiscommit:2020-12-15:Rohw0kei"
 
 [dependencies]
 byteorder = "^1.3"
