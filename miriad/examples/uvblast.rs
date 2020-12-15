@@ -1,13 +1,5 @@
-/*!
-
-Read a UV dataset file and report how long it took. This should basically just
-be a test of the system's I/O throughput.
-
- */
-
-extern crate clap;
-extern crate failure;
-extern crate rubbl_miriad;
+//! Read a UV dataset file and report how long it took. This should basically
+//! just be a test of the system's I/O throughput.
 
 use clap::{App, Arg};
 use failure::{Error, ResultExt};

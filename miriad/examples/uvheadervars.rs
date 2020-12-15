@@ -1,13 +1,5 @@
-/*!
-
-Print out the values of all of the UV variables as they are set in the very
-first record of a UV data stream.
-
- */
-
-extern crate clap;
-extern crate failure;
-extern crate rubbl_miriad;
+//! Print out the values of all of the UV variables as they are set in the very
+//! first record of a UV data stream.
 
 use clap::{App, Arg};
 use failure::{Error, ResultExt};

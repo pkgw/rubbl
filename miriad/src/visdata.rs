@@ -24,7 +24,7 @@ use std::io::prelude::*;
 use std::slice;
 
 use super::{AnyMiriadValue, DataSet, MiriadMappedType, Type};
-use mask::MaskDecoder;
+use crate::{mask::MaskDecoder, MiriadFormatError};
 
 #[derive(Copy, Clone, Debug, Eq, Hash, PartialEq)]
 pub enum ObsType {
@@ -553,7 +553,7 @@ impl Encoder {
         let our_num = self
             .vars_by_name
             .get(&var.name)
-            .ok_or(::MiriadFormatError(format!(
+            .ok_or(MiriadFormatError(format!(
                 "target stream does not have variable named \"{}\"",
                 var.name
             )))?;
@@ -602,7 +602,7 @@ impl Encoder {
         let num = self
             .vars_by_name
             .get(name)
-            .ok_or(::MiriadFormatError(format!(
+            .ok_or(MiriadFormatError(format!(
                 "target stream does not have variable named \"{}\"",
                 name
             )))?;

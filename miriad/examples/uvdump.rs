@@ -1,12 +1,4 @@
-/*!
-
-Decode the low-level details of MIRIAD UV data.
-
- */
-
-extern crate clap;
-extern crate failure;
-extern crate rubbl_miriad;
+//! Decode the low-level details of MIRIAD UV data.
 
 use clap::{App, Arg};
 use failure::{Error, ResultExt};

@@ -1,11 +1,12 @@
-# Copyright 2017-2019 Peter Williams <peter@newton.cx> and collaborators
+# Copyright 2017-2020 Peter Williams <peter@newton.cx> and collaborators
 # Licensed under the MIT License.
 
 [package]
 name = "rubbl_core"
-version = "0.1.3"
+version = "0.2.0"
 authors = ["Peter Williams <peter@newton.cx>"]
 license = "MIT"
+edition = "2018"
 homepage = "https://github.com/pkgw/rubbl"
 repository = "https://github.com/pkgw/rubbl"
 description = """
@@ -17,6 +18,6 @@ byteorder = "^1.3"
 clap = "^2.33"
 failure = "^0.1"
 failure_derive = "^0.1"
-ndarray = "^0.13"
+ndarray = "^0.14"
 num-complex = "^0.3"
 termcolor = "^1.1"

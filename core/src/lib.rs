@@ -12,18 +12,7 @@ the Rubbl framework.
 
 #![deny(missing_docs)]
 
-extern crate byteorder;
-extern crate clap;
-extern crate failure;
-#[macro_use]
-extern crate failure_derive;
-extern crate ndarray;
-extern crate num_complex;
-extern crate termcolor;
-
-// convenience re-exports -- these can make it so that you can skip putting
-// these crates in your Cargo.toml and the `extern crate` line in the toplevel
-// of your crate.
+// convenience re-exports
 pub use failure::{Error, Fail, ResultExt};
 pub use ndarray::Array;
 pub use num_complex::Complex;

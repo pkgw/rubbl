@@ -1,16 +1,10 @@
-// Copyright 2017 Peter Williams
+// Copyright 2017-2020 Peter Williams
 // Licensed under the MIT License.
 
-/*!
-
-Working with interferometric visibility data.
-
-API currently maps quasi-directly onto the MIRIAD data model since those are
-the files I'm working with.
-
- */
-
-extern crate rubbl_core;
+//! Working with interferometric visibility data.
+//!
+//! API currently maps quasi-directly onto the MIRIAD data model since those are
+//! the files I'm working with.
 
 use rubbl_core::Result;
 

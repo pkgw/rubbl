@@ -1,8 +1,5 @@
-# See elsewhere for changelog
+# rubbl_casatables 0.2.0 (2020-12-15)
 
-This project’s release notes are curated from the Git history of its main
-branch. You can find them by looking at [the version of this file on the
-`release` branch][branch] or the [GitHub release history][gh-releases].
-
-[branch]: https://github.com/pkgw/rubbl/blob/release/casatables/CHANGELOG.md
-[gh-releases]: https://github.com/pkgw/rubbl/releases
+- Fix retrieval of string values from table columns and cells, I hope.
+  (#133, #134)
+- Bump to the 2018 edition, which requires a small build tweak

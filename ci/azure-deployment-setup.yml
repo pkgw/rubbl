@@ -15,7 +15,6 @@ steps:
 - bash: |
     git switch -c release
     git pull --ff-only $(Pipeline.Workspace)/git-release/release.bundle
-    git show
   displayName: Restore release commit
 
 - bash: |
