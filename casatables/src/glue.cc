@@ -1,4 +1,4 @@
-// Copyright 2017 Peter Williams <peter@newton.cx> and collaborators
+// Copyright 2017-2020 Peter Williams <peter@newton.cx> and collaborators
 // Licensed under the MIT License.
 
 // Note that in CASA, an array shape like (4, 64) means that the most
@@ -42,11 +42,23 @@ extern "C" {
         return result;
     }
 
+    // To pass strings from C++ to Rust, we *always* have to copy the data. The
+    // only time that could safely avoid copying would be if we were absolutely
+    // sure that the string buffer pointed into a data structure whose lifetime
+    // was longer than that of the calling Rust code ... but even then, we would
+    // need to have Rust-side code to check that the C++ string data are valid
+    // UTF-8, so that there's always a potential need to allocate anyway. The
+    // only efficient way that I can come up with that will work 100% reliably
+    // is to pass a Rust callback into the C++ code, so that the Rust code can
+    // do its memory allocation inside a stack frame where we are *sure* that
+    // the C++ pointer is still valid. So, that's what this function enforces.
     void
-    unbridge_string(const casacore::String &input, StringBridge &dest)
+    unbridge_string(const casacore::String &input, StringBridgeCallback callback, void *ctxt)
     {
-        dest.data = input.data();
-        dest.n_bytes = input.length();
+        StringBridge bridge;
+        bridge.data = input.data();
+        bridge.n_bytes = input.length();
+        callback(&bridge, ctxt);
     }
 
     casacore::Array<casacore::String>
@@ -62,16 +74,17 @@ extern "C" {
         return array;
     }
 
-    // We have to assume that destination has enough space.
     void
-    unbridge_string_array(const casacore::Array<casacore::String> &input, StringBridge *dest)
+    unbridge_string_array(const casacore::Array<casacore::String> &input,
+                          StringBridgeCallback callback, void *ctxt)
     {
-        unsigned int n = 0;
+        StringBridge bridge;
         casacore::Array<casacore::String>::const_iterator end = input.end();
 
-        for (casacore::Array<casacore::String>::const_iterator i = input.begin(); i != end; i++, n++) {
-            dest[n].data = (*i).data();
-            dest[n].n_bytes = (*i).length();
+        for (casacore::Array<casacore::String>::const_iterator i = input.begin(); i != end; i++) {
+            bridge.data = (*i).data();
+            bridge.n_bytes = (*i).length();
+            callback(&bridge, ctxt);
         }
     }
 
@@ -162,19 +175,12 @@ extern "C" {
         return table.actualTableDesc().columnDescSet().ncolumn();
     }
 
-    // We assume the caller has allocated col_names of sufficient size.
     int
     table_get_column_names(const GlueTable &table, StringBridgeCallback callback,
                            void *ctxt, ExcInfo &exc)
     {
         try {
-            StringBridge name;
-            casacore::Vector<casacore::String> cnames = table.actualTableDesc().columnNames();
-
-            for (size_t i = 0; i < cnames.size(); i++) {
-                unbridge_string(cnames[i], name);
-                callback(&name, ctxt);
-            }
+            unbridge_string_array(table.actualTableDesc().columnNames(), callback, ctxt);
         } catch (...) {
             handle_exception(exc);
             return 1;
@@ -215,7 +221,8 @@ extern "C" {
                 // the callback is called; otherwise it can be deleted before
                 // we copy its data.
                 const casacore::String n = rec.name(i);
-                unbridge_string(n, name);
+                name.data = n.data();
+                name.n_bytes = n.length();
                 callback(&name, rec.type(i), ctxt);
             }
         } catch (...) {
@@ -322,17 +329,31 @@ extern "C" {
 
 #undef CASE
 
-            case casacore::TpString: {                                         \
-                casacore::ScalarColumn<casacore::String> col(table, bridge_string(col_name));
-                casacore::Vector<casacore::String> vec(shape);
-                col.getColumn(vec);
-                unbridge_string_array(vec, (StringBridge *) data);
-                break;
-            }
+            case casacore::TpString:
+                throw std::runtime_error("use table_get_scalar_column_data_string for TpString columns");
 
             default:
                 throw std::runtime_error("unhandled scalar column data type");
             }
+        } catch (...) {
+            handle_exception(exc);
+            return 1;
+        }
+
+        return 0;
+    }
+
+    int
+    table_get_scalar_column_data_string(const GlueTable &table, const StringBridge &col_name,
+                                        StringBridgeCallback callback, void *ctxt, ExcInfo &exc)
+    {
+        try {
+            casacore::ScalarColumn<casacore::String> col(table, bridge_string(col_name));
+            casacore::IPosition shape(1, table.nrow());
+            casacore::Vector<casacore::String> vec(shape);
+
+            col.getColumn(vec);
+            unbridge_string_array(vec, callback, ctxt);
         } catch (...) {
             handle_exception(exc);
             return 1;
@@ -431,23 +452,50 @@ extern "C" {
 #undef SCALAR_CASE
 #undef VECTOR_CASE
 
-            case casacore::TpString: {                                         \
-                casacore::ScalarColumn<casacore::String> col(table, bridge_string(col_name));
-                unbridge_string(col.get(row_number), *((StringBridge *) data));
-                break;
-            }
+            case casacore::TpString:
+                throw std::runtime_error("you must use table_get_cell_string() for string cells");
 
-            case casacore::TpArrayString: {
-                casacore::ArrayColumn<casacore::String> col(table, bridge_string(col_name));
-                casacore::Array<casacore::String> array(shape);
-                col.get(row_number, array, casacore::False);
-                unbridge_string_array(array, (StringBridge *) data);
-                break;
-            }
+            case casacore::TpArrayString:
+                throw std::runtime_error("you must use table_get_cell_string_array() for string-array cells");
 
             default:
                 throw std::runtime_error("unhandled cell data type");
             }
+        } catch (...) {
+            handle_exception(exc);
+            return 1;
+        }
+
+        return 0;
+    }
+
+    int
+    table_get_cell_string(const GlueTable &table, const StringBridge &col_name,
+                          const unsigned long row_number, StringBridgeCallback callback,
+                          void *ctxt, ExcInfo &exc)
+    {
+        try {
+            casacore::ScalarColumn<casacore::String> col(table, bridge_string(col_name));
+            unbridge_string(col.get(row_number), callback, ctxt);
+        } catch (...) {
+            handle_exception(exc);
+            return 1;
+        }
+
+        return 0;
+    }
+
+    int
+    table_get_cell_string_array(const GlueTable &table, const StringBridge &col_name,
+                                const unsigned long row_number, StringBridgeCallback callback,
+                                void *ctxt, ExcInfo &exc)
+    {
+        try {
+            casacore::ArrayColumn<casacore::String> col(table, bridge_string(col_name));
+            casacore::IPosition shape = col.shape(row_number);
+            casacore::Array<casacore::String> array(shape);
+            col.get(row_number, array, casacore::False);
+            unbridge_string_array(array, callback, ctxt);
         } catch (...) {
             handle_exception(exc);
             return 1;
@@ -708,23 +756,70 @@ extern "C" {
 #undef SCALAR_CASE
 #undef VECTOR_CASE
 
-            case casacore::TpString: {
-                casacore::String datum;
-                rec.get(field_num, datum);
-                unbridge_string(datum, *(StringBridge *) data);
-                break;
-            }
+            case casacore::TpString:
+                throw std::runtime_error("you must use table_get_cell_string() for string cells");
 
-            case casacore::TpArrayString: {
-                casacore::Array<casacore::String> array(shape);
-                rec.get(field_num, array);
-                unbridge_string_array(array, (StringBridge *) data);
-                break;
-            }
+            case casacore::TpArrayString:
+                throw std::runtime_error("you must use table_get_cell_string_array() for string-array cells");
 
             default:
                 throw std::runtime_error("unhandled cell data type");
             }
+        } catch (...) {
+            handle_exception(exc);
+            return 1;
+        }
+
+        return 0;
+    }
+
+    int
+    table_row_get_cell_string(const GlueTableRow &row, const StringBridge &col_name,
+                              StringBridgeCallback callback, void *ctxt,
+                              ExcInfo &exc)
+    {
+        try {
+            const casacore::TableRecord &rec = row.record();
+            casacore::Int field_num = rec.fieldNumber(bridge_string(col_name));
+
+            if (field_num < 0)
+                throw std::runtime_error("unrecognized column name");
+
+            if (rec.type(field_num) != casacore::TpString)
+                throw std::runtime_error("row cell must be of TpString type");
+
+            casacore::String datum;
+            rec.get(field_num, datum);
+            unbridge_string(datum, callback, ctxt);
+        } catch (...) {
+            handle_exception(exc);
+            return 1;
+        }
+
+        return 0;
+    }
+
+    int
+    table_row_get_cell_string_array(const GlueTableRow &row, const StringBridge &col_name,
+                                    StringBridgeCallback callback, void *ctxt,
+                                    ExcInfo &exc)
+    {
+        try {
+            const casacore::TableRecord &rec = row.record();
+            casacore::Int field_num = rec.fieldNumber(bridge_string(col_name));
+
+            if (field_num < 0)
+                throw std::runtime_error("unrecognized column name");
+
+            casacore::TableColumn col(row.table(), bridge_string(col_name));
+            casacore::IPosition shape = col.shape(row.rowNumber());
+
+            if (rec.type(field_num) != casacore::TpArrayString)
+                throw std::runtime_error("row cell must be of TpStringArray type");
+
+            casacore::Array<casacore::String> array(shape);
+            rec.get(field_num, array);
+            unbridge_string_array(array, callback, ctxt);
         } catch (...) {
             handle_exception(exc);
             return 1;

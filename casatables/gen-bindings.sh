@@ -10,6 +10,7 @@ EOF
 
 exec bindgen \
      --rust-target=1.19 \
+     --rustified-enum '.*' \
      src/glue.h \
      -- \
      -x c++ >>src/glue.rs
