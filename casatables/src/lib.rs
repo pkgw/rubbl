@@ -1,13 +1,12 @@
 // Copyright 2017-2020 Peter Williams <peter@newton.cx> and collaborators
 // Licensed under the MIT License.
 
-use failure::{err_msg, Error};
-use failure_derive::Fail;
 use ndarray::Dimension;
 use rubbl_core::num::{DimFromShapeSlice, DimensionMismatchError};
 use rubbl_core::{Array, Complex};
 use std::fmt;
 use std::path::Path;
+use thiserror::Error;
 
 mod glue;
 
@@ -15,8 +14,8 @@ mod glue;
 
 /// An error type used when the wrapped "casacore" C++ code raises an
 /// exception.
-#[derive(Fail, Debug)]
-#[fail(display = "{}", _0)]
+#[derive(Error, Debug)]
+#[error("{0}")]
 pub struct CasacoreError(String);
 
 impl glue::ExcInfo {
@@ -132,7 +131,7 @@ pub trait CasaDataType: Clone + PartialEq + Sized {
     }
 
     #[doc(hidden)]
-    fn casatables_alloc(shape: &[u64]) -> Result<Self, Error>;
+    fn casatables_alloc(shape: &[u64]) -> Result<Self, DimensionMismatchError>;
 
     #[doc(hidden)]
     fn casatables_as_buf(&self) -> *const () {
@@ -155,7 +154,7 @@ macro_rules! impl_scalar_data_type {
         impl CasaDataType for $rust_type {
             const DATA_TYPE: glue::GlueDataType = glue::GlueDataType::$casa_scalar_type;
 
-            fn casatables_alloc(_shape: &[u64]) -> Result<Self, Error> {
+            fn casatables_alloc(_shape: &[u64]) -> Result<Self, DimensionMismatchError> {
                 Ok($default)
             }
         }
@@ -190,7 +189,7 @@ impl CasaDataType for String {
         s.to_owned()
     }
 
-    fn casatables_alloc(_shape: &[u64]) -> Result<Self, Error> {
+    fn casatables_alloc(_shape: &[u64]) -> Result<Self, DimensionMismatchError> {
         Ok("".to_owned())
     }
 
@@ -216,7 +215,7 @@ macro_rules! impl_vec_data_type {
         impl CasaDataType for Vec<$rust_type> {
             const DATA_TYPE: glue::GlueDataType = glue::GlueDataType::$casa_type;
 
-            fn casatables_alloc(shape: &[u64]) -> Result<Self, Error> {
+            fn casatables_alloc(shape: &[u64]) -> Result<Self, DimensionMismatchError> {
                 if shape.len() != 1 {
                     Err(DimensionMismatchError {
                         expected: 1,
@@ -264,7 +263,7 @@ impl_vec_data_type! { Complex<f64>, TpArrayDComplex }
 impl CasaDataType for Vec<String> {
     const DATA_TYPE: glue::GlueDataType = glue::GlueDataType::TpArrayString;
 
-    fn casatables_alloc(shape: &[u64]) -> Result<Self, Error> {
+    fn casatables_alloc(shape: &[u64]) -> Result<Self, DimensionMismatchError> {
         if shape.len() != 1 {
             Err(DimensionMismatchError {
                 expected: 1,
@@ -303,7 +302,7 @@ impl CasaDataType for Vec<String> {
 impl<I: CasaScalarData + Copy, D: Dimension + DimFromShapeSlice<u64>> CasaDataType for Array<I, D> {
     const DATA_TYPE: glue::GlueDataType = I::VECTOR_TYPE;
 
-    fn casatables_alloc(shape: &[u64]) -> Result<Self, Error> {
+    fn casatables_alloc(shape: &[u64]) -> Result<Self, DimensionMismatchError> {
         Ok(unsafe { Self::uninitialized(D::from_shape_slice(shape)?) })
     }
 
@@ -538,29 +537,33 @@ pub enum TableOpenMode {
     Create = 3,
 }
 
-#[derive(Fail, Debug)]
-#[fail(
-    display = "Expected a column with a scalar data type, but found a vector of {}",
-    _0
-)]
-pub struct NotScalarColumnError(glue::GlueDataType);
-
-#[derive(Fail, Debug)]
-#[fail(
-    display = "Expected data with the storage type {}, but found {}",
-    _0, _1
-)]
+#[derive(Error, Debug)]
+#[error("Expected data with the storage type {0}, but found {1}")]
 pub struct UnexpectedDataTypeError(glue::GlueDataType, glue::GlueDataType);
 
+#[derive(Error, Debug)]
+pub enum TableError {
+    #[error("table paths must be representable as UTF-8 strings")]
+    InvalidUtf8,
+
+    #[error("Expected a column with a scalar data type, but found a vector of {0}")]
+    NotScalarColumnError(glue::GlueDataType),
+
+    #[error("{0}")]
+    UnexpectedDataType(#[from] UnexpectedDataTypeError),
+
+    #[error("{0}")]
+    Casacore(#[from] CasacoreError),
+
+    #[error("{0}")]
+    DimensionMismatch(#[from] DimensionMismatchError),
+}
+
 impl Table {
-    pub fn open<P: AsRef<Path>>(path: P, mode: TableOpenMode) -> Result<Self, Error> {
+    pub fn open<P: AsRef<Path>>(path: P, mode: TableOpenMode) -> Result<Self, TableError> {
         let spath = match path.as_ref().to_str() {
             Some(s) => s,
-            None => {
-                return Err(err_msg(
-                    "table paths must be representable as UTF-8 strings",
-                ));
-            }
+            None => return Err(TableError::InvalidUtf8),
         };
         let cpath = glue::StringBridge::from_rust(spath);
         let mut exc_info = unsafe { std::mem::zeroed::<glue::ExcInfo>() };
@@ -576,10 +579,7 @@ impl Table {
             return exc_info.as_err();
         }
 
-        Ok(Table {
-            handle: handle,
-            exc_info: exc_info,
-        })
+        Ok(Table { handle, exc_info })
     }
 
     pub fn n_rows(&self) -> u64 {
@@ -678,14 +678,17 @@ impl Table {
 
         Ok(ColumnDescription {
             name: col_name.to_owned(),
-            data_type: data_type,
+            data_type,
             is_scalar: is_scalar != 0,
             is_fixed_shape: is_fixed_shape != 0,
-            shape: shape,
+            shape,
         })
     }
 
-    pub fn get_col_as_vec<T: CasaScalarData>(&mut self, col_name: &str) -> Result<Vec<T>, Error> {
+    pub fn get_col_as_vec<T: CasaScalarData>(
+        &mut self,
+        col_name: &str,
+    ) -> Result<Vec<T>, TableError> {
         let ccol_name = glue::StringBridge::from_rust(col_name);
         let mut n_rows = 0;
         let mut data_type = glue::GlueDataType::TpOther;
@@ -713,7 +716,7 @@ impl Table {
         }
 
         if is_scalar == 0 || is_fixed_shape == 0 || n_dim != 0 {
-            return Err(NotScalarColumnError(data_type).into());
+            return Err(TableError::NotScalarColumnError(data_type).into());
         }
 
         if data_type != T::DATA_TYPE {
@@ -759,7 +762,7 @@ impl Table {
         Ok(result)
     }
 
-    pub fn get_cell<T: CasaDataType>(&mut self, col_name: &str, row: u64) -> Result<T, Error> {
+    pub fn get_cell<T: CasaDataType>(&mut self, col_name: &str, row: u64) -> Result<T, TableError> {
         let ccol_name = glue::StringBridge::from_rust(col_name);
         let mut data_type = glue::GlueDataType::TpOther;
         let mut n_dim = 0;
@@ -786,7 +789,8 @@ impl Table {
         }
 
         let result = if data_type != glue::GlueDataType::TpString {
-            let mut result = T::casatables_alloc(&dims[..n_dim as usize])?;
+            let mut result =
+                T::casatables_alloc(&dims[..n_dim as usize]).map_err(|e| TableError::from(e))?;
 
             let rv = unsafe {
                 glue::table_get_cell(
@@ -833,7 +837,7 @@ impl Table {
         &mut self,
         col_name: &str,
         row: u64,
-    ) -> Result<Vec<T>, Error> {
+    ) -> Result<Vec<T>, TableError> {
         let ccol_name = glue::StringBridge::from_rust(col_name);
         let mut data_type = glue::GlueDataType::TpOther;
         let mut n_dim = 0;
@@ -993,10 +997,7 @@ impl Table {
             return exc_info.as_err();
         }
 
-        Ok(TableRow {
-            handle: handle,
-            exc_info: exc_info,
-        })
+        Ok(TableRow { handle, exc_info })
     }
 
     pub fn get_row_reader(&mut self) -> Result<TableRow, CasacoreError> {
@@ -1007,7 +1008,7 @@ impl Table {
         self.get_row_handle(false)
     }
 
-    pub fn read_row(&mut self, row: &mut TableRow, row_number: u64) -> Result<(), Error> {
+    pub fn read_row(&mut self, row: &mut TableRow, row_number: u64) -> Result<(), TableError> {
         if unsafe { glue::table_row_read(row.handle, row_number, &mut row.exc_info) } != 0 {
             return row.exc_info.as_err();
         }
@@ -1015,9 +1016,9 @@ impl Table {
         Ok(())
     }
 
-    pub fn for_each_row<F>(&mut self, mut func: F) -> Result<(), Error>
+    pub fn for_each_row<F>(&mut self, mut func: F) -> Result<(), TableError>
     where
-        F: FnMut(&mut TableRow) -> Result<(), Error>,
+        F: FnMut(&mut TableRow) -> Result<(), TableError>,
     {
         let mut exc_info = unsafe { std::mem::zeroed::<glue::ExcInfo>() };
 
@@ -1026,10 +1027,7 @@ impl Table {
             return exc_info.as_err();
         }
 
-        let mut row = TableRow {
-            handle: handle,
-            exc_info: exc_info,
-        };
+        let mut row = TableRow { handle, exc_info };
 
         for row_number in 0..self.n_rows() {
             if unsafe { glue::table_row_read(row.handle, row_number as u64, &mut row.exc_info) }
@@ -1111,7 +1109,7 @@ pub struct TableRow {
 }
 
 impl TableRow {
-    pub fn get_cell<T: CasaDataType>(&mut self, col_name: &str) -> Result<T, Error> {
+    pub fn get_cell<T: CasaDataType>(&mut self, col_name: &str) -> Result<T, TableError> {
         let ccol_name = glue::StringBridge::from_rust(col_name);
         let mut data_type = glue::GlueDataType::TpOther;
         let mut n_dim = 0;

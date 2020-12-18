@@ -14,10 +14,10 @@ Core types and traits for Rubbl, a Rust package for astrophysics.
 """
 
 [dependencies]
+anyhow = "^1.0"
 byteorder = "^1.4"
 clap = "^2.33"
-failure = "^0.1"
-failure_derive = "^0.1"
 ndarray = "^0.15"
 num-complex = "^0.4"
 termcolor = "^1.1"
+thiserror = "^1.0"
