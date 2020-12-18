@@ -18,10 +18,10 @@ rubbl_core = "thiscommit:2020-12-15:peif3Eng"
 rubbl_visdata = "thiscommit:2020-12-15:Ox8roFai"
 
 [dependencies]
-failure = "^0.1"
-failure_derive = "^0.1"
 rubbl_core = { path = "../core", version ="0.0.0-dev.0"}
 rubbl_visdata = { path = "../visdata", version ="0.0.0-dev.0"}
+thiserror = "^1.0"
 
 [dev-dependencies]
+anyhow = "^1.0"
 clap = { version = "^4", features = ["cargo"] }

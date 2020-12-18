@@ -1,7 +1,7 @@
 //! Decode the low-level details of MIRIAD UV data.
 
+use anyhow::{Context, Error};
 use clap::{Arg, Command};
-use failure::{Error, ResultExt};
 use std::ffi::{OsStr, OsString};
 use std::io;
 use std::process;
@@ -25,7 +25,7 @@ fn main() {
 
         Err(e) => {
             println!("fatal error while processing {}", path.to_string_lossy());
-            for cause in e.iter_chain() {
+            for cause in e.chain() {
                 println!("  caused by: {}", cause);
             }
             1
@@ -34,8 +34,10 @@ fn main() {
 }
 
 fn inner(path: &OsStr) -> Result<i32, Error> {
-    let mut ds = rubbl_miriad::DataSet::open(path).context("error opening dataset")?;
-    let mut uv = ds.open_uv().context("could not open as UV dataset")?;
+    let mut ds = rubbl_miriad::DataSet::open(path).with_context(|| "error opening dataset")?;
+    let mut uv = ds
+        .open_uv()
+        .with_context(|| "could not open as UV dataset")?;
     uv.dump_diagnostic(io::stdout())?;
     Ok(0)
 }

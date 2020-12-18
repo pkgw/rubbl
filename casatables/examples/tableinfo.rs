@@ -3,9 +3,10 @@
 
 //! Summarize the structure of a CASA table.
 
+use anyhow::{Context, Error};
 use clap::{Arg, Command};
 use rubbl_casatables::{Table, TableOpenMode};
-use rubbl_core::{ctry, notify::ClapNotificationArgsExt, Error};
+use rubbl_core::notify::ClapNotificationArgsExt;
 use std::{cmp::max, path::PathBuf, process};
 
 fn main() {
@@ -25,24 +26,30 @@ fn main() {
         |matches, _nbe| -> Result<i32, Error> {
             let inpath = matches.get_one::<PathBuf>("IN-TABLE").unwrap();
 
-            let mut t = ctry!(Table::open(&inpath, TableOpenMode::Read);
-                          "failed to open input table \"{}\"", inpath.display());
+            let mut t = Table::open(&inpath, TableOpenMode::Read)
+                .with_context(|| format!("failed to open input table \"{}\"", inpath.display()))?;
 
             println!("Table \"{}\":", inpath.display());
             println!("Number of rows: {}", t.n_rows());
             println!("Number of columns: {}", t.n_columns());
             println!("");
 
-            let col_names = ctry!(t.column_names();
-                              "failed to get names of columns in \"{}\"", inpath.display());
+            let col_names = t.column_names().with_context(|| {
+                format!("failed to get names of columns in \"{}\"", inpath.display())
+            })?;
 
             let mut max_name_len = 0;
             let mut max_type_len = 0;
             let mut info: Vec<(&str, String, String)> = Vec::new();
 
             for n in &col_names {
-                let desc = ctry!(t.get_col_desc(&n);
-                             "failed to query column \"{}\" in \"{}\"", n, inpath.display());
+                let desc = t.get_col_desc(&n).with_context(|| {
+                    format!(
+                        "failed to query column \"{}\" in \"{}\"",
+                        n,
+                        inpath.display()
+                    )
+                })?;
 
                 let type_text = format!("{}", desc.data_type());
 
@@ -67,8 +74,9 @@ fn main() {
                 );
             }
 
-            let table_kw_names = ctry!(t.table_keyword_names();
-                                   "failed to get keyword info in \"{}\"", inpath.display());
+            let table_kw_names = t.table_keyword_names().with_context(|| {
+                format!("failed to get keyword info in \"{}\"", inpath.display())
+            })?;
 
             if table_kw_names.len() != 0 {
                 println!();

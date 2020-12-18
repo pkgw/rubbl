@@ -1,8 +1,8 @@
 //! Print out the values of all of the UV variables as they are set in the very
 //! first record of a UV data stream.
 
+use anyhow::{Context, Error};
 use clap::{Arg, Command};
-use failure::{Error, ResultExt};
 use std::ffi::{OsStr, OsString};
 use std::process;
 
@@ -25,7 +25,7 @@ fn main() {
 
         Err(e) => {
             println!("fatal error while processing {}", path.to_string_lossy());
-            for cause in e.iter_chain() {
+            for cause in e.chain() {
                 println!("  caused by: {}", cause);
             }
             1
@@ -34,10 +34,13 @@ fn main() {
 }
 
 fn inner(path: &OsStr) -> Result<i32, Error> {
-    let mut ds = rubbl_miriad::DataSet::open(path).context("error opening input dataset")?;
-    let mut uv = ds.open_uv().context("could not open input as UV dataset")?;
+    let mut ds =
+        rubbl_miriad::DataSet::open(path).with_context(|| "error opening input dataset")?;
+    let mut uv = ds
+        .open_uv()
+        .with_context(|| "could not open input as UV dataset")?;
 
-    uv.next().context("could not read UV data")?;
+    uv.next().with_context(|| "could not read UV data")?;
 
     for var in uv.variables() {
         let n = var.n_vals();

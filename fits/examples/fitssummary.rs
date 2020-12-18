@@ -3,8 +3,8 @@
 //! which doesn't seek but therefore has to actually read through all of the
 //! data.
 
+use anyhow::Context;
 use clap::{Arg, Command};
-use failure::{Error, ResultExt};
 use std::ffi::{OsStr, OsString};
 use std::fs;
 use std::process;
@@ -28,16 +28,14 @@ fn main() {
 
         Err(e) => {
             println!("fatal error while processing {}", path.to_string_lossy());
-            for cause in e.iter_chain() {
-                println!("  caused by: {}", cause);
-            }
+            println!("  caused by: {}", e);
             1
         }
     });
 }
 
-fn inner(path: &OsStr) -> Result<i32, Error> {
-    let file = fs::File::open(path).context("error opening file")?;
+fn inner(path: &OsStr) -> Result<i32, anyhow::Error> {
+    let file = fs::File::open(path).with_context(|| "error opening file")?;
     let fits = rubbl_fits::FitsParser::new(file)?;
 
     for (num, hdu) in fits.hdus().iter().enumerate() {

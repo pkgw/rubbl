@@ -17,8 +17,8 @@ engine. (Which the author of this module also wrote.)
 #[macro_use]
 pub mod termcolor;
 
+use anyhow::Error;
 use clap;
-use failure::Error;
 use std::cmp;
 use std::fmt::Arguments;
 use std::result::Result as StdResult;
@@ -201,9 +201,9 @@ impl BufferingNotificationBackend {
 impl NotificationBackend for BufferingNotificationBackend {
     fn notify(&mut self, kind: NotificationKind, args: Arguments, err: Option<Error>) {
         self.buf.push(NotificationData {
-            kind: kind,
+            kind,
             text: format!("{}", args),
-            err: err,
+            err,
         });
     }
 }

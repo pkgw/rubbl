@@ -1,8 +1,8 @@
 //! Hack for Paul La Plante: synthesize a 352-antenna dataset from a smaller
 //! one, so that we can see how our algorithms scale.
 
+use anyhow::{bail, Context, Error};
 use clap::{Arg, Command};
-use failure::{format_err, Error, ResultExt};
 use rubbl_miriad::mask::{MaskDecoder, MaskEncoder};
 use rubbl_miriad::visdata::{
     decode_baseline, encode_baseline, Decoder, Encoder, UvVariableReference,
@@ -47,7 +47,7 @@ fn main() {
                     in_path.to_string_lossy(),
                     out_path.to_string_lossy()
                 );
-                for cause in e.iter_chain() {
+                for cause in e.chain() {
                     println!("  caused by: {}", cause);
                 }
                 1
@@ -117,7 +117,7 @@ impl UvInflator {
         let out_mib = inst.out_uv.flush(&mut inst.out_ds)? as f64 / (1024. * 1024.);
         inst.out_ds
             .flush()
-            .context("couldn't flush changes to output dataset")?;
+            .with_context(|| "couldn't flush changes to output dataset")?;
 
         let dur = t0.elapsed();
         let dur_secs = dur.subsec_nanos() as f64 * 1e-9 + dur.as_secs() as f64;
@@ -140,22 +140,22 @@ impl UvInflator {
     }
 
     fn new(in_path: &OsStr, out_path: &OsStr) -> Result<Self, Error> {
-        let mut in_ds = DataSet::open(in_path).context("error opening input dataset")?;
+        let mut in_ds = DataSet::open(in_path).with_context(|| "error opening input dataset")?;
         let mut in_uv = in_ds
             .open_uv()
-            .context("could not open input as UV dataset")?;
+            .with_context(|| "could not open input as UV dataset")?;
         let mut in_flags = MaskDecoder::new(
             in_ds
                 .get("flags")?
-                .ok_or(format_err!("no \"flags\" item in input"))?
+                .with_context(|| "no \"flags\" item in input")?
                 .into_byte_stream()?,
         );
 
-        let mut out_ds =
-            rubbl_miriad::DataSet::open(out_path).context("error opening output dataset")?;
+        let mut out_ds = rubbl_miriad::DataSet::open(out_path)
+            .with_context(|| "error opening output dataset")?;
         let mut out_uv = out_ds
             .new_uv_like(&in_uv)
-            .context("could not open output for writing UV data")?;
+            .with_context(|| "could not open output for writing UV data")?;
         let out_flags = MaskEncoder::new(out_ds.create_large_item("flags", Type::Int32)?);
 
         // Progress bar
@@ -168,7 +168,7 @@ impl UvInflator {
         // nbls, nblts, st_type. We *should* skip pol here too, but we're
         // leveraging the fact that we know our datasets are single-pol.
 
-        in_uv.next().context("could not read UV data")?;
+        in_uv.next().with_context(|| "could not read UV data")?;
 
         for var in in_uv.variables() {
             match var.name() {
@@ -181,7 +181,7 @@ impl UvInflator {
 
             out_uv
                 .write_var(var)
-                .context("could not write UV variable")?;
+                .with_context(|| "could not write UV variable")?;
         }
 
         // antnums is an (in_nants)-element f64 array mapping HERA antenna numbers
@@ -196,7 +196,7 @@ impl UvInflator {
         in_uv.get_data(
             in_uv
                 .lookup_variable("antnums")
-                .ok_or(format_err!("no \"antnums\" UV variable"))?,
+                .with_context(|| format!("no \"antnums\" UV variable"))?,
             &mut antnums_float,
         );
 
@@ -210,7 +210,7 @@ impl UvInflator {
         let in_nants_slots = in_uv.get_scalar::<i32>(
             in_uv
                 .lookup_variable("nants")
-                .ok_or(format_err!("no \"nants\" UV variable"))?,
+                .with_context(|| "no \"nants\" UV variable")?,
         ) as usize;
         let mut last_used_antnum = 0; // assuming antnum 0 is always taken
 
@@ -262,7 +262,7 @@ impl UvInflator {
         let in_antnames: String = in_uv.get_scalar(
             in_uv
                 .lookup_variable("antnames")
-                .ok_or(format_err!("no \"antnames\" UV variable"))?,
+                .with_context(|| "no \"antnames\" UV variable")?,
         );
         let in_antnames = in_antnames.split_at(in_antnames.len() - 2).0.split_at(1).1;
         let mut out_antnames = String::from("[");
@@ -291,7 +291,7 @@ impl UvInflator {
         in_uv.get_data(
             in_uv
                 .lookup_variable("antpos")
-                .ok_or(format_err!("no \"antpos\" UV variable"))?,
+                .with_context(|| "no \"antpos\" UV variable")?,
             &mut in_antpos,
         );
 
@@ -321,7 +321,7 @@ impl UvInflator {
         let ntimes: i32 = in_uv.get_scalar(
             in_uv
                 .lookup_variable("ntimes")
-                .ok_or(format_err!("no \"ntimes\" UV variable"))?,
+                .with_context(|| "no \"ntimes\" UV variable")?,
         );
         out_uv.write_scalar("nblts", nbls * ntimes)?;
 
@@ -330,7 +330,7 @@ impl UvInflator {
         let in_st_type: String = in_uv.get_scalar(
             in_uv
                 .lookup_variable("st_type")
-                .ok_or(format_err!("no \"st_type\" UV variable"))?,
+                .with_context(|| "no \"st_type\" UV variable")?,
         );
         let in_st_type = in_st_type.split_at(in_st_type.len() - 2).0.split_at(1).1;
         let st_types: Vec<_> = in_st_type.split(", ").collect();
@@ -355,27 +355,27 @@ impl UvInflator {
         let nschan: usize = in_uv.get_scalar::<i32>(
             in_uv
                 .lookup_variable("nschan")
-                .ok_or(format_err!("no \"nschan\" UV variable"))?,
+                .with_context(|| "no \"nschan\" UV variable")?,
         ) as usize;
 
         let time_var = in_uv
             .lookup_variable("time")
-            .ok_or(format_err!("no \"time\" UV variable"))?;
+            .with_context(|| "no \"time\" UV variable")?;
         let lst_var = in_uv
             .lookup_variable("lst")
-            .ok_or(format_err!("no \"lst\" UV variable"))?;
+            .with_context(|| "no \"lst\" UV variable")?;
         let ra_var = in_uv
             .lookup_variable("ra")
-            .ok_or(format_err!("no \"ra\" UV variable"))?;
+            .with_context(|| "no \"ra\" UV variable")?;
         let baseline_var = in_uv
             .lookup_variable("baseline")
-            .ok_or(format_err!("no \"baseline\" UV variable"))?;
+            .with_context(|| "no \"baseline\" UV variable")?;
         let coord_var = in_uv
             .lookup_variable("coord")
-            .ok_or(format_err!("no \"coord\" UV variable"))?;
+            .with_context(|| "no \"coord\" UV variable")?;
         let corr_var = in_uv
             .lookup_variable("corr")
-            .ok_or(format_err!("no \"corr\" UV variable"))?;
+            .with_context(|| "no \"corr\" UV variable")?;
 
         let time: f64 = in_uv.get_scalar(time_var);
         let lst: f64 = in_uv.get_scalar(lst_var);
@@ -446,7 +446,10 @@ impl UvInflator {
         let mut keep_going = true;
 
         while keep_going {
-            keep_going = self.in_uv.next().context("could not read UV data")?;
+            keep_going = self
+                .in_uv
+                .next()
+                .with_context(|| "could not read UV data")?;
             self.in_n += 1;
             let new_time = self.in_uv.get_scalar(self.time_var);
             let cur_time = self.time; // borrowck annoyances
@@ -511,23 +514,16 @@ impl UvInflator {
                     conj = true;
                 }
 
-                let rec = self
-                    .records
-                    .get(&(src_mir_1, src_mir_2))
-                    .ok_or(format_err!(
-                        "missing data for source {}-{} baseline",
-                        src_mir_1,
-                        src_mir_2
-                    ))?;
+                let rec = self.records.get(&(src_mir_1, src_mir_2)).with_context(|| {
+                    format!("missing data for source {src_mir_1}-{src_mir_2} baseline")
+                })?;
 
                 if rec.update_time != time {
-                    return Err(format_err!(
-                        "stale data for source {}-{} baseline ({:?} vs {:?})",
-                        src_mir_1,
-                        src_mir_2,
+                    bail!(
+                        "stale data for source {src_mir_1}-{src_mir_2} baseline ({:?} vs {:?})",
                         rec.update_time,
                         time
-                    ));
+                    );
                 }
 
                 // In our fake dataset this is a cross-correlation, but in the

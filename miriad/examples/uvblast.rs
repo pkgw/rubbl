@@ -1,8 +1,8 @@
 //! Read a UV dataset file and report how long it took. This should basically
 //! just be a test of the system's I/O throughput.
 
+use anyhow::{Context, Error};
 use clap::{Arg, Command};
-use failure::{Error, ResultExt};
 use std::ffi::{OsStr, OsString};
 use std::process;
 use std::time::Instant;
@@ -26,7 +26,7 @@ fn main() {
 
         Err(e) => {
             println!("fatal error while processing {}", path.to_string_lossy());
-            for cause in e.iter_chain() {
+            for cause in e.chain() {
                 println!("  caused by: {}", cause);
             }
             1
@@ -35,13 +35,15 @@ fn main() {
 }
 
 fn inner(path: &OsStr) -> Result<i32, Error> {
-    let mut ds = rubbl_miriad::DataSet::open(path).context("error opening dataset")?;
-    let mut uv = ds.open_uv().context("could not open as UV dataset")?;
+    let mut ds = rubbl_miriad::DataSet::open(path).with_context(|| "error opening dataset")?;
+    let mut uv = ds
+        .open_uv()
+        .with_context(|| "could not open as UV dataset")?;
     let mib = uv.visdata_bytes() as f64 / (1024. * 1024.);
     let mut n = 0usize;
     let t0 = Instant::now();
 
-    while uv.next().context("could not read UV data")? {
+    while uv.next().with_context(|| "could not read UV data")? {
         n += 1
     }
 
