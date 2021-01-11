@@ -18,7 +18,7 @@ rubbl_casatables_impl = "1d861e38cc1a40a6f0c984a58ae3dee54c27d127"
 rubbl_core = "thiscommit:2020-12-15:EiT8sa0a"
 
 [dependencies]
-byteorder = "^1.3"
+byteorder = "^1.4"
 clap = "^2.33"
 failure = "^0.1"
 failure_derive = "^0.1"
