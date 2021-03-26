@@ -255,9 +255,9 @@ dependencies = [
 
 [[package]]
 name = "matrixmultiply"
-version = "0.2.3"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d4f7ec66360130972f34830bfad9ef05c6610a43938a467bcc9ab9369ab3478f"
+checksum = "1300bdbea33ec2836b01ff1f5a6eed8bad66d0c31f94d9b7993407a8b054c3a1"
 dependencies = [
  "rawpointer",
 ]
@@ -270,12 +270,12 @@ checksum = "88579771288728879b57485cc7d6b07d648c9f0141eb955f8ab7f9d45394468e"
 
 [[package]]
 name = "ndarray"
-version = "0.14.0"
+version = "0.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6c0d5c9540a691d153064dc47a4db2504587a75eae07bf1d73f7a596ebc73c04"
+checksum = "073c7c76f7b90654996f08db92290e9f300d11de0634493d6f1c4fd11d8a1583"
 dependencies = [
  "matrixmultiply",
- "num-complex 0.3.1",
+ "num-complex",
  "num-integer",
  "num-traits",
  "rawpointer",
@@ -298,15 +298,6 @@ dependencies = [
  "lexical-core",
  "memchr",
  "version_check",
-]
-
-[[package]]
-name = "num-complex"
-version = "0.3.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "747d632c0c558b87dbabbe6a82f3b4ae03720d0646ac5b7b4dae89394be5f2c5"
-dependencies = [
- "num-traits",
 ]
 
 [[package]]
@@ -485,7 +476,7 @@ dependencies = [
  "failure",
  "failure_derive",
  "ndarray",
- "num-complex 0.4.0",
+ "num-complex",
  "termcolor",
 ]
 
