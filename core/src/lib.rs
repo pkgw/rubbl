@@ -13,7 +13,8 @@ the Rubbl framework.
 #![deny(missing_docs)]
 
 // convenience re-exports
-pub use failure::{Error, Fail, ResultExt};
+use anyhow::Context;
+pub use anyhow::Error;
 pub use ndarray::Array;
 pub use num_complex::Complex;
 
@@ -21,7 +22,7 @@ pub use num_complex::Complex;
 ///
 /// Attempts an operation that returns a Result and returns its Ok value if
 /// the operation is successful. If not, it returns an Err value of type
-/// `failure::Context` that includes explanatory text formatted using the
+/// `anyhow::Context` that includes explanatory text formatted using the
 /// `format!` macro and chains to the causative error. Example:
 ///
 /// ```rust,ignore
@@ -34,7 +35,7 @@ pub use num_complex::Complex;
 macro_rules! ctry {
     ($op:expr ; $( $chain_fmt_args:expr ),*) => {
         {
-            use $crate::ResultExt;
+            use $crate::Error;
             $op.with_context(|_| format!($( $chain_fmt_args ),*))?
         }
     }
@@ -46,4 +47,4 @@ pub mod num;
 
 /// A convenience Result type whose error half is fixed to be
 /// `failure::Error`.
-pub type Result<T> = ::std::result::Result<T, failure::Error>;
+pub type Result<T> = ::std::result::Result<T, anyhow::Error>;

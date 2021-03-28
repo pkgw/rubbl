@@ -3,16 +3,13 @@
 
 //! General helpers for numerics.
 
-use failure_derive::Fail;
 use ndarray::{IntoDimension, Ix0, Ix1, Ix2, Ix3, Ix4, Ix5, Ix6};
+use thiserror::Error;
 
 /// An error type used when two arrays should have the same dimensionality,
 /// but do not.
-#[derive(Fail, Debug)]
-#[fail(
-    display = "Expected a {}-dimensional array, but got one with {} dimensions",
-    expected, actual
-)]
+#[derive(Error, Debug)]
+#[error("Expected a {expected}-dimensional array, but got one with {actual} dimensions")]
 pub struct DimensionMismatchError {
     /// The number of dimensions that the array was expected to have.
     pub expected: usize,

@@ -11,15 +11,14 @@ Heavily modeled on Cargo's implementation of the same sort of functionality.
 */
 
 use clap::{crate_version, App, AppSettings, Arg, ArgMatches, SubCommand};
-use failure::Error;
-use failure_derive::Fail;
 use rubbl_core::{
     notify::{ClapNotificationArgsExt, NotificationBackend},
     Result,
 };
 use std::{
     collections::BTreeSet,
-    env, fs,
+    env,
+    fs,
     os::unix::process::CommandExt,
     path::{Path, PathBuf},
     process,
@@ -27,8 +26,8 @@ use std::{
 
 // Some error help.
 
-#[derive(Fail, Debug)]
-#[fail(display = "no such sub-command `{}`", _0)]
+#[derive(thiserror::Error, Debug)]
+#[error("no such sub-command `{0}`")]
 pub struct NoSuchSubcommandError(String);
 
 fn main() {
@@ -125,7 +124,7 @@ fn do_external(cmd: &str, matches: &ArgMatches, _nbe: &mut dyn NotificationBacke
 
 /// Try to re-execute the process using the executable corresponding to the
 /// named sub-command. If this function returns, something went wrong.
-fn try_exec_subcommand(cmd: &str, args: &[&str]) -> Error {
+fn try_exec_subcommand(cmd: &str, args: &[&str]) -> anyhow::Error {
     let command_exe = format!("rubbl-{}{}", cmd, env::consts::EXE_SUFFIX);
     let path = search_directories()
         .iter()

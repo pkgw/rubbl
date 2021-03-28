@@ -13,7 +13,7 @@ engine. (Which the author of this module also wrote.)
 // TODO: make this module a feature that can be disabled if the user doesn't want to
 // link with termcolor
 
-use failure::Error;
+use anyhow::Error;
 use std::fmt::Arguments;
 use std::io::Write;
 use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
@@ -55,14 +55,14 @@ impl TermcolorNotificationBackend {
         fatal_spec.set_fg(Some(Color::Red)).set_bold(true);
 
         TermcolorNotificationBackend {
-            chatter: chatter,
+            chatter,
             stdout: StandardStream::stdout(ColorChoice::Auto),
             stderr: StandardStream::stderr(ColorChoice::Auto),
-            note_spec: note_spec,
+            note_spec,
             //highlight_spec: highlight_spec,
-            warning_spec: warning_spec,
-            severe_spec: severe_spec,
-            fatal_spec: fatal_spec,
+            warning_spec,
+            severe_spec,
+            fatal_spec,
         }
     }
 
@@ -135,7 +135,7 @@ impl TermcolorNotificationBackend {
         let mut prefix = "error:";
         let err = err.into();
 
-        for fail in err.iter_chain() {
+        for fail in err.chain() {
             self.generic_message(
                 NotificationKind::Severe,
                 Some(prefix),
@@ -144,15 +144,15 @@ impl TermcolorNotificationBackend {
             prefix = "caused by:";
         }
 
-        let backtrace = err.backtrace();
-        self.generic_message(
-            NotificationKind::Severe,
-            Some("debugging:"),
-            format_args!("backtrace follows:"),
-        );
-        self.with_stream(NotificationKind::Severe, |s| {
-            writeln!(s, "{:?}", backtrace).expect("backtrace dump failed");
-        });
+        // let backtrace = err.backtrace();
+        // self.generic_message(
+        //     NotificationKind::Severe,
+        //     Some("debugging:"),
+        //     format_args!("backtrace follows:"),
+        // );
+        // self.with_stream(NotificationKind::Severe, |s| {
+        //     writeln!(s, "{:?}", backtrace).expect("backtrace dump failed");
+        // });
     }
 }
 
@@ -161,15 +161,15 @@ impl NotificationBackend for TermcolorNotificationBackend {
         self.generic_message(kind, None, args);
 
         if let Some(e) = err {
-            for fail in e.iter_chain() {
+            for fail in e.chain() {
                 self.generic_message(kind, Some("caused by:"), format_args!("{}", fail));
             }
 
-            let backtrace = e.backtrace();
-            self.generic_message(kind, Some("debugging:"), format_args!("backtrace follows:"));
-            self.with_stream(kind, |s| {
-                writeln!(s, "{:?}", backtrace).expect("backtrace dump failed");
-            });
+            // let backtrace = e.backtrace();
+            // self.generic_message(kind, Some("debugging:"), format_args!("backtrace follows:"));
+            // self.with_stream(kind, |s| {
+            //     writeln!(s, "{:?}", backtrace).expect("backtrace dump failed");
+            // });
         }
     }
 }
