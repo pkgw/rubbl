@@ -1015,6 +1015,7 @@ impl Table {
         Ok(())
     }
 
+    /// Perform `func` on each row of the measurement set.
     pub fn for_each_row<F>(&mut self, mut func: F) -> Result<(), Error>
     where
         F: FnMut(&mut TableRow) -> Result<(), Error>,
@@ -1032,6 +1033,70 @@ impl Table {
         };
 
         for row_number in 0..self.n_rows() {
+            if unsafe { glue::table_row_read(row.handle, row_number as u64, &mut row.exc_info) }
+                != 0
+            {
+                return row.exc_info.as_err();
+            }
+
+            func(&mut row)?;
+        }
+
+        Ok(())
+    }
+
+    /// Perform `func` on each row in the range `row_range`.
+    pub fn for_each_row_in_range<F>(
+        &mut self,
+        row_range: std::ops::Range<u64>,
+        mut func: F,
+    ) -> Result<(), Error>
+    where
+        F: FnMut(&mut TableRow) -> Result<(), Error>,
+    {
+        let mut exc_info = unsafe { std::mem::zeroed::<glue::ExcInfo>() };
+
+        let handle = unsafe { glue::table_row_alloc(self.handle, 1, &mut exc_info) };
+        if handle.is_null() {
+            return exc_info.as_err();
+        }
+
+        let mut row = TableRow {
+            handle: handle,
+            exc_info: exc_info,
+        };
+
+        for row_number in row_range {
+            if unsafe { glue::table_row_read(row.handle, row_number as u64, &mut row.exc_info) }
+                != 0
+            {
+                return row.exc_info.as_err();
+            }
+
+            func(&mut row)?;
+        }
+
+        Ok(())
+    }
+
+    /// Perform `func` on each row indicated by `rows`.
+    pub fn for_each_specific_row<F>(&mut self, rows: &[u64], mut func: F) -> Result<(), Error>
+    where
+        F: FnMut(&mut TableRow) -> Result<(), Error>,
+    {
+        let mut exc_info = unsafe { std::mem::zeroed::<glue::ExcInfo>() };
+
+        let handle = unsafe { glue::table_row_alloc(self.handle, 1, &mut exc_info) };
+        if handle.is_null() {
+            return exc_info.as_err();
+        }
+
+        let mut row = TableRow {
+            handle: handle,
+            exc_info: exc_info,
+        };
+
+        for &row_number in rows {
             if unsafe { glue::table_row_read(row.handle, row_number as u64, &mut row.exc_info) }
                 != 0
             {
