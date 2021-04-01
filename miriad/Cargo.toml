@@ -20,11 +20,11 @@ rubbl_core = "thiscommit:2020-12-15:aishi6Ae"
 rubbl_visdata = "thiscommit:2020-12-15:Rohw0kei"
 
 [dependencies]
-byteorder = "^1.3"
+byteorder = "^1.4"
 clap = "^2.33"
 failure = "^0.1"
 failure_derive = "^0.1"
-openat = "^0.1.19"
+openat = "^0.1.20"
 pbr = "^1.0"
 rubbl_core = { path = "../core", version ="0.0.0-dev.0"}
 rubbl_visdata = { path = "../visdata", version ="0.0.0-dev.0"}

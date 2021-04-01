@@ -1,13 +1,8 @@
-# rc: micro bump
+# See elsewhere for changelog
 
-- No code changes from the previous release, but it *also* wasn't successfully
-  published to Cargo.
+This project’s release notes are curated from the Git history of its main
+branch. You can find them by looking at [the version of this file on the
+`release` branch][branch] or the [GitHub release history][gh-releases].
 
-# rubbl_casatables_impl 0.2.31103 (2020-12-15)
-
-- No code changes from the previous release, but that wasn't successfully
-  published to Cargo.
-
-# rubbl_casatables_impl 0.2.31102 (2020-12-15)
-
-- Bump to the 2018 edition
+[branch]: https://github.com/pkgw/rubbl/blob/release/casatables_impl/CHANGELOG.md
+[gh-releases]: https://github.com/pkgw/rubbl/releases
