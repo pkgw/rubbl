@@ -1,3 +1,7 @@
+# rubbl_fits 0.2.4 (2021-04-01)
+
+- Remove a bunch of superfluous dependencies
+
 # rubbl_fits 0.2.3 (2021-04-01)
 
 - Dependency bump: byteorder 1.3.4 to 1.4.2

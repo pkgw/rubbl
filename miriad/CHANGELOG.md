@@ -1,3 +1,7 @@
+# rubbl_miriad 0.2.4 (2021-04-01)
+
+- Remove a bunch of superfluous dependencies
+
 # rubbl_miriad 0.2.3 (2021-04-01)
 
 - Dependency bumps: openat from 0.1.19 to 0.1.20, byteorder from 1.3.4 to 1.4.2
