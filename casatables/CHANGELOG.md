@@ -1,3 +1,8 @@
+# rubbl_casatables 0.3.0 (2021-04-01)
+
+- Add methods to iterate over particular rows (@cjordan, #146)
+- Update versions of a variety of dependencies
+
 # rubbl_casatables 0.2.2 (2020-12-15)
 
 - No code changes from notional 0.2.1, but 0.2.1 *also* wasn't successfully
