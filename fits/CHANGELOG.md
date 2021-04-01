@@ -1,5 +1,9 @@
 # rc: micro bump
 
+- Remove a bunch of superfluous dependencies
+
+# rubbl_fits 0.2.3 (2021-04-01)
+
 - Dependency bump: byteorder 1.3.4 to 1.4.2
 
 # rubbl_fits 0.2.2 (2020-12-15)
