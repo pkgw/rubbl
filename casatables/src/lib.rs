@@ -304,6 +304,10 @@ impl<I: CasaScalarData + Copy, D: Dimension + DimFromShapeSlice<u64>> CasaDataTy
     const DATA_TYPE: glue::GlueDataType = I::VECTOR_TYPE;
 
     fn casatables_alloc(shape: &[u64]) -> Result<Self, Error> {
+        // TODO: this method is deprecated and we are certainly in the danger
+        // zone by producing uninitialized memory here. Need to figure out a
+        // better approach. We may need to take a closure argument that we can
+        // call between uninit() and assume_init(), or something.
         Ok(unsafe { Self::uninitialized(D::from_shape_slice(shape)?) })
     }
 
