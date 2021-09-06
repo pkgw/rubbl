@@ -529,6 +529,50 @@ where
     )
 }
 
+// TableDesc
+
+pub struct TableDesc {
+    handle: *mut glue::GlueTableDesc,
+    exc_info: glue::ExcInfo,
+}
+
+impl TableDesc {
+    pub fn new(stype: &str) -> Self {
+        let ctype = glue::StringBridge::from_rust(stype);
+        let exc_info = unsafe { std::mem::zeroed::<glue::ExcInfo>() };
+
+        let handle = unsafe { glue::tabledesc_create(&ctype) };
+
+        // Ok(TableDesc {
+        //     handle,
+        //     exc_info
+        // })
+        TableDesc { handle, exc_info }
+    }
+
+    pub fn add_scalar_column(
+        &mut self,
+        data_type: glue::GlueDataType,
+        col_name: &str,
+    ) -> Result<Self, Error> {
+        let cname = glue::StringBridge::from_rust(col_name);
+        let new_handle = unsafe {
+            glue::tabledesc_add_scalar_column(self.handle, data_type, &cname, &mut self.exc_info)
+        };
+
+        if new_handle.is_null() {
+            return self.exc_info.as_err();
+        }
+
+        // not sure what to do with new_handle after this?
+
+        Ok(Self {
+            handle: new_handle,
+            exc_info: self.exc_info,
+        })
+    }
+}
+
 // Tables
 
 pub struct Table {
@@ -557,6 +601,35 @@ pub struct NotScalarColumnError(glue::GlueDataType);
 pub struct UnexpectedDataTypeError(glue::GlueDataType, glue::GlueDataType);
 
 impl Table {
+    pub fn new<P: AsRef<Path>>(
+        path: P,
+        table_desc: TableDesc,
+        n_rows: usize,
+    ) -> Result<Self, Error> {
+        let spath = match path.as_ref().to_str() {
+            Some(s) => s,
+            None => {
+                return Err(err_msg(
+                    "table paths must be representable as UTF-8 strings",
+                ));
+            }
+        };
+
+        let cpath = glue::StringBridge::from_rust(spath);
+        let mut exc_info = unsafe { std::mem::zeroed::<glue::ExcInfo>() };
+
+        let handle =
+            unsafe { glue::table_create(&cpath, table_desc.handle, n_rows as u64, &mut exc_info) };
+        if handle.is_null() {
+            return exc_info.as_err();
+        }
+
+        Ok(Table {
+            handle: handle,
+            exc_info: exc_info,
+        })
+    }
+
     pub fn open<P: AsRef<Path>>(path: P, mode: TableOpenMode) -> Result<Self, Error> {
         let spath = match path.as_ref().to_str() {
             Some(s) => s,
@@ -1364,5 +1437,36 @@ impl Drop for TableRow {
         unsafe {
             glue::table_row_free(self.handle, &mut self.exc_info);
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::glue::GlueDataType;
+    use tempfile::tempdir;
+
+    #[test]
+    fn table_create_with_scalar_desc() {
+        let tmp_dir = tempdir().unwrap();
+        let table_path = tmp_dir.path().join("test.ms");
+
+        let col_name = "test_uint";
+
+        let mut table_desc = TableDesc::new("TEST");
+        table_desc = table_desc
+            .add_scalar_column(GlueDataType::TpUInt, &col_name)
+            .unwrap();
+
+        let mut table = Table::new(table_path, table_desc, 123).unwrap();
+
+        assert_eq!(table.n_rows(), 123);
+        assert_eq!(table.n_columns(), 1);
+
+        let column_info = table.get_col_desc(&col_name).unwrap();
+        assert_eq!(column_info.data_type(), GlueDataType::TpUInt);
+        assert_eq!(column_info.name(), col_name);
+        assert!(column_info.is_scalar());
+        // assert!(column_info.is_fixed_shape());
     }
 }

@@ -12,8 +12,10 @@
 
 #define CASA_TYPES_ALREADY_DECLARED
 #define GlueTable casacore::Table
+#define GlueTableDesc casacore::TableDesc
 #define GlueTableRow casacore::ROTableRow
 #define GlueDataType casacore::DataType
+#define GlueUInt casacore::uInt
 
 #include "glue.h"
 
@@ -131,7 +133,129 @@ extern "C" {
         return -1;
     }
 
+    // TableDesc
+
+    GlueTableDesc *
+    tabledesc_create(
+        // TODO: figure out exactly what this is.
+        // Apparently this is actually the name of the table?
+        const StringBridge &type
+    )
+    {
+        // TODO: expose this?
+        GlueTableDesc::TDOption tdOption = GlueTableDesc::TDOption::New;
+        return new GlueTableDesc(bridge_string(type), tdOption);
+    }
+
+    GlueTableDesc *
+    tabledesc_add_scalar_column(
+        GlueTableDesc &tableDesc,
+        GlueDataType dataType,
+        const StringBridge &columnName,
+        ExcInfo &exc
+    )
+    {
+        try {
+
+            switch (dataType) {
+
+#define CASE(DTYPE, CPPTYPE) \
+            case casacore::DTYPE: { \
+                tableDesc.addColumn(casacore::ScalarColumnDesc<CPPTYPE>( \
+                    bridge_string(columnName) \
+                )); \
+                break; \
+            }
+
+            CASE(TpBool, casacore::Bool)
+            CASE(TpChar, casacore::Char)
+            CASE(TpUChar, casacore::uChar)
+            CASE(TpShort, casacore::Short)
+            CASE(TpUShort, casacore::uShort)
+            CASE(TpInt, casacore::Int)
+            CASE(TpUInt, casacore::uInt)
+            CASE(TpFloat, float)
+            CASE(TpDouble, double)
+            CASE(TpComplex, casacore::Complex)
+            CASE(TpDComplex, casacore::DComplex)
+
+#undef CASE
+
+            case casacore::TpString:
+                throw std::runtime_error("use table_get_scalar_column_data_string for TpString columns");
+
+            default:
+                throw std::runtime_error("unhandled scalar column data type");
+            }
+        } catch (...) {
+            handle_exception(exc);
+        }
+
+        return &tableDesc;
+    }
+
+    // GlueTableDesc *
+    // tabledesc_add_column_array(
+    //     GlueTableDesc &tableDesc,
+    //     GlueDataType dataType,
+    //     const StringBridge &columnName,
+    //     casacore::Int ndim
+    // )
+    // {
+    //     const casacore::ColumnDesc column = new casacore::ArrayColumnDesc<dataType>(
+    //         bridge_string(columnName),
+    //         ndim
+    //     );
+
+    //     tableDesc.addColumn(column);
+    // }
+
     // Tables
+
+    GlueTable *
+    table_create(
+        const StringBridge &path, 
+        // Description of columns and keys in the table
+        GlueTableDesc &tableDesc,
+        // number of rows
+        unsigned long nrrow,
+        ExcInfo &exc
+    )
+    {
+        // TODO: expose this as an argument?
+        // I think the only options here are New, NewNoReplace and Scratch, but 
+        // not sure whether it's worth extending the TableOpenMode enum or 
+        // doing something else. Open to suggestions
+        GlueTable::TableOption tableOption = GlueTable::TableOption::New;
+
+        // TOOD: expose this as an argument?
+        // the enum is either either `Plain` or `Memory`
+        GlueTable::TableType type = GlueTable::TableType::Plain;
+
+        // TODO: expose this as an argument?
+        // const casacore::TSMOption tsmOption();
+
+        // TODO: expose this as an argument?
+        casacore::Bool initialize = true;
+
+        // create a an object containing some information about the table we're creating
+        casacore::SetupNewTable newTable(
+            bridge_string(path),
+            tableDesc,
+            tableOption
+        );
+
+        // always use the local endianness
+        GlueTable::EndianFormat endianFormat = GlueTable::EndianFormat::LocalEndian;
+
+
+        try {
+            return new GlueTable(newTable, type, nrrow, initialize, endianFormat, casacore::TSMOption());
+        } catch (...) {
+            handle_exception(exc);
+            return NULL;
+        }
+    }
 
     GlueTable *
     table_alloc_and_open(const StringBridge &path, const TableOpenMode mode, ExcInfo &exc)
