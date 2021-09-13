@@ -529,27 +529,46 @@ where
     )
 }
 
-// TableDesc
-
+/// From `casacore::TableDesc`:
+///
+/// Define the structure of a Casacore table
+///
+/// A TableDesc object contains the description, or structure, of a table.
+/// This description is required for the creation of a new table.  
+/// Descriptions are subsequently associated with every table and
+/// embedded in them.
+///
+/// # Examples
+///
+/// Create a 
+///
+/// ```rust
+/// let mut table_desc = TableDesc::new("TYPE");
+/// table_desc
+///     .add_scalar_column(GlueDataType::TpUInt, "column name")
+///     .unwrap();
+/// ```
 pub struct TableDesc {
     handle: *mut glue::GlueTableDesc,
     exc_info: glue::ExcInfo,
 }
 
 impl TableDesc {
+    /// Create a new TableDesc.
+    ///
+    /// `type` - effectively the name of the table. From casacore:
+    ///     This name can be seen as the table type in the same way as a
+    ///     class name is the data type of an object.
     pub fn new(stype: &str) -> Self {
         let ctype = glue::StringBridge::from_rust(stype);
         let exc_info = unsafe { std::mem::zeroed::<glue::ExcInfo>() };
 
         let handle = unsafe { glue::tabledesc_create(&ctype) };
 
-        // Ok(TableDesc {
-        //     handle,
-        //     exc_info
-        // })
         TableDesc { handle, exc_info }
     }
 
+    /// Add a scalar column to the TableDesc
     pub fn add_scalar_column(
         &mut self,
         data_type: glue::GlueDataType,
