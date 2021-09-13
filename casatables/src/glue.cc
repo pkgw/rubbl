@@ -188,6 +188,52 @@ extern "C" {
         return &table_desc;
     }
 
+    GlueTableDesc *
+    tabledesc_add_array_column(
+        GlueTableDesc &table_desc,
+        GlueDataType data_type,
+        const StringBridge &col_name,
+        // Number of dimensions
+        int n_dims,
+        ExcInfo &exc
+    )
+    {
+        try {
+            switch (data_type) {
+
+#define CASE(DTYPE, CPPTYPE) \
+            case casacore::DTYPE: { \
+                table_desc.addColumn(casacore::ArrayColumnDesc<CPPTYPE>( \
+                    bridge_string(col_name), \
+                    n_dims \
+                )); \
+                break; \
+            }
+
+            CASE(TpBool, casacore::Bool)
+            CASE(TpChar, casacore::Char)
+            CASE(TpUChar, casacore::uChar)
+            CASE(TpShort, casacore::Short)
+            CASE(TpUShort, casacore::uShort)
+            CASE(TpInt, casacore::Int)
+            CASE(TpUInt, casacore::uInt)
+            CASE(TpFloat, float)
+            CASE(TpDouble, double)
+            CASE(TpComplex, casacore::Complex)
+            CASE(TpDComplex, casacore::DComplex)
+            CASE(TpString, casacore::String)
+#undef CASE
+
+            default:
+                throw std::runtime_error("unhandled scalar column data type");
+            }
+        } catch (...) {
+            handle_exception(exc);
+        }
+
+        return &table_desc;
+    }
+
     // Tables
 
     GlueTable *

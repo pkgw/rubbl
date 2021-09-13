@@ -181,6 +181,15 @@ extern "C" {
     ) -> *mut GlueTableDesc;
 }
 extern "C" {
+    pub fn tabledesc_add_array_column(
+        table_desc: *mut GlueTableDesc,
+        data_type: GlueDataType,
+        col_name: *const StringBridge,
+        n_dims: ::std::os::raw::c_int,
+        exc: *mut ExcInfo,
+    ) -> *mut GlueTableDesc;
+}
+extern "C" {
     pub fn table_create(
         path: *const StringBridge,
         table_desc: *mut GlueTableDesc,

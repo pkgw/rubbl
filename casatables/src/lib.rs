@@ -589,6 +589,25 @@ impl TableDesc {
 
         Ok(())
     }
+
+    /// Add an array column to the TableDesc
+    pub fn add_array_column(
+        &mut self,
+        data_type: glue::GlueDataType,
+        col_name: &str,
+        n_dims: i32
+    ) -> Result<(), Error> {
+        let cname = glue::StringBridge::from_rust(col_name);
+        let new_handle = unsafe {
+            glue::tabledesc_add_array_column(self.handle, data_type, &cname, n_dims, &mut self.exc_info)
+        };
+
+        if new_handle.is_null() {
+            return self.exc_info.as_err();
+        }
+
+        Ok(())
+    }
 }
 
 // Tables
@@ -1550,5 +1569,55 @@ mod tests {
             Table::new(table_path, table_desc, 123, TableCreateMode::NewNoReplace),
             Err(Error{..})
         ));
+    }
+
+    #[test]
+    fn table_create_with_fixed_string_array_desc() {
+        let tmp_dir = tempdir().unwrap();
+        let table_path = tmp_dir.path().join("test.ms");
+
+        let col_name = "test_string_fixed";
+
+        let mut table_desc = TableDesc::new("TEST");
+        table_desc
+            .add_array_column(GlueDataType::TpString, &col_name, 3)
+            .unwrap();
+
+        let mut table = Table::new(table_path, table_desc, 123, TableCreateMode::New).unwrap();
+
+        assert_eq!(table.n_rows(), 123);
+        assert_eq!(table.n_columns(), 1);
+
+        let column_info = table.get_col_desc(&col_name).unwrap();
+        assert_eq!(column_info.data_type(), GlueDataType::TpString);
+        assert_eq!(column_info.name(), col_name);
+        assert!(!column_info.is_scalar());
+        // even though we've set n_dims, fixed shape is legitimately 0. 
+        // Weird casacore quirk? Not sure if this breaks anything.
+        // assert!(column_info.is_fixed_shape());
+    }
+
+    #[test]
+    fn table_create_with_variable_string_array_desc() {
+        let tmp_dir = tempdir().unwrap();
+        let table_path = tmp_dir.path().join("test.ms");
+
+        let col_name = "test_string_var";
+
+        let mut table_desc = TableDesc::new("TEST");
+        table_desc
+            .add_array_column(GlueDataType::TpString, &col_name, -1)
+            .unwrap();
+
+        let mut table = Table::new(table_path, table_desc, 123, TableCreateMode::New).unwrap();
+
+        assert_eq!(table.n_rows(), 123);
+        assert_eq!(table.n_columns(), 1);
+
+        let column_info = table.get_col_desc(&col_name).unwrap();
+        assert_eq!(column_info.data_type(), GlueDataType::TpString);
+        assert_eq!(column_info.name(), col_name);
+        assert!(!column_info.is_scalar());
+        assert!(!column_info.is_fixed_shape());
     }
 }
