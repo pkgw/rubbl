@@ -156,7 +156,6 @@ extern "C" {
     )
     {
         try {
-
             switch (dataType) {
 
 #define CASE(DTYPE, CPPTYPE) \
@@ -178,11 +177,8 @@ extern "C" {
             CASE(TpDouble, double)
             CASE(TpComplex, casacore::Complex)
             CASE(TpDComplex, casacore::DComplex)
-
+            CASE(TpString, casacore::String)
 #undef CASE
-
-            case casacore::TpString:
-                throw std::runtime_error("use table_get_scalar_column_data_string for TpString columns");
 
             default:
                 throw std::runtime_error("unhandled scalar column data type");

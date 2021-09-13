@@ -1467,6 +1467,29 @@ mod tests {
         assert_eq!(column_info.data_type(), GlueDataType::TpUInt);
         assert_eq!(column_info.name(), col_name);
         assert!(column_info.is_scalar());
-        // assert!(column_info.is_fixed_shape());
+        
+    }
+
+    #[test]
+    fn table_create_with_scalar_string_desc() {
+        let tmp_dir = tempdir().unwrap();
+        let table_path = tmp_dir.path().join("test.ms");
+
+        let col_name = "test_string";
+
+        let mut table_desc = TableDesc::new("TEST");
+        table_desc = table_desc
+            .add_scalar_column(GlueDataType::TpString, &col_name)
+            .unwrap();
+
+        let mut table = Table::new(table_path, table_desc, 123).unwrap();
+
+        assert_eq!(table.n_rows(), 123);
+        assert_eq!(table.n_columns(), 1);
+
+        let column_info = table.get_col_desc(&col_name).unwrap();
+        assert_eq!(column_info.data_type(), GlueDataType::TpString);
+        assert_eq!(column_info.name(), col_name);
+        assert!(column_info.is_scalar());
     }
 }
