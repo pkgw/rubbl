@@ -11,6 +11,8 @@ use std::path::Path;
 
 mod glue;
 
+pub use glue::GlueDataType;
+
 // Exceptions
 
 /// An error type used when the wrapped "casacore" C++ code raises an
@@ -543,6 +545,8 @@ where
 /// Create a 
 ///
 /// ```rust
+/// use rubbl_casatables::{GlueDataType, TableDesc};
+///
 /// let mut table_desc = TableDesc::new("TYPE");
 /// table_desc
 ///     .add_scalar_column(GlueDataType::TpUInt, "column name")
