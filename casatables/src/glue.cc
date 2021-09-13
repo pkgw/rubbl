@@ -215,6 +215,7 @@ extern "C" {
         GlueTableDesc &tableDesc,
         // number of rows
         unsigned long nrrow,
+        const TableCreateMode mode,
         ExcInfo &exc
     )
     {
@@ -223,6 +224,9 @@ extern "C" {
         // not sure whether it's worth extending the TableOpenMode enum or 
         // doing something else. Open to suggestions
         GlueTable::TableOption tableOption = GlueTable::TableOption::New;
+        if (mode == TCM_NEW_NO_REPLACE) {
+            tableOption = GlueTable::TableOption::NewNoReplace;
+        }
 
         // TOOD: expose this as an argument?
         // the enum is either either `Plain` or `Memory`
@@ -234,18 +238,16 @@ extern "C" {
         // TODO: expose this as an argument?
         casacore::Bool initialize = true;
 
-        // create a an object containing some information about the table we're creating
-        casacore::SetupNewTable newTable(
-            bridge_string(path),
-            tableDesc,
-            tableOption
-        );
-
         // always use the local endianness
         GlueTable::EndianFormat endianFormat = GlueTable::EndianFormat::LocalEndian;
 
-
         try {
+            // create a an object containing some information about the table we're creating
+            casacore::SetupNewTable newTable(
+                bridge_string(path),
+                tableDesc,
+                tableOption
+            );
             return new GlueTable(newTable, type, nrrow, initialize, endianFormat, casacore::TSMOption());
         } catch (...) {
             handle_exception(exc);

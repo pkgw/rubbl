@@ -586,6 +586,16 @@ pub enum TableOpenMode {
     Create = 3,
 }
 
+pub enum TableCreateMode {
+    // create table
+    New = 1,
+	// create table (may not exist)
+    NewNoReplace = 2,
+    // An additional mode exists, but I have no idea what this is used for. 
+    // The description in casacore says "new table, which gets marked for delete"
+    // Scratch = 3,
+}
+
 #[derive(Fail, Debug)]
 #[fail(
     display = "Expected a column with a scalar data type, but found a vector of {}",
@@ -605,6 +615,7 @@ impl Table {
         path: P,
         table_desc: TableDesc,
         n_rows: usize,
+        mode: TableCreateMode,
     ) -> Result<Self, Error> {
         let spath = match path.as_ref().to_str() {
             Some(s) => s,
@@ -618,8 +629,14 @@ impl Table {
         let cpath = glue::StringBridge::from_rust(spath);
         let mut exc_info = unsafe { std::mem::zeroed::<glue::ExcInfo>() };
 
+        let cmode = match mode {
+            TableCreateMode::New => glue::TableCreateMode::TCM_NEW,
+            TableCreateMode::NewNoReplace => glue::TableCreateMode::TCM_NEW_NO_REPLACE,
+            // TableCreateMode::Scratch => glue::TableCreateMode::TCM_SCRATCH,
+        };
+
         let handle =
-            unsafe { glue::table_create(&cpath, table_desc.handle, n_rows as u64, &mut exc_info) };
+            unsafe { glue::table_create(&cpath, table_desc.handle, n_rows as u64, cmode, &mut exc_info) };
         if handle.is_null() {
             return exc_info.as_err();
         }
@@ -1442,6 +1459,8 @@ impl Drop for TableRow {
 
 #[cfg(test)]
 mod tests {
+    use std::{fs::OpenOptions};
+
     use super::*;
     use crate::glue::GlueDataType;
     use tempfile::tempdir;
@@ -1458,7 +1477,7 @@ mod tests {
             .add_scalar_column(GlueDataType::TpUInt, &col_name)
             .unwrap();
 
-        let mut table = Table::new(table_path, table_desc, 123).unwrap();
+        let mut table = Table::new(table_path, table_desc, 123, TableCreateMode::New).unwrap();
 
         assert_eq!(table.n_rows(), 123);
         assert_eq!(table.n_columns(), 1);
@@ -1482,7 +1501,7 @@ mod tests {
             .add_scalar_column(GlueDataType::TpString, &col_name)
             .unwrap();
 
-        let mut table = Table::new(table_path, table_desc, 123).unwrap();
+        let mut table = Table::new(table_path, table_desc, 123, TableCreateMode::New).unwrap();
 
         assert_eq!(table.n_rows(), 123);
         assert_eq!(table.n_columns(), 1);
@@ -1491,5 +1510,27 @@ mod tests {
         assert_eq!(column_info.data_type(), GlueDataType::TpString);
         assert_eq!(column_info.name(), col_name);
         assert!(column_info.is_scalar());
+    }
+
+    #[test]
+    fn table_create_no_replace() {
+        let tmp_dir = tempdir().unwrap();
+        let table_path = tmp_dir.path().join("test.ms");
+
+        // touch the file
+        OpenOptions::new().create(true).write(true).open(table_path.clone()).unwrap();
+
+        let col_name = "test_string";
+
+        let mut table_desc = TableDesc::new("TEST");
+        table_desc = table_desc
+            .add_scalar_column(GlueDataType::TpString, &col_name)
+            .unwrap();
+
+        // NewNoReplace should fail if table exists.
+        assert!(matches!(
+            Table::new(table_path, table_desc, 123, TableCreateMode::NewNoReplace),
+            Err(Error{..})
+        ));
     }
 }

@@ -160,6 +160,12 @@ pub enum TableOpenMode {
     TOM_OPEN_RW = 2,
     TOM_CREATE = 3,
 }
+#[repr(u32)]
+#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
+pub enum TableCreateMode {
+    TCM_NEW = 1,
+    TCM_NEW_NO_REPLACE = 2,
+}
 extern "C" {
     pub fn data_type_get_element_size(ty: GlueDataType) -> ::std::os::raw::c_int;
 }
@@ -179,6 +185,7 @@ extern "C" {
         path: *const StringBridge,
         tableDesc: *mut GlueTableDesc,
         nrrow: ::std::os::raw::c_ulong,
+        mode: TableCreateMode,
         exc: *mut ExcInfo,
     ) -> *mut GlueTable;
 }
