@@ -573,7 +573,7 @@ impl TableDesc {
         &mut self,
         data_type: glue::GlueDataType,
         col_name: &str,
-    ) -> Result<Self, Error> {
+    ) -> Result<(), Error> {
         let cname = glue::StringBridge::from_rust(col_name);
         let new_handle = unsafe {
             glue::tabledesc_add_scalar_column(self.handle, data_type, &cname, &mut self.exc_info)
@@ -583,12 +583,7 @@ impl TableDesc {
             return self.exc_info.as_err();
         }
 
-        // not sure what to do with new_handle after this?
-
-        Ok(Self {
-            handle: new_handle,
-            exc_info: self.exc_info,
-        })
+        Ok(())
     }
 }
 
@@ -1492,7 +1487,7 @@ mod tests {
         let col_name = "test_uint";
 
         let mut table_desc = TableDesc::new("TEST");
-        table_desc = table_desc
+        table_desc
             .add_scalar_column(GlueDataType::TpUInt, &col_name)
             .unwrap();
 
@@ -1516,7 +1511,7 @@ mod tests {
         let col_name = "test_string";
 
         let mut table_desc = TableDesc::new("TEST");
-        table_desc = table_desc
+        table_desc
             .add_scalar_column(GlueDataType::TpString, &col_name)
             .unwrap();
 
@@ -1542,7 +1537,7 @@ mod tests {
         let col_name = "test_string";
 
         let mut table_desc = TableDesc::new("TEST");
-        table_desc = table_desc
+        table_desc
             .add_scalar_column(GlueDataType::TpString, &col_name)
             .unwrap();
 
