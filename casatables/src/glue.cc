@@ -137,31 +137,29 @@ extern "C" {
 
     GlueTableDesc *
     tabledesc_create(
-        // TODO: figure out exactly what this is.
-        // Apparently this is actually the name of the table?
         const StringBridge &type
     )
     {
         // TODO: expose this?
-        GlueTableDesc::TDOption tdOption = GlueTableDesc::TDOption::New;
-        return new GlueTableDesc(bridge_string(type), tdOption);
+        GlueTableDesc::TDOption td_option = GlueTableDesc::TDOption::New;
+        return new GlueTableDesc(bridge_string(type), td_option);
     }
 
     GlueTableDesc *
     tabledesc_add_scalar_column(
-        GlueTableDesc &tableDesc,
-        GlueDataType dataType,
-        const StringBridge &columnName,
+        GlueTableDesc &table_desc,
+        GlueDataType data_type,
+        const StringBridge &col_name,
         ExcInfo &exc
     )
     {
         try {
-            switch (dataType) {
+            switch (data_type) {
 
 #define CASE(DTYPE, CPPTYPE) \
             case casacore::DTYPE: { \
-                tableDesc.addColumn(casacore::ScalarColumnDesc<CPPTYPE>( \
-                    bridge_string(columnName) \
+                table_desc.addColumn(casacore::ScalarColumnDesc<CPPTYPE>( \
+                    bridge_string(col_name) \
                 )); \
                 break; \
             }
@@ -187,24 +185,8 @@ extern "C" {
             handle_exception(exc);
         }
 
-        return &tableDesc;
+        return &table_desc;
     }
-
-    // GlueTableDesc *
-    // tabledesc_add_column_array(
-    //     GlueTableDesc &tableDesc,
-    //     GlueDataType dataType,
-    //     const StringBridge &columnName,
-    //     casacore::Int ndim
-    // )
-    // {
-    //     const casacore::ColumnDesc column = new casacore::ArrayColumnDesc<dataType>(
-    //         bridge_string(columnName),
-    //         ndim
-    //     );
-
-    //     tableDesc.addColumn(column);
-    // }
 
     // Tables
 
@@ -212,9 +194,9 @@ extern "C" {
     table_create(
         const StringBridge &path, 
         // Description of columns and keys in the table
-        GlueTableDesc &tableDesc,
+        GlueTableDesc &table_desc,
         // number of rows
-        unsigned long nrrow,
+        unsigned long n_rows,
         const TableCreateMode mode,
         ExcInfo &exc
     )
@@ -223,9 +205,9 @@ extern "C" {
         // I think the only options here are New, NewNoReplace and Scratch, but 
         // not sure whether it's worth extending the TableOpenMode enum or 
         // doing something else. Open to suggestions
-        GlueTable::TableOption tableOption = GlueTable::TableOption::New;
+        GlueTable::TableOption table_option = GlueTable::TableOption::New;
         if (mode == TCM_NEW_NO_REPLACE) {
-            tableOption = GlueTable::TableOption::NewNoReplace;
+            table_option = GlueTable::TableOption::NewNoReplace;
         }
 
         // TOOD: expose this as an argument?
@@ -239,16 +221,16 @@ extern "C" {
         casacore::Bool initialize = true;
 
         // always use the local endianness
-        GlueTable::EndianFormat endianFormat = GlueTable::EndianFormat::LocalEndian;
+        GlueTable::EndianFormat endian_format = GlueTable::EndianFormat::LocalEndian;
 
         try {
             // create a an object containing some information about the table we're creating
             casacore::SetupNewTable newTable(
                 bridge_string(path),
-                tableDesc,
-                tableOption
+                table_desc,
+                table_option
             );
-            return new GlueTable(newTable, type, nrrow, initialize, endianFormat, casacore::TSMOption());
+            return new GlueTable(newTable, type, n_rows, initialize, endian_format, casacore::TSMOption());
         } catch (...) {
             handle_exception(exc);
             return NULL;

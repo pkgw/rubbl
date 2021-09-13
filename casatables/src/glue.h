@@ -104,8 +104,8 @@ extern "C" {
     int data_type_get_element_size(const GlueDataType ty);
 
     GlueTableDesc *tabledesc_create(const StringBridge &type);
-    GlueTableDesc *tabledesc_add_scalar_column( GlueTableDesc &tableDesc, GlueDataType dataType, const StringBridge &columnName, ExcInfo &exc);
-    GlueTable *table_create(const StringBridge &path, GlueTableDesc &tableDesc, unsigned long nrrow, const TableCreateMode mode, ExcInfo &exc);
+    GlueTableDesc *tabledesc_add_scalar_column( GlueTableDesc &table_desc, GlueDataType data_type, const StringBridge &col_name, ExcInfo &exc);
+    GlueTable *table_create(const StringBridge &path, GlueTableDesc &table_desc, unsigned long n_rows, const TableCreateMode mode, ExcInfo &exc);
     GlueTable *table_alloc_and_open(const StringBridge &path, const TableOpenMode mode, ExcInfo &exc);
     void table_close_and_free(GlueTable *table, ExcInfo &exc);
     unsigned long table_n_rows(const GlueTable &table);

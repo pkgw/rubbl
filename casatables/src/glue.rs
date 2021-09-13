@@ -174,17 +174,17 @@ extern "C" {
 }
 extern "C" {
     pub fn tabledesc_add_scalar_column(
-        tableDesc: *mut GlueTableDesc,
-        dataType: GlueDataType,
-        columnName: *const StringBridge,
+        table_desc: *mut GlueTableDesc,
+        data_type: GlueDataType,
+        col_name: *const StringBridge,
         exc: *mut ExcInfo,
     ) -> *mut GlueTableDesc;
 }
 extern "C" {
     pub fn table_create(
         path: *const StringBridge,
-        tableDesc: *mut GlueTableDesc,
-        nrrow: ::std::os::raw::c_ulong,
+        table_desc: *mut GlueTableDesc,
+        n_rows: ::std::os::raw::c_ulong,
         mode: TableCreateMode,
         exc: *mut ExcInfo,
     ) -> *mut GlueTable;
