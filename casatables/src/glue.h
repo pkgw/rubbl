@@ -93,11 +93,11 @@ typedef enum TableOpenMode {
 typedef enum TableCreateMode {
     // create table
     TCM_NEW = 1,
-	// create table (may not exist)
+    // create table (may not exist)
     TCM_NEW_NO_REPLACE = 2,
     // An additional mode exists, but I have no idea what this is used for. 
     // The description in casacore says "new table, which gets marked for delete"
-	// TCM_SCRATCH = 3,
+    // TCM_SCRATCH = 3,
 } TableCreateMode;
 
 extern "C" {
