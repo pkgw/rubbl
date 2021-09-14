@@ -620,20 +620,32 @@ pub struct Table {
     exc_info: glue::ExcInfo,
 }
 
+/// Modes in which a casacore table can be opened.
+///
 pub enum TableOpenMode {
     Read = 1,
     ReadWrite = 2,
     Create = 3,
 }
 
+/// Modes in which a casacore table can be created.
+///
+/// ## Note
+/// 
+/// Casacore allows for an additional mode, `Scratch` which it describes as 
+/// "new table, which gets marked for delete". 
+/// 
+/// The use case for this was unclear, but If you have a use for this mode, 
+/// consider opening an issue in rubbl. 
+/// 
+/// For more details about the discussion of this mode, see this comment 
+/// <https://github.com/pkgw/rubbl/pull/160#discussion_r707433551>
+/// 
 pub enum TableCreateMode {
-    // create table
+    /// create table
     New = 1,
-	// create table (may not exist)
+	/// create table (may not exist)
     NewNoReplace = 2,
-    // An additional mode exists, but I have no idea what this is used for. 
-    // The description in casacore says "new table, which gets marked for delete"
-    // Scratch = 3,
 }
 
 #[derive(Fail, Debug)]
