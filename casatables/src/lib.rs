@@ -542,15 +542,18 @@ where
 ///
 /// # Examples
 ///
-/// Create a 
+/// Create a description of a table named "TYPE", with a scalar string column 
+/// named "string", and a column of two-dimensional unsigned integer arrays 
+/// named "uint array"
 ///
 /// ```rust
 /// use rubbl_casatables::{GlueDataType, TableDesc};
 ///
 /// let mut table_desc = TableDesc::new("TYPE");
 /// table_desc
-///     .add_scalar_column(GlueDataType::TpUInt, "column name")
-///     .unwrap();
+///     .add_scalar_column(GlueDataType::TpString, "string").unwrap();
+/// table_desc
+///     .add_array_column(GlueDataType::TpUInt, "uint array", 2).unwrap();
 /// ```
 pub struct TableDesc {
     handle: *mut glue::GlueTableDesc,
