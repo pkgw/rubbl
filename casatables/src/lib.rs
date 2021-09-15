@@ -543,17 +543,21 @@ where
 /// # Examples
 ///
 /// Create a description of a table named "TYPE", with a scalar string column 
-/// named "string", and a column of two-dimensional unsigned integer arrays 
-/// named "uint array"
+/// named "A" with comment "string", a column of unsigned integer arrays of no
+/// fixed size named "B" with comment "uint array", and a column of double 
+/// precision complex number arrays of shape [4] named "C" with comment 
+/// "fixed complex vector"
 ///
 /// ```rust
 /// use rubbl_casatables::{GlueDataType, TableDesc};
 ///
 /// let mut table_desc = TableDesc::new("TYPE");
 /// table_desc
-///     .add_scalar_column(GlueDataType::TpString, "string").unwrap();
+///     .add_scalar_column(GlueDataType::TpString, "A", Some("string"), false, false).unwrap();
 /// table_desc
-///     .add_array_column(GlueDataType::TpUInt, "uint array", 2).unwrap();
+///     .add_array_column(GlueDataType::TpUInt, "B", Some("uint array"), None, false, false).unwrap();
+/// table_desc
+///     .add_array_column(GlueDataType::TpDComplex, "C", Some("fixed complex vector"), Some(&[4]), false, false).unwrap();
 /// ```
 pub struct TableDesc {
     handle: *mut glue::GlueTableDesc,
@@ -580,10 +584,17 @@ impl TableDesc {
         &mut self,
         data_type: glue::GlueDataType,
         col_name: &str,
+        comment: Option<&str>,
+        direct: bool,
+        undefined: bool,
     ) -> Result<(), Error> {
         let cname = glue::StringBridge::from_rust(col_name);
+        let comment = if let Some(comment_) = comment { comment_ } else { "" };
+        let ccomment = glue::StringBridge::from_rust(comment);
         let new_handle = unsafe {
-            glue::tabledesc_add_scalar_column(self.handle, data_type, &cname, &mut self.exc_info)
+            glue::tabledesc_add_scalar_column(
+                self.handle, data_type, &cname, &ccomment, direct, undefined, &mut self.exc_info
+            )
         };
 
         if new_handle.is_null() {
@@ -594,15 +605,31 @@ impl TableDesc {
     }
 
     /// Add an array column to the TableDesc
+    ///
+    /// If dimensions (`dims`) are provided, then the column has fixed dimensions, 
+    /// other wise the column is not fixed.
     pub fn add_array_column(
         &mut self,
         data_type: glue::GlueDataType,
         col_name: &str,
-        n_dims: i32
+        comment: Option<&str>,
+        dims: Option<&[u64]>,
+        direct: bool,
+        undefined: bool,
     ) -> Result<(), Error> {
         let cname = glue::StringBridge::from_rust(col_name);
+        let comment = if let Some(comment_) = comment { comment_ } else { "" };
+        let ccomment = glue::StringBridge::from_rust(comment);
         let new_handle = unsafe {
-            glue::tabledesc_add_array_column(self.handle, data_type, &cname, n_dims, &mut self.exc_info)
+            if let Some(dims_) = dims {
+                glue::tabledesc_add_fixed_array_column(
+                    self.handle, data_type, &cname, &ccomment, dims_.len() as u64, dims_.as_ptr(), direct, undefined, &mut self.exc_info
+                )
+            } else {
+                glue::tabledesc_add_array_column(
+                    self.handle, data_type, &cname, &ccomment, direct, undefined, &mut self.exc_info
+                )
+            }
         };
 
         if new_handle.is_null() {
@@ -1526,7 +1553,7 @@ mod tests {
 
         let mut table_desc = TableDesc::new("TEST");
         table_desc
-            .add_scalar_column(GlueDataType::TpUInt, &col_name)
+            .add_scalar_column(GlueDataType::TpUInt, &col_name, None, false, false)
             .unwrap();
 
         let mut table = Table::new(table_path, table_desc, 123, TableCreateMode::New).unwrap();
@@ -1550,7 +1577,7 @@ mod tests {
 
         let mut table_desc = TableDesc::new("TEST");
         table_desc
-            .add_scalar_column(GlueDataType::TpString, &col_name)
+            .add_scalar_column(GlueDataType::TpString, &col_name, None, false, false)
             .unwrap();
 
         let mut table = Table::new(table_path, table_desc, 123, TableCreateMode::New).unwrap();
@@ -1576,7 +1603,7 @@ mod tests {
 
         let mut table_desc = TableDesc::new("TEST");
         table_desc
-            .add_scalar_column(GlueDataType::TpString, &col_name)
+            .add_scalar_column(GlueDataType::TpString, &col_name, None, false, false)
             .unwrap();
 
         // NewNoReplace should fail if table exists.
@@ -1595,7 +1622,7 @@ mod tests {
 
         let mut table_desc = TableDesc::new("TEST");
         table_desc
-            .add_array_column(GlueDataType::TpString, &col_name, 3)
+            .add_array_column(GlueDataType::TpString, &col_name, None, Some(&[1,2,3]), false, false)
             .unwrap();
 
         let mut table = Table::new(table_path, table_desc, 123, TableCreateMode::New).unwrap();
@@ -1607,9 +1634,8 @@ mod tests {
         assert_eq!(column_info.data_type(), GlueDataType::TpString);
         assert_eq!(column_info.name(), col_name);
         assert!(!column_info.is_scalar());
-        // even though we've set n_dims, fixed shape is legitimately 0. 
-        // Weird casacore quirk? Not sure if this breaks anything.
-        // assert!(column_info.is_fixed_shape());
+        assert!(column_info.is_fixed_shape());
+        assert_eq!(column_info.shape(), Some(&[1,2,3][..]));
     }
 
     #[test]
@@ -1621,7 +1647,7 @@ mod tests {
 
         let mut table_desc = TableDesc::new("TEST");
         table_desc
-            .add_array_column(GlueDataType::TpString, &col_name, -1)
+            .add_array_column(GlueDataType::TpString, &col_name, None, None, false, false)
             .unwrap();
 
         let mut table = Table::new(table_path, table_desc, 123, TableCreateMode::New).unwrap();
@@ -1634,5 +1660,6 @@ mod tests {
         assert_eq!(column_info.name(), col_name);
         assert!(!column_info.is_scalar());
         assert!(!column_info.is_fixed_shape());
+        assert_eq!(column_info.shape(), None);
     }
 }

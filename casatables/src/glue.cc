@@ -150,16 +150,32 @@ extern "C" {
         GlueTableDesc &table_desc,
         GlueDataType data_type,
         const StringBridge &col_name,
+        const StringBridge &comment,
+        // see casacore::ColumnDesc::Direct
+        bool direct,
+        // undefined values are possible, see casacore::ColumnDesc::Direct
+        bool undefined,
         ExcInfo &exc
     )
     {
+        // scalar columns are never fixed.
+        int opt = 0;
+        if (direct) {
+            opt |= casacore::ColumnDesc::Direct;
+        }
+        if (undefined) {
+            opt |= casacore::ColumnDesc::Undefined;
+        }
+
         try {
             switch (data_type) {
 
 #define CASE(DTYPE, CPPTYPE) \
             case casacore::DTYPE: { \
                 table_desc.addColumn(casacore::ScalarColumnDesc<CPPTYPE>( \
-                    bridge_string(col_name) \
+                    bridge_string(col_name), \
+                    bridge_string(comment), \
+                    opt \
                 )); \
                 break; \
             }
@@ -193,11 +209,22 @@ extern "C" {
         GlueTableDesc &table_desc,
         GlueDataType data_type,
         const StringBridge &col_name,
-        // Number of dimensions
-        int n_dims,
+        const StringBridge &comment,
+        // see casacore::ColumnDesc::Direct
+        bool direct,
+        // undefined values are possible, see casacore::ColumnDesc::Direct
+        bool undefined,
         ExcInfo &exc
     )
     {
+        int opt = 0;
+        if (direct) {
+            opt |= casacore::ColumnDesc::Direct;
+        }
+        if (undefined) {
+            opt |= casacore::ColumnDesc::Undefined;
+        }
+
         try {
             switch (data_type) {
 
@@ -205,7 +232,76 @@ extern "C" {
             case casacore::DTYPE: { \
                 table_desc.addColumn(casacore::ArrayColumnDesc<CPPTYPE>( \
                     bridge_string(col_name), \
-                    n_dims \
+                    bridge_string(comment), \
+                    -1, \
+                    opt \
+                )); \
+                break; \
+            }
+
+            CASE(TpBool, casacore::Bool)
+            CASE(TpChar, casacore::Char)
+            CASE(TpUChar, casacore::uChar)
+            CASE(TpShort, casacore::Short)
+            CASE(TpUShort, casacore::uShort)
+            CASE(TpInt, casacore::Int)
+            CASE(TpUInt, casacore::uInt)
+            CASE(TpFloat, float)
+            CASE(TpDouble, double)
+            CASE(TpComplex, casacore::Complex)
+            CASE(TpDComplex, casacore::DComplex)
+            CASE(TpString, casacore::String)
+#undef CASE
+
+            default:
+                throw std::runtime_error("unhandled scalar column data type");
+            }
+        } catch (...) {
+            handle_exception(exc);
+        }
+
+        return &table_desc;
+    }
+
+    GlueTableDesc *
+    tabledesc_add_fixed_array_column(
+        GlueTableDesc &table_desc,
+        GlueDataType data_type,
+        const StringBridge &col_name,
+        const StringBridge &comment,
+        // number of dimensions
+        const unsigned long n_dims,
+        // dimensions array
+        const unsigned long *dims,
+        // see casacore::ColumnDesc::Direct
+        bool direct,
+        // undefined values are possible, see casacore::ColumnDesc::Direct
+        bool undefined,
+        ExcInfo &exc
+    )
+    {
+        int opt = casacore::ColumnDesc::FixedShape;
+        if (direct) {
+            opt |= casacore::ColumnDesc::Direct;
+        }
+        if (undefined) {
+            opt |= casacore::ColumnDesc::Undefined;
+        }
+
+        casacore::IPosition shape(n_dims); \
+        for (casacore::uInt i = 0; i < n_dims; i++) \
+            shape[i] = dims[n_dims - 1 - i]; \
+
+        try {
+            switch (data_type) {
+
+#define CASE(DTYPE, CPPTYPE) \
+            case casacore::DTYPE: { \
+                table_desc.addColumn(casacore::ArrayColumnDesc<CPPTYPE>( \
+                    bridge_string(col_name), \
+                    bridge_string(comment), \
+                    shape, \
+                    opt \
                 )); \
                 break; \
             }

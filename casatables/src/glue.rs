@@ -177,6 +177,9 @@ extern "C" {
         table_desc: *mut GlueTableDesc,
         data_type: GlueDataType,
         col_name: *const StringBridge,
+        comment: *const StringBridge,
+        direct: bool,
+        undefined: bool,
         exc: *mut ExcInfo,
     ) -> *mut GlueTableDesc;
 }
@@ -185,7 +188,22 @@ extern "C" {
         table_desc: *mut GlueTableDesc,
         data_type: GlueDataType,
         col_name: *const StringBridge,
-        n_dims: ::std::os::raw::c_int,
+        comment: *const StringBridge,
+        direct: bool,
+        undefined: bool,
+        exc: *mut ExcInfo,
+    ) -> *mut GlueTableDesc;
+}
+extern "C" {
+    pub fn tabledesc_add_fixed_array_column(
+        table_desc: *mut GlueTableDesc,
+        data_type: GlueDataType,
+        col_name: *const StringBridge,
+        comment: *const StringBridge,
+        n_dims: ::std::os::raw::c_ulong,
+        dims: *const ::std::os::raw::c_ulong,
+        direct: bool,
+        undefined: bool,
         exc: *mut ExcInfo,
     ) -> *mut GlueTableDesc;
 }
