@@ -542,10 +542,10 @@ where
 ///
 /// # Examples
 ///
-/// Create a description of a table named "TYPE", with a scalar string column 
+/// Create a description of a table named "TYPE", with a scalar string column
 /// named "A" with comment "string", a column of unsigned integer arrays of no
-/// fixed size named "B" with comment "uint array", and a column of double 
-/// precision complex number arrays of shape [4] named "C" with comment 
+/// fixed size named "B" with comment "uint array", and a column of double
+/// precision complex number arrays of shape [4] named "C" with comment
 /// "fixed complex vector"
 ///
 /// ```rust
@@ -589,11 +589,21 @@ impl TableDesc {
         undefined: bool,
     ) -> Result<(), Error> {
         let cname = glue::StringBridge::from_rust(col_name);
-        let comment = if let Some(comment_) = comment { comment_ } else { "" };
+        let comment = if let Some(comment_) = comment {
+            comment_
+        } else {
+            ""
+        };
         let ccomment = glue::StringBridge::from_rust(comment);
         let new_handle = unsafe {
             glue::tabledesc_add_scalar_column(
-                self.handle, data_type, &cname, &ccomment, direct, undefined, &mut self.exc_info
+                self.handle,
+                data_type,
+                &cname,
+                &ccomment,
+                direct,
+                undefined,
+                &mut self.exc_info,
             )
         };
 
@@ -606,7 +616,7 @@ impl TableDesc {
 
     /// Add an array column to the TableDesc
     ///
-    /// If dimensions (`dims`) are provided, then the column has fixed dimensions, 
+    /// If dimensions (`dims`) are provided, then the column has fixed dimensions,
     /// other wise the column is not fixed.
     pub fn add_array_column(
         &mut self,
@@ -618,16 +628,34 @@ impl TableDesc {
         undefined: bool,
     ) -> Result<(), Error> {
         let cname = glue::StringBridge::from_rust(col_name);
-        let comment = if let Some(comment_) = comment { comment_ } else { "" };
+        let comment = if let Some(comment_) = comment {
+            comment_
+        } else {
+            ""
+        };
         let ccomment = glue::StringBridge::from_rust(comment);
         let new_handle = unsafe {
             if let Some(dims_) = dims {
                 glue::tabledesc_add_fixed_array_column(
-                    self.handle, data_type, &cname, &ccomment, dims_.len() as u64, dims_.as_ptr(), direct, undefined, &mut self.exc_info
+                    self.handle,
+                    data_type,
+                    &cname,
+                    &ccomment,
+                    dims_.len() as u64,
+                    dims_.as_ptr(),
+                    direct,
+                    undefined,
+                    &mut self.exc_info,
                 )
             } else {
                 glue::tabledesc_add_array_column(
-                    self.handle, data_type, &cname, &ccomment, direct, undefined, &mut self.exc_info
+                    self.handle,
+                    data_type,
+                    &cname,
+                    &ccomment,
+                    direct,
+                    undefined,
+                    &mut self.exc_info,
                 )
             }
         };
@@ -658,20 +686,20 @@ pub enum TableOpenMode {
 /// Modes in which a casacore table can be created.
 ///
 /// ## Note
-/// 
-/// Casacore allows for an additional mode, `Scratch` which it describes as 
-/// "new table, which gets marked for delete". 
-/// 
-/// The use case for this was unclear, but If you have a use for this mode, 
-/// consider opening an issue in rubbl. 
-/// 
-/// For more details about the discussion of this mode, see this comment 
+///
+/// Casacore allows for an additional mode, `Scratch` which it describes as
+/// "new table, which gets marked for delete".
+///
+/// The use case for this was unclear, but If you have a use for this mode,
+/// consider opening an issue in rubbl.
+///
+/// For more details about the discussion of this mode, see this comment
 /// <https://github.com/pkgw/rubbl/pull/160#discussion_r707433551>
-/// 
+///
 pub enum TableCreateMode {
     /// create table
     New = 1,
-	/// create table (may not exist)
+    /// create table (may not exist)
     NewNoReplace = 2,
 }
 
@@ -714,8 +742,15 @@ impl Table {
             // TableCreateMode::Scratch => glue::TableCreateMode::TCM_SCRATCH,
         };
 
-        let handle =
-            unsafe { glue::table_create(&cpath, table_desc.handle, n_rows as u64, cmode, &mut exc_info) };
+        let handle = unsafe {
+            glue::table_create(
+                &cpath,
+                table_desc.handle,
+                n_rows as u64,
+                cmode,
+                &mut exc_info,
+            )
+        };
         if handle.is_null() {
             return exc_info.as_err();
         }
@@ -1538,7 +1573,7 @@ impl Drop for TableRow {
 
 #[cfg(test)]
 mod tests {
-    use std::{fs::OpenOptions};
+    use std::fs::OpenOptions;
 
     use super::*;
     use crate::glue::GlueDataType;
@@ -1565,7 +1600,6 @@ mod tests {
         assert_eq!(column_info.data_type(), GlueDataType::TpUInt);
         assert_eq!(column_info.name(), col_name);
         assert!(column_info.is_scalar());
-        
     }
 
     #[test]
@@ -1597,7 +1631,11 @@ mod tests {
         let table_path = tmp_dir.path().join("test.ms");
 
         // touch the file
-        OpenOptions::new().create(true).write(true).open(table_path.clone()).unwrap();
+        OpenOptions::new()
+            .create(true)
+            .write(true)
+            .open(table_path.clone())
+            .unwrap();
 
         let col_name = "test_string";
 
@@ -1609,7 +1647,7 @@ mod tests {
         // NewNoReplace should fail if table exists.
         assert!(matches!(
             Table::new(table_path, table_desc, 123, TableCreateMode::NewNoReplace),
-            Err(Error{..})
+            Err(Error { .. })
         ));
     }
 
@@ -1622,7 +1660,14 @@ mod tests {
 
         let mut table_desc = TableDesc::new("TEST");
         table_desc
-            .add_array_column(GlueDataType::TpString, &col_name, None, Some(&[1,2,3]), false, false)
+            .add_array_column(
+                GlueDataType::TpString,
+                &col_name,
+                None,
+                Some(&[1, 2, 3]),
+                false,
+                false,
+            )
             .unwrap();
 
         let mut table = Table::new(table_path, table_desc, 123, TableCreateMode::New).unwrap();
@@ -1635,7 +1680,7 @@ mod tests {
         assert_eq!(column_info.name(), col_name);
         assert!(!column_info.is_scalar());
         assert!(column_info.is_fixed_shape());
-        assert_eq!(column_info.shape(), Some(&[1,2,3][..]));
+        assert_eq!(column_info.shape(), Some(&[1, 2, 3][..]));
     }
 
     #[test]
