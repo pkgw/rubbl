@@ -165,12 +165,25 @@ pub enum TableOpenMode {
 pub enum TableCreateMode {
     TCM_NEW = 1,
     TCM_NEW_NO_REPLACE = 2,
+    TCM_SCRATCH = 3,
 }
+#[repr(u32)]
+#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
+pub enum TableDescCreateMode {
+    TDM_NEW = 0,
+    TDM_NEW_NO_REPLACE = 1,
+    TDM_SCRATCH = 2,
+}
+pub use self::TableDescCreateMode as TableDescOption;
 extern "C" {
     pub fn data_type_get_element_size(ty: GlueDataType) -> ::std::os::raw::c_int;
 }
 extern "C" {
-    pub fn tabledesc_create(type_: *const StringBridge, exc: *mut ExcInfo) -> *mut GlueTableDesc;
+    pub fn tabledesc_create(
+        type_: *const StringBridge,
+        mode: TableDescCreateMode,
+        exc: *mut ExcInfo,
+    ) -> *mut GlueTableDesc;
 }
 extern "C" {
     pub fn tabledesc_add_scalar_column(

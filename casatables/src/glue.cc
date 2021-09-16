@@ -138,12 +138,18 @@ extern "C" {
     GlueTableDesc *
     tabledesc_create(
         const StringBridge &type,
+        const TableDescCreateMode mode,
         ExcInfo &exc
     )
     {
-        // TODO: expose this?
-        GlueTableDesc::TDOption td_option = GlueTableDesc::TDOption::New;
+        GlueTableDesc::TDOption td_option;
         try {
+            switch(mode) {
+                case TDM_NEW: td_option = GlueTableDesc::TDOption::New; break;
+                case TDM_NEW_NO_REPLACE: td_option = GlueTableDesc::TDOption::NewNoReplace; break;
+                case TDM_SCRATCH: td_option = GlueTableDesc::TDOption::Scratch; break;
+                default: throw std::invalid_argument( "invalid TableDescCreateMode" );
+            }
             return new GlueTableDesc(bridge_string(type), td_option);
         } catch (...) {
             handle_exception(exc);
@@ -349,14 +355,6 @@ extern "C" {
         ExcInfo &exc
     )
     {
-        // TODO: expose this as an argument?
-        // I think the only options here are New, NewNoReplace and Scratch, but 
-        // not sure whether it's worth extending the TableOpenMode enum or 
-        // doing something else. Open to suggestions
-        GlueTable::TableOption table_option = GlueTable::TableOption::New;
-        if (mode == TCM_NEW_NO_REPLACE) {
-            table_option = GlueTable::TableOption::NewNoReplace;
-        }
 
         // TOOD: expose this as an argument?
         // the enum is either either `Plain` or `Memory`
@@ -372,6 +370,15 @@ extern "C" {
         GlueTable::EndianFormat endian_format = GlueTable::EndianFormat::LocalEndian;
 
         try {
+            GlueTable::TableOption table_option;
+
+            switch(mode) {
+                case TCM_NEW: table_option = GlueTable::TableOption::New; break;
+                case TCM_NEW_NO_REPLACE: table_option = GlueTable::TableOption::NewNoReplace; break;
+                case TCM_SCRATCH: table_option = GlueTable::TableOption::Scratch; break;
+                default: throw std::invalid_argument( "invalid TableCreateMode" );
+            }
+
             // create a an object containing some information about the table we're creating
             casacore::SetupNewTable newTable(
                 bridge_string(path),

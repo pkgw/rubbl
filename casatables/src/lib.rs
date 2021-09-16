@@ -11,7 +11,7 @@ use std::path::Path;
 
 mod glue;
 
-pub use glue::GlueDataType;
+pub use glue::{GlueDataType, TableDescCreateMode};
 
 // Exceptions
 
@@ -549,9 +549,9 @@ where
 /// "fixed complex vector"
 ///
 /// ```rust
-/// use rubbl_casatables::{GlueDataType, TableDesc};
+/// use rubbl_casatables::{GlueDataType, TableDesc, TableDescCreateMode};
 ///
-/// let mut table_desc = TableDesc::new("TYPE").unwrap();
+/// let mut table_desc = TableDesc::new("TYPE", TableDescCreateMode::TDM_SCRATCH).unwrap();
 /// table_desc
 ///     .add_scalar_column(GlueDataType::TpString, "A", Some("string"), false, false).unwrap();
 /// table_desc
@@ -567,14 +567,14 @@ pub struct TableDesc {
 impl TableDesc {
     /// Create a new TableDesc.
     ///
-    /// `type` - effectively the name of the table. From casacore:
+    /// `name` - The name of the table description. From casacore:
     ///     This name can be seen as the table type in the same way as a
     ///     class name is the data type of an object.
-    pub fn new(stype: &str) -> Result<Self, Error> {
-        let ctype = glue::StringBridge::from_rust(stype);
+    pub fn new(name: &str, mode: glue::TableDescCreateMode) -> Result<Self, Error> {
+        let cname = glue::StringBridge::from_rust(name);
         let mut exc_info = unsafe { std::mem::zeroed::<glue::ExcInfo>() };
 
-        let handle = unsafe { glue::tabledesc_create(&ctype, &mut exc_info) };
+        let handle = unsafe { glue::tabledesc_create(&cname, mode, &mut exc_info) };
 
         if handle.is_null() {
             return exc_info.as_err();
@@ -1580,7 +1580,7 @@ mod tests {
     use std::fs::OpenOptions;
 
     use super::*;
-    use crate::glue::GlueDataType;
+    use crate::glue::{GlueDataType, TableDescCreateMode};
     use tempfile::tempdir;
 
     #[test]
@@ -1590,7 +1590,7 @@ mod tests {
 
         let col_name = "test_uint";
 
-        let mut table_desc = TableDesc::new("TEST").unwrap();
+        let mut table_desc = TableDesc::new("TEST", TableDescCreateMode::TDM_SCRATCH).unwrap();
         table_desc
             .add_scalar_column(GlueDataType::TpUInt, &col_name, None, false, false)
             .unwrap();
@@ -1613,7 +1613,7 @@ mod tests {
 
         let col_name = "test_string";
 
-        let mut table_desc = TableDesc::new("TEST").unwrap();
+        let mut table_desc = TableDesc::new("TEST", TableDescCreateMode::TDM_SCRATCH).unwrap();
         table_desc
             .add_scalar_column(GlueDataType::TpString, &col_name, None, false, false)
             .unwrap();
@@ -1643,7 +1643,7 @@ mod tests {
 
         let col_name = "test_string";
 
-        let mut table_desc = TableDesc::new("TEST").unwrap();
+        let mut table_desc = TableDesc::new("TEST", TableDescCreateMode::TDM_SCRATCH).unwrap();
         table_desc
             .add_scalar_column(GlueDataType::TpString, &col_name, None, false, false)
             .unwrap();
@@ -1662,7 +1662,7 @@ mod tests {
 
         let col_name = "test_string_fixed";
 
-        let mut table_desc = TableDesc::new("TEST").unwrap();
+        let mut table_desc = TableDesc::new("TEST", TableDescCreateMode::TDM_SCRATCH).unwrap();
         table_desc
             .add_array_column(
                 GlueDataType::TpString,
@@ -1694,7 +1694,7 @@ mod tests {
 
         let col_name = "test_string_var";
 
-        let mut table_desc = TableDesc::new("TEST").unwrap();
+        let mut table_desc = TableDesc::new("TEST", TableDescCreateMode::TDM_SCRATCH).unwrap();
         table_desc
             .add_array_column(GlueDataType::TpString, &col_name, None, None, false, false)
             .unwrap();
