@@ -103,7 +103,7 @@ typedef enum TableCreateMode {
 extern "C" {
     int data_type_get_element_size(const GlueDataType ty);
 
-    GlueTableDesc *tabledesc_create(const StringBridge &type);
+    GlueTableDesc *tabledesc_create(const StringBridge &type, ExcInfo &exc);
     GlueTableDesc *tabledesc_add_scalar_column( GlueTableDesc &table_desc, GlueDataType data_type, const StringBridge &col_name, const StringBridge &comment, bool direct, bool undefined, ExcInfo &exc);
     GlueTableDesc *tabledesc_add_array_column( GlueTableDesc &table_desc, GlueDataType data_type, const StringBridge &col_name, const StringBridge &comment, bool direct, bool undefined, ExcInfo &exc);
     GlueTableDesc *tabledesc_add_fixed_array_column( GlueTableDesc &table_desc, GlueDataType data_type, const StringBridge &col_name, const StringBridge &comment, const unsigned long n_dims, const unsigned long *dims, bool direct, bool undefined, ExcInfo &exc);

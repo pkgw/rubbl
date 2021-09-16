@@ -170,7 +170,7 @@ extern "C" {
     pub fn data_type_get_element_size(ty: GlueDataType) -> ::std::os::raw::c_int;
 }
 extern "C" {
-    pub fn tabledesc_create(type_: *const StringBridge) -> *mut GlueTableDesc;
+    pub fn tabledesc_create(type_: *const StringBridge, exc: *mut ExcInfo) -> *mut GlueTableDesc;
 }
 extern "C" {
     pub fn tabledesc_add_scalar_column(

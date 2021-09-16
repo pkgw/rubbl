@@ -551,7 +551,7 @@ where
 /// ```rust
 /// use rubbl_casatables::{GlueDataType, TableDesc};
 ///
-/// let mut table_desc = TableDesc::new("TYPE");
+/// let mut table_desc = TableDesc::new("TYPE").unwrap();
 /// table_desc
 ///     .add_scalar_column(GlueDataType::TpString, "A", Some("string"), false, false).unwrap();
 /// table_desc
@@ -570,13 +570,17 @@ impl TableDesc {
     /// `type` - effectively the name of the table. From casacore:
     ///     This name can be seen as the table type in the same way as a
     ///     class name is the data type of an object.
-    pub fn new(stype: &str) -> Self {
+    pub fn new(stype: &str) -> Result<Self, Error> {
         let ctype = glue::StringBridge::from_rust(stype);
-        let exc_info = unsafe { std::mem::zeroed::<glue::ExcInfo>() };
+        let mut exc_info = unsafe { std::mem::zeroed::<glue::ExcInfo>() };
 
-        let handle = unsafe { glue::tabledesc_create(&ctype) };
+        let handle = unsafe { glue::tabledesc_create(&ctype, &mut exc_info) };
 
-        TableDesc { handle, exc_info }
+        if handle.is_null() {
+            return exc_info.as_err();
+        }
+
+        Ok(TableDesc { handle, exc_info })
     }
 
     /// Add a scalar column to the TableDesc
@@ -1586,7 +1590,7 @@ mod tests {
 
         let col_name = "test_uint";
 
-        let mut table_desc = TableDesc::new("TEST");
+        let mut table_desc = TableDesc::new("TEST").unwrap();
         table_desc
             .add_scalar_column(GlueDataType::TpUInt, &col_name, None, false, false)
             .unwrap();
@@ -1609,7 +1613,7 @@ mod tests {
 
         let col_name = "test_string";
 
-        let mut table_desc = TableDesc::new("TEST");
+        let mut table_desc = TableDesc::new("TEST").unwrap();
         table_desc
             .add_scalar_column(GlueDataType::TpString, &col_name, None, false, false)
             .unwrap();
@@ -1639,7 +1643,7 @@ mod tests {
 
         let col_name = "test_string";
 
-        let mut table_desc = TableDesc::new("TEST");
+        let mut table_desc = TableDesc::new("TEST").unwrap();
         table_desc
             .add_scalar_column(GlueDataType::TpString, &col_name, None, false, false)
             .unwrap();
@@ -1658,7 +1662,7 @@ mod tests {
 
         let col_name = "test_string_fixed";
 
-        let mut table_desc = TableDesc::new("TEST");
+        let mut table_desc = TableDesc::new("TEST").unwrap();
         table_desc
             .add_array_column(
                 GlueDataType::TpString,
@@ -1690,7 +1694,7 @@ mod tests {
 
         let col_name = "test_string_var";
 
-        let mut table_desc = TableDesc::new("TEST");
+        let mut table_desc = TableDesc::new("TEST").unwrap();
         table_desc
             .add_array_column(GlueDataType::TpString, &col_name, None, None, false, false)
             .unwrap();

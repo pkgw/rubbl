@@ -137,12 +137,18 @@ extern "C" {
 
     GlueTableDesc *
     tabledesc_create(
-        const StringBridge &type
+        const StringBridge &type,
+        ExcInfo &exc
     )
     {
         // TODO: expose this?
         GlueTableDesc::TDOption td_option = GlueTableDesc::TDOption::New;
-        return new GlueTableDesc(bridge_string(type), td_option);
+        try {
+            return new GlueTableDesc(bridge_string(type), td_option);
+        } catch (...) {
+            handle_exception(exc);
+            return NULL;
+        }
     }
 
     GlueTableDesc *
