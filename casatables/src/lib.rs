@@ -570,6 +570,12 @@ impl TableDesc {
     /// `name` - The name of the table description. From casacore:
     ///     This name can be seen as the table type in the same way as a
     ///     class name is the data type of an object.
+    ///
+    /// `mode` - The mode in which to create the table description.
+    ///     For compatibility with casacore, multiple options are provided,
+    ///     however you most likely want to go with Scratch, as this avoids
+    ///     writing a .tabdsc file to disk.
+    ///
     pub fn new(name: &str, mode: glue::TableDescCreateMode) -> Result<Self, Error> {
         let cname = glue::StringBridge::from_rust(name);
         let mut exc_info = unsafe { std::mem::zeroed::<glue::ExcInfo>() };
@@ -721,7 +727,34 @@ pub struct NotScalarColumnError(glue::GlueDataType);
 )]
 pub struct UnexpectedDataTypeError(glue::GlueDataType, glue::GlueDataType);
 
+/// A Rust wrapper for a casacore table.
+///
+/// For details on the casacore tables, see the [documentation](https://casacore.github.io/casacore/group__Tables__module.html#details)
 impl Table {
+
+    /// Create a new casacore table
+    ///
+    /// # Examples
+    /// 
+    /// Creating a table
+    ///
+    /// ```rust
+    /// use std::path::PathBuf;
+    /// use tempfile::tempdir;
+    /// use rubbl_casatables::{ColumnDescription, GlueDataType, Table, TableCreateMode, TableDesc, TableDescCreateMode};
+    ///
+    /// // tempdir is only necessary to avoid writing to disk each time this example is run
+    /// let tmp_dir = tempdir().unwrap();
+    /// let table_path = tmp_dir.path().join("test.ms");
+    ///
+    /// // First create a table description for our base table. 
+    /// // Use TDM_SCRATCH to avoid writing the .tabdsc to disk. 
+    /// let mut table_desc = TableDesc::new("", TableDescCreateMode::TDM_SCRATCH).unwrap();
+    /// // Define the columns in your table description
+    /// table_desc.add_array_column(GlueDataType::TpDouble, "UVW", Some("Vector with uvw coordinates (in meters)"), Some(&[3]), true, false).unwrap();
+    /// // Create your new table with 0 rows.
+    /// Table::new(&table_path, table_desc, 0, TableCreateMode::New).unwrap();
+    /// ```
     pub fn new<P: AsRef<Path>>(
         path: P,
         table_desc: TableDesc,
@@ -765,6 +798,42 @@ impl Table {
         })
     }
 
+    /// Open an existing casacore table
+    ///
+    /// to create a table, use `Table::new`, instead of `Table::open` with 
+    /// `mode = TableOpenMode::Create`
+    ///
+    /// # Examples
+    /// 
+    /// Creating a table, writing a cell, opening it and reading the cell.
+    ///
+    /// ```rust
+    /// use std::path::PathBuf;
+    /// use tempfile::tempdir;
+    /// use rubbl_casatables::{ColumnDescription, GlueDataType, Table, TableCreateMode, TableDesc, TableDescCreateMode, TableOpenMode};
+    ///
+    /// // tempdir is only necessary to avoid writing to disk each time this example is run
+    /// let tmp_dir = tempdir().unwrap();
+    /// let table_path = tmp_dir.path().join("test.ms");
+    /// // First create a table description for our base table. 
+    /// // Use TDM_SCRATCH to avoid writing the .tabdsc to disk. 
+    /// let mut table_desc = TableDesc::new("", TableDescCreateMode::TDM_SCRATCH).unwrap();
+    /// // Define the columns in your table description
+    /// table_desc.add_array_column(GlueDataType::TpDouble, "UVW", Some("Vector with uvw coordinates (in meters)"), Some(&[3]), true, false).unwrap();
+    /// // Create your new table with 1 rows
+    /// let mut table = Table::new(&table_path, table_desc, 1, TableCreateMode::New).unwrap();
+    /// // write to the first row in the uvw column  
+    /// let cell_value: Vec<f64> = vec![1.0, 2.0, 3.0];
+    /// table.put_cell("UVW", 0, &cell_value);
+    /// // This writes the table to disk and closes the file pointer.
+    /// drop(table);
+    /// 
+    /// // now open the table
+    /// let mut table = Table::open(&table_path, TableOpenMode::ReadWrite).unwrap();
+    /// // and extract the cell value we wrote earlier
+    /// let extracted_cell_value: Vec<f64> = table.get_cell_as_vec("UVW", 0).unwrap();
+    /// assert_eq!(cell_value, extracted_cell_value);
+    /// ```
     pub fn open<P: AsRef<Path>>(path: P, mode: TableOpenMode) -> Result<Self, Error> {
         let spath = match path.as_ref().to_str() {
             Some(s) => s,
@@ -1710,5 +1779,30 @@ mod tests {
         assert!(!column_info.is_scalar());
         assert!(!column_info.is_fixed_shape());
         assert_eq!(column_info.shape(), None);
+    }
+
+    #[test]
+    fn table_create_write_open_read_cell() {
+        // tempdir is only necessary to avoid writing to disk each time this example is run
+        let tmp_dir = tempdir().unwrap();
+        let table_path = tmp_dir.path().join("test.ms");
+        // First create a table description for our base table. 
+        // Use TDM_SCRATCH to avoid writing the .tabdsc to disk. 
+        let mut table_desc = TableDesc::new("", TableDescCreateMode::TDM_SCRATCH).unwrap();
+        // Define the columns in your table description
+        table_desc.add_array_column(GlueDataType::TpDouble, "UVW", Some("Vector with uvw coordinates (in meters)"), Some(&[3]), true, false).unwrap();
+        // Create your new table with 1 rows
+        let mut table = Table::new(&table_path, table_desc, 1, TableCreateMode::New).unwrap();
+        // write to the first row in the uvw column  
+        let cell_value: Vec<f64> = vec![1.0, 2.0, 3.0];
+        table.put_cell("UVW", 0, &cell_value);
+        // This writes the table to disk and closes the file pointer.
+        drop(table);
+
+        // now open the table
+        let mut table = Table::open(&table_path, TableOpenMode::ReadWrite).unwrap();
+        // and extract the cell value we wrote earlier
+        let extracted_cell_value: Vec<f64> = table.get_cell_as_vec("UVW", 0).unwrap();
+        assert_eq!(cell_value, extracted_cell_value);
     }
 }
