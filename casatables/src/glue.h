@@ -52,6 +52,7 @@ typedef enum GlueDataType {
 
 typedef struct GlueTable GlueTable;
 typedef struct GlueTableRow GlueTableRow;
+typedef struct GlueTableDesc GlueTableDesc;
 #endif
 
 // OMG, strings. First of all: casacore::String is a subclass of std::string,
@@ -89,9 +90,48 @@ typedef enum TableOpenMode {
     TOM_CREATE = 3,
 } TableOpenMode;
 
+typedef enum TableCreateMode {
+    // create table
+    TCM_NEW = 1,
+    // create table (may not exist)
+    TCM_NEW_NO_REPLACE = 2,
+    // New table, which gets marked for delete"
+    TCM_SCRATCH = 3,
+} TableCreateMode;
+
+typedef enum TableDescCreateMode {
+    //    Create a new table description file.
+    //    The TableDesc destructor will write the table description into the file.
+    TDM_NEW,
+    //    As option New, but an exception will be thrown if the table
+    //    description file already exists.
+    TDM_NEW_NO_REPLACE,
+    //    Create a temporary table description. The table description will
+    //    be lost when the TableDesc object is destructed.
+    //    This is useful to create a Table object without storing the
+    //    description separately.
+    //    Note that the Table object maintains its own description (i.e. it
+    //    copies the description when being constructed).
+    TDM_SCRATCH,
+    // Note, there are other options here which could be enabled if needed.
+    //  <li> Old
+    //    Open an existing table description file as readonly.
+    //  <li> Update
+    //    Open an existing table description file as read/write
+    //    The TableDesc destructor will rewrite the possibly changed
+    //    description.
+    //  <li> Delete
+    //    Delete the table description file. This gets done by the destructor.
+} TableDescOption;
+
 extern "C" {
     int data_type_get_element_size(const GlueDataType ty);
 
+    GlueTableDesc *tabledesc_create(const StringBridge &type, const TableDescCreateMode mode, ExcInfo &exc);
+    GlueTableDesc *tabledesc_add_scalar_column( GlueTableDesc &table_desc, GlueDataType data_type, const StringBridge &col_name, const StringBridge &comment, bool direct, bool undefined, ExcInfo &exc);
+    GlueTableDesc *tabledesc_add_array_column( GlueTableDesc &table_desc, GlueDataType data_type, const StringBridge &col_name, const StringBridge &comment, bool direct, bool undefined, ExcInfo &exc);
+    GlueTableDesc *tabledesc_add_fixed_array_column( GlueTableDesc &table_desc, GlueDataType data_type, const StringBridge &col_name, const StringBridge &comment, const unsigned long n_dims, const unsigned long *dims, bool direct, bool undefined, ExcInfo &exc);
+    GlueTable *table_create(const StringBridge &path, GlueTableDesc &table_desc, unsigned long n_rows, const TableCreateMode mode, ExcInfo &exc);
     GlueTable *table_alloc_and_open(const StringBridge &path, const TableOpenMode mode, ExcInfo &exc);
     void table_close_and_free(GlueTable *table, ExcInfo &exc);
     unsigned long table_n_rows(const GlueTable &table);
