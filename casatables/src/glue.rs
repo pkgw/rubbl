@@ -299,6 +299,41 @@ extern "C" {
     ) -> ::std::os::raw::c_int;
 }
 extern "C" {
+    pub fn table_add_scalar_column(
+        table: *mut GlueTable,
+        col_name: *const StringBridge,
+        data_type: GlueDataType,
+        comment: *const StringBridge,
+        direct: bool,
+        undefined: bool,
+        exc: *mut ExcInfo,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn table_add_array_column(
+        table: *mut GlueTable,
+        col_name: *const StringBridge,
+        data_type: GlueDataType,
+        comment: *const StringBridge,
+        direct: bool,
+        undefined: bool,
+        exc: *mut ExcInfo,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn table_add_fixed_array_column(
+        table: *mut GlueTable,
+        col_name: *const StringBridge,
+        data_type: GlueDataType,
+        comment: *const StringBridge,
+        n_dims: ::std::os::raw::c_ulong,
+        dims: *const ::std::os::raw::c_ulong,
+        direct: bool,
+        undefined: bool,
+        exc: *mut ExcInfo,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
     pub fn table_get_scalar_column_data(
         table: *const GlueTable,
         col_name: *const StringBridge,
