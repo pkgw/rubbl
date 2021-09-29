@@ -685,9 +685,9 @@ impl TableDesc {
 lazy_static! {
     /// Global table drop mutex
     ///
-    /// This is needed to deal with the fact that casacore uses a globally 
-    /// shared table cache which is not threadsafe. Without this mutex, a 
-    /// segfault can occu If multiple threads concurrently drop (unrelated) 
+    /// This is needed to deal with the fact that casacore uses a globally
+    /// shared table cache which is not threadsafe. Without this mutex, a
+    /// segfault can occu If multiple threads concurrently drop (unrelated)
     /// tables concurrently
     static ref TABLE_DROP_MUTEX: Mutex<i32> = Mutex::new(0i32);
 }
@@ -1752,9 +1752,9 @@ mod tests {
 
     use super::*;
     use crate::glue::{GlueDataType, TableDescCreateMode};
+    use ndarray::array;
     use rubbl_core::Complex;
     use tempfile::tempdir;
-    use ndarray::array;
 
     type c64 = Complex<f64>;
 
@@ -2044,25 +2044,47 @@ mod tests {
 
         // now open the table again for adding the column
         let mut table = Table::open(&table_path, TableOpenMode::ReadWrite).unwrap();
+        let data_shape = [2, 4, 1];
         table
             .add_array_column(
-                "second",
+                "DATA",
                 GlueDataType::TpDComplex,
-                Some("comment2"),
-                Some(&[4, 2]),
+                None,
+                Some(&data_shape),
                 false,
                 false,
             )
             .unwrap();
-        let cell_value = array![
-            [c64::new(1.0, 2.0),c64::new(-1.0, -2.0)],
-            [c64::new(3.0, 4.0),c64::new(-3.0, -4.0)],
-            [c64::new(5.0, 6.0),c64::new(-5.0, -6.0)],
-            [c64::new(7.0, 8.0),c64::new(-7.0, -8.0)]
-        ];
-        table.put_cell("second", 0, &cell_value).unwrap();
 
-        let col_names = table.column_names().unwrap();
-        assert!(col_names.len() == 2);
+        let cell_value = array![
+            [
+                [c64::new(1.0, 2.0)],
+                [c64::new(-1.0, -2.0)],
+                [c64::new(3.0, 4.0)],
+                [c64::new(-3.0, -4.0)]
+            ],
+            [
+                [c64::new(5.0, 6.0)],
+                [c64::new(-5.0, -6.0)],
+                [c64::new(7.0, 8.0)],
+                [c64::new(-7.0, -8.0)]
+            ]
+        ];
+        dbg!(&cell_value);
+        table.put_cell("DATA", 0, &cell_value).unwrap();
+
+        drop(table);
+
+        let mut table = Table::open(&table_path, TableOpenMode::Read).unwrap();
+        let uvw_tabledesc = table.get_col_desc("UVW").unwrap();
+        let data_tabledesc = table.get_col_desc("DATA").unwrap();
+        assert_eq!(uvw_tabledesc.data_type(), GlueDataType::TpDouble);
+        assert_eq!(data_tabledesc.data_type(), GlueDataType::TpDComplex);
+        assert!(uvw_tabledesc.is_fixed_shape());
+        assert!(data_tabledesc.is_fixed_shape());
+        assert!(!uvw_tabledesc.is_scalar());
+        assert!(!data_tabledesc.is_scalar());
+        assert_eq!(data_tabledesc.shape().unwrap(), data_shape);
+        assert_eq!(uvw_tabledesc.shape().unwrap(), &[3]);
     }
 }
