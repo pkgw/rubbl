@@ -913,8 +913,8 @@ impl Table {
 
     pub fn add_scalar_column(
         &mut self,
-        col_name: &str,
         data_type: glue::GlueDataType,
+        col_name: &str,
         comment: Option<&str>,
         direct: bool,
         undefined: bool,
@@ -930,8 +930,8 @@ impl Table {
         let rv = unsafe {
             glue::table_add_scalar_column(
                 self.handle,
-                &ccol_name,
                 data_type,
+                &ccol_name,
                 &ccomment,
                 direct,
                 undefined,
@@ -952,8 +952,8 @@ impl Table {
     /// other wise the column is not fixed.
     pub fn add_array_column(
         &mut self,
-        col_name: &str,
         data_type: glue::GlueDataType,
+        col_name: &str,
         comment: Option<&str>,
         dims: Option<&[u64]>,
         direct: bool,
@@ -970,8 +970,8 @@ impl Table {
             if let Some(dims_) = dims {
                 glue::table_add_fixed_array_column(
                     self.handle,
-                    &cname,
                     data_type,
+                    &cname,
                     &ccomment,
                     dims_.len() as u64,
                     dims_.as_ptr(),
@@ -982,8 +982,8 @@ impl Table {
             } else {
                 glue::table_add_array_column(
                     self.handle,
-                    &cname,
                     data_type,
+                    &cname,
                     &ccomment,
                     direct,
                     undefined,
@@ -1952,8 +1952,8 @@ mod tests {
         let mut table = Table::open(&table_path, TableOpenMode::ReadWrite).unwrap();
         table
             .add_scalar_column(
-                "second",
                 GlueDataType::TpInt,
+                "second",
                 Some("comment2"),
                 false,
                 false,
@@ -1995,8 +1995,8 @@ mod tests {
         let mut table = Table::open(&table_path, TableOpenMode::ReadWrite).unwrap();
         table
             .add_array_column(
-                "second",
                 GlueDataType::TpDComplex,
+                "second",
                 Some("comment2"),
                 Some(&[4]),
                 false,
@@ -2047,8 +2047,8 @@ mod tests {
         let data_shape = [2, 4, 1];
         table
             .add_array_column(
-                "DATA",
                 GlueDataType::TpDComplex,
+                "DATA",
                 None,
                 Some(&data_shape),
                 false,

@@ -301,8 +301,8 @@ extern "C" {
 extern "C" {
     pub fn table_add_scalar_column(
         table: *mut GlueTable,
-        col_name: *const StringBridge,
         data_type: GlueDataType,
+        col_name: *const StringBridge,
         comment: *const StringBridge,
         direct: bool,
         undefined: bool,
@@ -312,8 +312,8 @@ extern "C" {
 extern "C" {
     pub fn table_add_array_column(
         table: *mut GlueTable,
-        col_name: *const StringBridge,
         data_type: GlueDataType,
+        col_name: *const StringBridge,
         comment: *const StringBridge,
         direct: bool,
         undefined: bool,
@@ -323,8 +323,8 @@ extern "C" {
 extern "C" {
     pub fn table_add_fixed_array_column(
         table: *mut GlueTable,
-        col_name: *const StringBridge,
         data_type: GlueDataType,
+        col_name: *const StringBridge,
         comment: *const StringBridge,
         n_dims: ::std::os::raw::c_ulong,
         dims: *const ::std::os::raw::c_ulong,

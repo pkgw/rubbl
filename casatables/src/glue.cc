@@ -467,8 +467,8 @@ extern "C" {
     int 
     table_add_scalar_column(
         GlueTable &table, 
-        const StringBridge &col_name, 
         GlueDataType data_type,
+        const StringBridge &col_name, 
         const StringBridge &comment,
         // see casacore::ColumnDesc::Direct
         bool direct,
@@ -525,8 +525,8 @@ extern "C" {
     int
     table_add_array_column(
         GlueTable &table,
-        const StringBridge &col_name,
         GlueDataType data_type,
+        const StringBridge &col_name,
         const StringBridge &comment,
         // see casacore::ColumnDesc::Direct
         bool direct,
@@ -585,8 +585,8 @@ extern "C" {
     int
     table_add_fixed_array_column(
         GlueTable &table,
-        const StringBridge &col_name,
         GlueDataType data_type,
+        const StringBridge &col_name,
         const StringBridge &comment,
         // number of dimensions
         const unsigned long n_dims,
