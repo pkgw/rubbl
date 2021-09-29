@@ -335,7 +335,7 @@ extern "C" {
 #undef CASE
 
             default:
-                throw std::runtime_error("unhandled scalar column data type");
+                throw std::runtime_error("unhandled array column data type");
             }
         } catch (...) {
             handle_exception(exc);
