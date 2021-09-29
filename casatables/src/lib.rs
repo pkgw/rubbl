@@ -538,7 +538,7 @@ where
 /// Define the structure of a Casacore table
 ///
 /// A TableDesc object contains the description, or structure, of a table.
-/// This description is required for the creation of a new table.  
+/// This description is required for the creation of a new table.
 /// Descriptions are subsequently associated with every table and
 /// embedded in them.
 ///
@@ -833,7 +833,7 @@ impl Table {
     /// table_desc.add_array_column(GlueDataType::TpDouble, "UVW", Some("Vector with uvw coordinates (in meters)"), Some(&[3]), true, false).unwrap();
     /// // Create your new table with 1 rows
     /// let mut table = Table::new(&table_path, table_desc, 1, TableCreateMode::New).unwrap();
-    /// // write to the first row in the uvw column  
+    /// // write to the first row in the uvw column
     /// let cell_value: Vec<f64> = vec![1.0, 2.0, 3.0];
     /// table.put_cell("UVW", 0, &cell_value).unwrap();
     /// // This writes the table to disk and closes the file pointer.
@@ -2070,7 +2070,6 @@ mod tests {
                 [c64::new(-7.0, -8.0)]
             ]
         ];
-        dbg!(&cell_value);
         table.put_cell("DATA", 0, &cell_value).unwrap();
 
         drop(table);
