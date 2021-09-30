@@ -148,6 +148,9 @@ extern "C" {
                               int *is_scalar, int *is_fixed_shape, int *n_dim,
                               unsigned long dims[8], ExcInfo &exc);
     int table_remove_column(GlueTable &table, const StringBridge &col_name, ExcInfo &exc);
+    int table_add_scalar_column(GlueTable &table, GlueDataType data_type, const StringBridge &col_name, const StringBridge &comment, bool direct, bool undefined, ExcInfo &exc );
+    int table_add_array_column( GlueTable &table, GlueDataType data_type, const StringBridge &col_name, const StringBridge &comment, bool direct, bool undefined, ExcInfo &exc);
+    int table_add_fixed_array_column( GlueTable &table, GlueDataType data_type, const StringBridge &col_name, const StringBridge &comment, const unsigned long n_dims, const unsigned long *dims, bool direct, bool undefined, ExcInfo &exc);
     int table_get_scalar_column_data(const GlueTable &table, const StringBridge &col_name,
                                      void *data, ExcInfo &exc);
     int table_get_scalar_column_data_string(const GlueTable &table, const StringBridge &col_name,
