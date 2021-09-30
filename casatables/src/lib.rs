@@ -3,13 +3,11 @@
 
 use failure::{err_msg, Error};
 use failure_derive::Fail;
-use lazy_static::lazy_static;
 use ndarray::Dimension;
 use rubbl_core::num::{DimFromShapeSlice, DimensionMismatchError};
 use rubbl_core::{Array, Complex};
 use std::fmt;
 use std::path::Path;
-use std::sync::Mutex;
 
 mod glue;
 
@@ -681,16 +679,6 @@ impl TableDesc {
 }
 
 // Tables
-
-lazy_static! {
-    /// Global table drop mutex
-    ///
-    /// This is needed to deal with the fact that casacore uses a globally
-    /// shared table cache which is not threadsafe. Without this mutex, a
-    /// segfault can occu If multiple threads concurrently drop (unrelated)
-    /// tables concurrently
-    static ref TABLE_DROP_MUTEX: Mutex<i32> = Mutex::new(0i32);
-}
 
 pub struct Table {
     handle: *mut glue::GlueTable,
@@ -1514,10 +1502,7 @@ impl Drop for Table {
     fn drop(&mut self) {
         // FIXME: not sure if this function can actually produce useful
         // exceptions anyway, but we can't do anything if it does!
-        match TABLE_DROP_MUTEX.lock() {
-            Ok(_) => unsafe { glue::table_close_and_free(self.handle, &mut self.exc_info) },
-            _ => unreachable!(),
-        };
+        unsafe { glue::table_close_and_free(self.handle, &mut self.exc_info) }
     }
 }
 

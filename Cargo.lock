@@ -382,7 +382,6 @@ dependencies = [
  "clap",
  "failure",
  "failure_derive",
- "lazy_static",
  "ndarray",
  "rubbl_casatables_impl",
  "rubbl_core",
