@@ -1005,6 +1005,19 @@ impl Table {
         Ok(result)
     }
 
+    pub fn put_table_keyword(&mut self, kw_name: &str, table: Table) -> Result<(), CasacoreError> {
+        let ckw_name = glue::StringBridge::from_rust(kw_name);
+        let rv = unsafe {
+            glue::table_put_keyword(self.handle, &ckw_name, glue::GlueDataType::TpTable, table.handle as _, &mut self.exc_info)
+        };
+
+        if rv != 0 {
+            return self.exc_info.as_err();
+        }
+
+        Ok(())
+    }
+
     pub fn get_col_desc(&mut self, col_name: &str) -> Result<ColumnDescription, CasacoreError> {
         let ccol_name = glue::StringBridge::from_rust(col_name);
         let mut n_rows = 0;
@@ -2070,5 +2083,36 @@ mod tests {
         assert!(!data_tabledesc.is_scalar());
         assert_eq!(data_tabledesc.shape().unwrap(), data_shape);
         assert_eq!(uvw_tabledesc.shape().unwrap(), &[3]);
+    }
+
+    #[test]
+    pub fn table_put_table_keyword() {
+        let tmp_dir = tempdir().unwrap();
+        let root_table_path = tmp_dir.path().join("test.ms");
+        let sub_table_path = root_table_path.join("SUB");
+        // First create a table description for our base table.
+        // Use TDM_SCRATCH to avoid writing the .tabdsc to disk.
+        let mut root_table_desc = TableDesc::new("", TableDescCreateMode::TDM_SCRATCH).unwrap();
+        // Define the columns in your table description
+        root_table_desc
+            .add_array_column(
+                GlueDataType::TpDouble,
+                "UVW",
+                Some("Vector with uvw coordinates (in meters)"),
+                Some(&[3]),
+                true,
+                false,
+            )
+            .unwrap();
+        // Create your new table with 1 rows
+        let mut root_table = Table::new(&root_table_path, root_table_desc, 1, TableCreateMode::New).unwrap();
+
+        let mut sub_table_desc = TableDesc::new("", TableDescCreateMode::TDM_SCRATCH).unwrap();
+        sub_table_desc.add_scalar_column(GlueDataType::TpInt, "int", None, true, false).unwrap();
+
+        let sub_table = Table::new(&sub_table_path, sub_table_desc, 1, TableCreateMode::New).unwrap();
+        root_table.put_table_keyword("SUB", sub_table).unwrap();
+        
+        assert_eq!(root_table.table_keyword_names().unwrap(), ["SUB"]);
     }
 }

@@ -265,6 +265,15 @@ extern "C" {
     ) -> ::std::os::raw::c_int;
 }
 extern "C" {
+    pub fn table_put_keyword(
+        table: *mut GlueTable,
+        kw_name: *const StringBridge,
+        data_type: GlueDataType,
+        data: *mut ::std::os::raw::c_void,
+        exc: *mut ExcInfo,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
     pub fn table_copy_rows(
         source: *const GlueTable,
         dest: *mut GlueTable,

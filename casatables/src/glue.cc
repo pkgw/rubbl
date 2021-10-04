@@ -683,6 +683,32 @@ extern "C" {
     }
 
     int
+    table_put_keyword(GlueTable &table, const StringBridge &kw_name, 
+                      const GlueDataType data_type, void *data, ExcInfo &exc)
+    {
+        try {
+            casacore::TableRecord &rec = table.rwKeywordSet();
+
+            switch(data_type) {
+
+            case casacore::TpTable: {
+                rec.defineTable(
+                    bridge_string(kw_name),
+                    *((const casacore::Table *)(data))
+                );
+                break;
+            }
+            default:
+                throw std::runtime_error("unhandled keyword data type");
+            }
+        } catch (...) {
+            handle_exception(exc);
+            return 1;
+        }
+        return 0;
+    }
+
+    int
     table_copy_rows(const GlueTable &source, GlueTable &dest, ExcInfo &exc)
     {
         try {
