@@ -694,7 +694,7 @@ extern "C" {
             case casacore::TpTable: {
                 rec.defineTable(
                     bridge_string(kw_name),
-                    (const casacore::Table &)(data)
+                    *((const casacore::Table *)(data))
                 );
                 break;
             }
