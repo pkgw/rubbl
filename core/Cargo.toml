@@ -19,5 +19,6 @@ clap = "^2.33"
 failure = "^0.1"
 failure_derive = "^0.1"
 ndarray = ">=0.8"
-num-complex = ">=0.1"
+num-complex = { version = ">=0.3" }
+approx = { version = ">=0.4", features = ["num-complex"] }
 termcolor = "^1.1"
