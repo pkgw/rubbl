@@ -1519,6 +1519,7 @@ impl Drop for Table {
     }
 }
 
+#[derive(PartialEq, Eq, Debug)]
 pub struct ColumnDescription {
     name: String,
     data_type: glue::GlueDataType,
