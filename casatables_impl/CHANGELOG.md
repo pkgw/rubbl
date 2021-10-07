@@ -1,3 +1,8 @@
+# rubbl_casatables_impl 0.2.31105 (2021-10-07)
+
+- Define `USE_THREADS=1` when building the C++ code to make it threadsafe. Yikes!
+  (@pkgw)
+
 # rubbl_casatables_impl 0.2.31104 (2020-12-15)
 
 - No code changes from the previous release, but it *also* wasn't successfully

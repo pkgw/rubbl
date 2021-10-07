@@ -11,6 +11,8 @@ use std::path::Path;
 
 mod glue;
 
+pub use glue::{GlueDataType, TableDescCreateMode};
+
 // Exceptions
 
 /// An error type used when the wrapped "casacore" C++ code raises an
@@ -529,6 +531,153 @@ where
     )
 }
 
+/// From `casacore::TableDesc`:
+///
+/// Define the structure of a Casacore table
+///
+/// A TableDesc object contains the description, or structure, of a table.
+/// This description is required for the creation of a new table.
+/// Descriptions are subsequently associated with every table and
+/// embedded in them.
+///
+/// # Examples
+///
+/// Create a description of a table named "TYPE", with a scalar string column
+/// named "A" with comment "string", a column of unsigned integer arrays of no
+/// fixed size named "B" with comment "uint array", and a column of double
+/// precision complex number arrays of shape [4] named "C" with comment
+/// "fixed complex vector"
+///
+/// ```rust
+/// use rubbl_casatables::{GlueDataType, TableDesc, TableDescCreateMode};
+///
+/// let mut table_desc = TableDesc::new("TYPE", TableDescCreateMode::TDM_SCRATCH).unwrap();
+/// table_desc
+///     .add_scalar_column(GlueDataType::TpString, "A", Some("string"), false, false).unwrap();
+/// table_desc
+///     .add_array_column(GlueDataType::TpUInt, "B", Some("uint array"), None, false, false).unwrap();
+/// table_desc
+///     .add_array_column(GlueDataType::TpDComplex, "C", Some("fixed complex vector"), Some(&[4]), false, false).unwrap();
+/// ```
+pub struct TableDesc {
+    handle: *mut glue::GlueTableDesc,
+    exc_info: glue::ExcInfo,
+}
+
+impl TableDesc {
+    /// Create a new TableDesc.
+    ///
+    /// `name` - The name of the table description. From casacore:
+    ///     This name can be seen as the table type in the same way as a
+    ///     class name is the data type of an object.
+    ///
+    /// `mode` - The mode in which to create the table description.
+    ///     For compatibility with casacore, multiple options are provided,
+    ///     however you most likely want to go with Scratch, as this avoids
+    ///     writing a .tabdsc file to disk.
+    ///
+    pub fn new(name: &str, mode: glue::TableDescCreateMode) -> Result<Self, Error> {
+        let cname = glue::StringBridge::from_rust(name);
+        let mut exc_info = unsafe { std::mem::zeroed::<glue::ExcInfo>() };
+
+        let handle = unsafe { glue::tabledesc_create(&cname, mode, &mut exc_info) };
+
+        if handle.is_null() {
+            return exc_info.as_err();
+        }
+
+        Ok(TableDesc { handle, exc_info })
+    }
+
+    /// Add a scalar column to the TableDesc
+    pub fn add_scalar_column(
+        &mut self,
+        data_type: glue::GlueDataType,
+        col_name: &str,
+        comment: Option<&str>,
+        direct: bool,
+        undefined: bool,
+    ) -> Result<(), Error> {
+        let cname = glue::StringBridge::from_rust(col_name);
+        let comment = if let Some(comment_) = comment {
+            comment_
+        } else {
+            ""
+        };
+        let ccomment = glue::StringBridge::from_rust(comment);
+        let new_handle = unsafe {
+            glue::tabledesc_add_scalar_column(
+                self.handle,
+                data_type,
+                &cname,
+                &ccomment,
+                direct,
+                undefined,
+                &mut self.exc_info,
+            )
+        };
+
+        if new_handle.is_null() {
+            return self.exc_info.as_err();
+        }
+
+        Ok(())
+    }
+
+    /// Add an array column to the TableDesc
+    ///
+    /// If dimensions (`dims`) are provided, then the column has fixed dimensions,
+    /// other wise the column is not fixed.
+    pub fn add_array_column(
+        &mut self,
+        data_type: glue::GlueDataType,
+        col_name: &str,
+        comment: Option<&str>,
+        dims: Option<&[u64]>,
+        direct: bool,
+        undefined: bool,
+    ) -> Result<(), Error> {
+        let cname = glue::StringBridge::from_rust(col_name);
+        let comment = if let Some(comment_) = comment {
+            comment_
+        } else {
+            ""
+        };
+        let ccomment = glue::StringBridge::from_rust(comment);
+        let new_handle = unsafe {
+            if let Some(dims_) = dims {
+                glue::tabledesc_add_fixed_array_column(
+                    self.handle,
+                    data_type,
+                    &cname,
+                    &ccomment,
+                    dims_.len() as u64,
+                    dims_.as_ptr(),
+                    direct,
+                    undefined,
+                    &mut self.exc_info,
+                )
+            } else {
+                glue::tabledesc_add_array_column(
+                    self.handle,
+                    data_type,
+                    &cname,
+                    &ccomment,
+                    direct,
+                    undefined,
+                    &mut self.exc_info,
+                )
+            }
+        };
+
+        if new_handle.is_null() {
+            return self.exc_info.as_err();
+        }
+
+        Ok(())
+    }
+}
+
 // Tables
 
 pub struct Table {
@@ -536,10 +685,32 @@ pub struct Table {
     exc_info: glue::ExcInfo,
 }
 
+/// Modes in which a casacore table can be opened.
+///
 pub enum TableOpenMode {
     Read = 1,
     ReadWrite = 2,
     Create = 3,
+}
+
+/// Modes in which a casacore table can be created.
+///
+/// ## Note
+///
+/// Casacore allows for an additional mode, `Scratch` which it describes as
+/// "new table, which gets marked for delete".
+///
+/// The use case for this was unclear, but If you have a use for this mode,
+/// consider opening an issue in rubbl.
+///
+/// For more details about the discussion of this mode, see this comment
+/// <https://github.com/pkgw/rubbl/pull/160#discussion_r707433551>
+///
+pub enum TableCreateMode {
+    /// create table
+    New = 1,
+    /// create table (may not exist)
+    NewNoReplace = 2,
 }
 
 #[derive(Fail, Debug)]
@@ -556,7 +727,112 @@ pub struct NotScalarColumnError(glue::GlueDataType);
 )]
 pub struct UnexpectedDataTypeError(glue::GlueDataType, glue::GlueDataType);
 
+/// A Rust wrapper for a casacore table.
+///
+/// For details on the casacore tables, see the [documentation](https://casacore.github.io/casacore/group__Tables__module.html#details)
 impl Table {
+    /// Create a new casacore table
+    ///
+    /// # Examples
+    ///
+    /// Creating a table
+    ///
+    /// ```rust
+    /// use std::path::PathBuf;
+    /// use tempfile::tempdir;
+    /// use rubbl_casatables::{ColumnDescription, GlueDataType, Table, TableCreateMode, TableDesc, TableDescCreateMode};
+    ///
+    /// // tempdir is only necessary to avoid writing to disk each time this example is run
+    /// let tmp_dir = tempdir().unwrap();
+    /// let table_path = tmp_dir.path().join("test.ms");
+    ///
+    /// // First create a table description for our base table.
+    /// // Use TDM_SCRATCH to avoid writing the .tabdsc to disk.
+    /// let mut table_desc = TableDesc::new("", TableDescCreateMode::TDM_SCRATCH).unwrap();
+    /// // Define the columns in your table description
+    /// table_desc.add_array_column(GlueDataType::TpDouble, "UVW", Some("Vector with uvw coordinates (in meters)"), Some(&[3]), true, false).unwrap();
+    /// // Create your new table with 0 rows.
+    /// Table::new(&table_path, table_desc, 0, TableCreateMode::New).unwrap();
+    /// ```
+    pub fn new<P: AsRef<Path>>(
+        path: P,
+        table_desc: TableDesc,
+        n_rows: usize,
+        mode: TableCreateMode,
+    ) -> Result<Self, Error> {
+        let spath = match path.as_ref().to_str() {
+            Some(s) => s,
+            None => {
+                return Err(err_msg(
+                    "table paths must be representable as UTF-8 strings",
+                ));
+            }
+        };
+
+        let cpath = glue::StringBridge::from_rust(spath);
+        let mut exc_info = unsafe { std::mem::zeroed::<glue::ExcInfo>() };
+
+        let cmode = match mode {
+            TableCreateMode::New => glue::TableCreateMode::TCM_NEW,
+            TableCreateMode::NewNoReplace => glue::TableCreateMode::TCM_NEW_NO_REPLACE,
+            // TableCreateMode::Scratch => glue::TableCreateMode::TCM_SCRATCH,
+        };
+
+        let handle = unsafe {
+            glue::table_create(
+                &cpath,
+                table_desc.handle,
+                n_rows as u64,
+                cmode,
+                &mut exc_info,
+            )
+        };
+        if handle.is_null() {
+            return exc_info.as_err();
+        }
+
+        Ok(Table {
+            handle: handle,
+            exc_info: exc_info,
+        })
+    }
+
+    /// Open an existing casacore table
+    ///
+    /// to create a table, use `Table::new`, instead of `Table::open` with
+    /// `mode = TableOpenMode::Create`
+    ///
+    /// # Examples
+    ///
+    /// Creating a table, writing a cell, opening it and reading the cell.
+    ///
+    /// ```rust
+    /// use std::path::PathBuf;
+    /// use tempfile::tempdir;
+    /// use rubbl_casatables::{ColumnDescription, GlueDataType, Table, TableCreateMode, TableDesc, TableDescCreateMode, TableOpenMode};
+    ///
+    /// // tempdir is only necessary to avoid writing to disk each time this example is run
+    /// let tmp_dir = tempdir().unwrap();
+    /// let table_path = tmp_dir.path().join("test.ms");
+    /// // First create a table description for our base table.
+    /// // Use TDM_SCRATCH to avoid writing the .tabdsc to disk.
+    /// let mut table_desc = TableDesc::new("", TableDescCreateMode::TDM_SCRATCH).unwrap();
+    /// // Define the columns in your table description
+    /// table_desc.add_array_column(GlueDataType::TpDouble, "UVW", Some("Vector with uvw coordinates (in meters)"), Some(&[3]), true, false).unwrap();
+    /// // Create your new table with 1 rows
+    /// let mut table = Table::new(&table_path, table_desc, 1, TableCreateMode::New).unwrap();
+    /// // write to the first row in the uvw column
+    /// let cell_value: Vec<f64> = vec![1.0, 2.0, 3.0];
+    /// table.put_cell("UVW", 0, &cell_value).unwrap();
+    /// // This writes the table to disk and closes the file pointer.
+    /// drop(table);
+    ///
+    /// // now open the table
+    /// let mut table = Table::open(&table_path, TableOpenMode::ReadWrite).unwrap();
+    /// // and extract the cell value we wrote earlier
+    /// let extracted_cell_value: Vec<f64> = table.get_cell_as_vec("UVW", 0).unwrap();
+    /// assert_eq!(cell_value, extracted_cell_value);
+    /// ```
     pub fn open<P: AsRef<Path>>(path: P, mode: TableOpenMode) -> Result<Self, Error> {
         let spath = match path.as_ref().to_str() {
             Some(s) => s,
@@ -623,6 +899,94 @@ impl Table {
         Ok(())
     }
 
+    pub fn add_scalar_column(
+        &mut self,
+        data_type: glue::GlueDataType,
+        col_name: &str,
+        comment: Option<&str>,
+        direct: bool,
+        undefined: bool,
+    ) -> Result<(), CasacoreError> {
+        let ccol_name = glue::StringBridge::from_rust(col_name);
+        let comment = if let Some(comment_) = comment {
+            comment_
+        } else {
+            ""
+        };
+        let ccomment = glue::StringBridge::from_rust(comment);
+
+        let rv = unsafe {
+            glue::table_add_scalar_column(
+                self.handle,
+                data_type,
+                &ccol_name,
+                &ccomment,
+                direct,
+                undefined,
+                &mut self.exc_info,
+            )
+        };
+
+        if rv != 0 {
+            return self.exc_info.as_err();
+        }
+
+        Ok(())
+    }
+
+    /// Add an array column to the Table
+    ///
+    /// If dimensions (`dims`) are provided, then the column has fixed dimensions,
+    /// other wise the column is not fixed.
+    pub fn add_array_column(
+        &mut self,
+        data_type: glue::GlueDataType,
+        col_name: &str,
+        comment: Option<&str>,
+        dims: Option<&[u64]>,
+        direct: bool,
+        undefined: bool,
+    ) -> Result<(), Error> {
+        let cname = glue::StringBridge::from_rust(col_name);
+        let comment = if let Some(comment_) = comment {
+            comment_
+        } else {
+            ""
+        };
+        let ccomment = glue::StringBridge::from_rust(comment);
+        let rv = unsafe {
+            if let Some(dims_) = dims {
+                glue::table_add_fixed_array_column(
+                    self.handle,
+                    data_type,
+                    &cname,
+                    &ccomment,
+                    dims_.len() as u64,
+                    dims_.as_ptr(),
+                    direct,
+                    undefined,
+                    &mut self.exc_info,
+                )
+            } else {
+                glue::table_add_array_column(
+                    self.handle,
+                    data_type,
+                    &cname,
+                    &ccomment,
+                    direct,
+                    undefined,
+                    &mut self.exc_info,
+                )
+            }
+        };
+
+        if rv != 0 {
+            return self.exc_info.as_err();
+        }
+
+        Ok(())
+    }
+
     pub fn table_keyword_names(&mut self) -> Result<Vec<String>, CasacoreError> {
         let mut result = Vec::new();
 
@@ -639,6 +1003,19 @@ impl Table {
         }
 
         Ok(result)
+    }
+
+    pub fn put_table_keyword(&mut self, kw_name: &str, table: Table) -> Result<(), CasacoreError> {
+        let ckw_name = glue::StringBridge::from_rust(kw_name);
+        let rv = unsafe {
+            glue::table_put_keyword(self.handle, &ckw_name, glue::GlueDataType::TpTable, table.handle as _, &mut self.exc_info)
+        };
+
+        if rv != 0 {
+            return self.exc_info.as_err();
+        }
+
+        Ok(())
     }
 
     pub fn get_col_desc(&mut self, col_name: &str) -> Result<ColumnDescription, CasacoreError> {
@@ -1142,6 +1519,7 @@ impl Drop for Table {
     }
 }
 
+#[derive(PartialEq, Eq, Debug)]
 pub struct ColumnDescription {
     name: String,
     data_type: glue::GlueDataType,
@@ -1364,5 +1742,378 @@ impl Drop for TableRow {
         unsafe {
             glue::table_row_free(self.handle, &mut self.exc_info);
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::fs::OpenOptions;
+
+    use super::*;
+    use crate::glue::{GlueDataType, TableDescCreateMode};
+    use ndarray::array;
+    use rubbl_core::Complex;
+    use tempfile::tempdir;
+
+    type c64 = Complex<f64>;
+
+    #[test]
+    fn table_create_with_scalar_desc() {
+        let tmp_dir = tempdir().unwrap();
+        let table_path = tmp_dir.path().join("test.ms");
+
+        let col_name = "test_uint";
+
+        let mut table_desc = TableDesc::new("TEST", TableDescCreateMode::TDM_SCRATCH).unwrap();
+        table_desc
+            .add_scalar_column(GlueDataType::TpUInt, &col_name, None, false, false)
+            .unwrap();
+
+        let mut table = Table::new(table_path, table_desc, 123, TableCreateMode::New).unwrap();
+
+        assert_eq!(table.n_rows(), 123);
+        assert_eq!(table.n_columns(), 1);
+
+        let column_info = table.get_col_desc(&col_name).unwrap();
+        assert_eq!(column_info.data_type(), GlueDataType::TpUInt);
+        assert_eq!(column_info.name(), col_name);
+        assert!(column_info.is_scalar());
+    }
+
+    #[test]
+    fn table_create_with_scalar_string_desc() {
+        let tmp_dir = tempdir().unwrap();
+        let table_path = tmp_dir.path().join("test.ms");
+
+        let col_name = "test_string";
+
+        let mut table_desc = TableDesc::new("TEST", TableDescCreateMode::TDM_SCRATCH).unwrap();
+        table_desc
+            .add_scalar_column(GlueDataType::TpString, &col_name, None, false, false)
+            .unwrap();
+
+        let mut table = Table::new(table_path, table_desc, 123, TableCreateMode::New).unwrap();
+
+        assert_eq!(table.n_rows(), 123);
+        assert_eq!(table.n_columns(), 1);
+
+        let column_info = table.get_col_desc(&col_name).unwrap();
+        assert_eq!(column_info.data_type(), GlueDataType::TpString);
+        assert_eq!(column_info.name(), col_name);
+        assert!(column_info.is_scalar());
+    }
+
+    #[test]
+    fn table_create_no_replace() {
+        let tmp_dir = tempdir().unwrap();
+        let table_path = tmp_dir.path().join("test.ms");
+
+        // touch the file
+        OpenOptions::new()
+            .create(true)
+            .write(true)
+            .open(table_path.clone())
+            .unwrap();
+
+        let col_name = "test_string";
+
+        let mut table_desc = TableDesc::new("TEST", TableDescCreateMode::TDM_SCRATCH).unwrap();
+        table_desc
+            .add_scalar_column(GlueDataType::TpString, &col_name, None, false, false)
+            .unwrap();
+
+        // NewNoReplace should fail if table exists.
+        assert!(matches!(
+            Table::new(table_path, table_desc, 123, TableCreateMode::NewNoReplace),
+            Err(Error { .. })
+        ));
+    }
+
+    #[test]
+    fn table_create_with_fixed_string_array_desc() {
+        let tmp_dir = tempdir().unwrap();
+        let table_path = tmp_dir.path().join("test.ms");
+
+        let col_name = "test_string_fixed";
+
+        let mut table_desc = TableDesc::new("TEST", TableDescCreateMode::TDM_SCRATCH).unwrap();
+        table_desc
+            .add_array_column(
+                GlueDataType::TpString,
+                &col_name,
+                None,
+                Some(&[1, 2, 3]),
+                false,
+                false,
+            )
+            .unwrap();
+
+        let mut table = Table::new(table_path, table_desc, 123, TableCreateMode::New).unwrap();
+
+        assert_eq!(table.n_rows(), 123);
+        assert_eq!(table.n_columns(), 1);
+
+        let column_info = table.get_col_desc(&col_name).unwrap();
+        assert_eq!(column_info.data_type(), GlueDataType::TpString);
+        assert_eq!(column_info.name(), col_name);
+        assert!(!column_info.is_scalar());
+        assert!(column_info.is_fixed_shape());
+        assert_eq!(column_info.shape(), Some(&[1, 2, 3][..]));
+    }
+
+    #[test]
+    fn table_create_with_variable_string_array_desc() {
+        let tmp_dir = tempdir().unwrap();
+        let table_path = tmp_dir.path().join("test.ms");
+
+        let col_name = "test_string_var";
+
+        let mut table_desc = TableDesc::new("TEST", TableDescCreateMode::TDM_SCRATCH).unwrap();
+        table_desc
+            .add_array_column(GlueDataType::TpString, &col_name, None, None, false, false)
+            .unwrap();
+
+        let mut table = Table::new(table_path, table_desc, 123, TableCreateMode::New).unwrap();
+
+        assert_eq!(table.n_rows(), 123);
+        assert_eq!(table.n_columns(), 1);
+
+        let column_info = table.get_col_desc(&col_name).unwrap();
+        assert_eq!(column_info.data_type(), GlueDataType::TpString);
+        assert_eq!(column_info.name(), col_name);
+        assert!(!column_info.is_scalar());
+        assert!(!column_info.is_fixed_shape());
+        assert_eq!(column_info.shape(), None);
+    }
+
+    #[test]
+    fn table_create_write_open_read_cell() {
+        // tempdir is only necessary to avoid writing to disk each time this example is run
+        let tmp_dir = tempdir().unwrap();
+        let table_path = tmp_dir.path().join("test.ms");
+        // First create a table description for our base table.
+        // Use TDM_SCRATCH to avoid writing the .tabdsc to disk.
+        let mut table_desc = TableDesc::new("", TableDescCreateMode::TDM_SCRATCH).unwrap();
+        // Define the columns in your table description
+        table_desc
+            .add_array_column(
+                GlueDataType::TpDouble,
+                "UVW",
+                Some("Vector with uvw coordinates (in meters)"),
+                Some(&[3]),
+                true,
+                false,
+            )
+            .unwrap();
+        // Create your new table with 1 rows
+        let mut table = Table::new(&table_path, table_desc, 1, TableCreateMode::New).unwrap();
+        // write to the first row in the uvw column
+        let cell_value: Vec<f64> = vec![1.0, 2.0, 3.0];
+        table.put_cell("UVW", 0, &cell_value).unwrap();
+        // This writes the table to disk and closes the file pointer.
+        drop(table);
+
+        // now open the table again for reading cells
+        let mut table = Table::open(&table_path, TableOpenMode::Read).unwrap();
+        // and extract the cell value we wrote earlier
+        let extracted_cell_value: Vec<f64> = table.get_cell_as_vec("UVW", 0).unwrap();
+        assert_eq!(cell_value, extracted_cell_value);
+    }
+
+    #[test]
+    fn table_add_scalar_column() {
+        // tempdir is only necessary to avoid writing to disk each time this example is run
+        let tmp_dir = tempdir().unwrap();
+        let table_path = tmp_dir.path().join("test.ms");
+        // First create a table description for our base table.
+        // Use TDM_SCRATCH to avoid writing the .tabdsc to disk.
+        let mut table_desc = TableDesc::new("", TableDescCreateMode::TDM_SCRATCH).unwrap();
+        // Define the columns in your table description
+        table_desc
+            .add_array_column(
+                GlueDataType::TpDouble,
+                "UVW",
+                Some("Vector with uvw coordinates (in meters)"),
+                Some(&[3]),
+                true,
+                false,
+            )
+            .unwrap();
+        // Create your new table with 1 rows
+        let mut table = Table::new(&table_path, table_desc, 1, TableCreateMode::New).unwrap();
+        // write to the first row in the uvw column
+        let cell_value: Vec<f64> = vec![1.0, 2.0, 3.0];
+        table.put_cell("UVW", 0, &cell_value).unwrap();
+        // This writes the table to disk and closes the file pointer.
+        drop(table);
+
+        // now open the table again for adding the column
+        let mut table = Table::open(&table_path, TableOpenMode::ReadWrite).unwrap();
+        table
+            .add_scalar_column(
+                GlueDataType::TpInt,
+                "second",
+                Some("comment2"),
+                false,
+                false,
+            )
+            .unwrap();
+
+        let col_names = table.column_names().unwrap();
+        assert!(col_names.len() == 2);
+    }
+
+    #[test]
+    fn table_add_array_column() {
+        // tempdir is only necessary to avoid writing to disk each time this example is run
+        let tmp_dir = tempdir().unwrap();
+        let table_path = tmp_dir.path().join("test.ms");
+        // First create a table description for our base table.
+        // Use TDM_SCRATCH to avoid writing the .tabdsc to disk.
+        let mut table_desc = TableDesc::new("", TableDescCreateMode::TDM_SCRATCH).unwrap();
+        // Define the columns in your table description
+        table_desc
+            .add_array_column(
+                GlueDataType::TpDouble,
+                "UVW",
+                Some("Vector with uvw coordinates (in meters)"),
+                Some(&[3]),
+                true,
+                false,
+            )
+            .unwrap();
+        // Create your new table with 1 rows
+        let mut table = Table::new(&table_path, table_desc, 1, TableCreateMode::New).unwrap();
+        // write to the first row in the uvw column
+        let cell_value: Vec<f64> = vec![1.0, 2.0, 3.0];
+        table.put_cell("UVW", 0, &cell_value).unwrap();
+        // This writes the table to disk and closes the file pointer.
+        drop(table);
+
+        // now open the table again for adding the column
+        let mut table = Table::open(&table_path, TableOpenMode::ReadWrite).unwrap();
+        table
+            .add_array_column(
+                GlueDataType::TpDComplex,
+                "second",
+                Some("comment2"),
+                Some(&[4]),
+                false,
+                false,
+            )
+            .unwrap();
+        let cell_value: Vec<Complex<f64>> = vec![
+            c64::new(1.0, 2.0),
+            c64::new(3.0, 4.0),
+            c64::new(5.0, 6.0),
+            c64::new(7.0, 8.0),
+        ];
+        table.put_cell("second", 0, &cell_value).unwrap();
+
+        let col_names = table.column_names().unwrap();
+        assert!(col_names.len() == 2);
+    }
+
+    #[test]
+    fn table_add_multi_dimensional_array_column() {
+        // tempdir is only necessary to avoid writing to disk each time this example is run
+        let tmp_dir = tempdir().unwrap();
+        let table_path = tmp_dir.path().join("test.ms");
+        // First create a table description for our base table.
+        // Use TDM_SCRATCH to avoid writing the .tabdsc to disk.
+        let mut table_desc = TableDesc::new("", TableDescCreateMode::TDM_SCRATCH).unwrap();
+        // Define the columns in your table description
+        table_desc
+            .add_array_column(
+                GlueDataType::TpDouble,
+                "UVW",
+                Some("Vector with uvw coordinates (in meters)"),
+                Some(&[3]),
+                true,
+                false,
+            )
+            .unwrap();
+        // Create your new table with 1 rows
+        let mut table = Table::new(&table_path, table_desc, 1, TableCreateMode::New).unwrap();
+        // write to the first row in the uvw column
+        let cell_value: Vec<f64> = vec![1.0, 2.0, 3.0];
+        table.put_cell("UVW", 0, &cell_value).unwrap();
+        // This writes the table to disk and closes the file pointer.
+        drop(table);
+
+        // now open the table again for adding the column
+        let mut table = Table::open(&table_path, TableOpenMode::ReadWrite).unwrap();
+        let data_shape = [2, 4, 1];
+        table
+            .add_array_column(
+                GlueDataType::TpDComplex,
+                "DATA",
+                None,
+                Some(&data_shape),
+                false,
+                false,
+            )
+            .unwrap();
+
+        let cell_value = array![
+            [
+                [c64::new(1.0, 2.0)],
+                [c64::new(-1.0, -2.0)],
+                [c64::new(3.0, 4.0)],
+                [c64::new(-3.0, -4.0)]
+            ],
+            [
+                [c64::new(5.0, 6.0)],
+                [c64::new(-5.0, -6.0)],
+                [c64::new(7.0, 8.0)],
+                [c64::new(-7.0, -8.0)]
+            ]
+        ];
+        table.put_cell("DATA", 0, &cell_value).unwrap();
+
+        drop(table);
+
+        let mut table = Table::open(&table_path, TableOpenMode::Read).unwrap();
+        let uvw_tabledesc = table.get_col_desc("UVW").unwrap();
+        let data_tabledesc = table.get_col_desc("DATA").unwrap();
+        assert_eq!(uvw_tabledesc.data_type(), GlueDataType::TpDouble);
+        assert_eq!(data_tabledesc.data_type(), GlueDataType::TpDComplex);
+        assert!(uvw_tabledesc.is_fixed_shape());
+        assert!(data_tabledesc.is_fixed_shape());
+        assert!(!uvw_tabledesc.is_scalar());
+        assert!(!data_tabledesc.is_scalar());
+        assert_eq!(data_tabledesc.shape().unwrap(), data_shape);
+        assert_eq!(uvw_tabledesc.shape().unwrap(), &[3]);
+    }
+
+    #[test]
+    pub fn table_put_table_keyword() {
+        let tmp_dir = tempdir().unwrap();
+        let root_table_path = tmp_dir.path().join("test.ms");
+        let sub_table_path = root_table_path.join("SUB");
+        // First create a table description for our base table.
+        // Use TDM_SCRATCH to avoid writing the .tabdsc to disk.
+        let mut root_table_desc = TableDesc::new("", TableDescCreateMode::TDM_SCRATCH).unwrap();
+        // Define the columns in your table description
+        root_table_desc
+            .add_array_column(
+                GlueDataType::TpDouble,
+                "UVW",
+                Some("Vector with uvw coordinates (in meters)"),
+                Some(&[3]),
+                true,
+                false,
+            )
+            .unwrap();
+        // Create your new table with 1 rows
+        let mut root_table = Table::new(&root_table_path, root_table_desc, 1, TableCreateMode::New).unwrap();
+
+        let mut sub_table_desc = TableDesc::new("", TableDescCreateMode::TDM_SCRATCH).unwrap();
+        sub_table_desc.add_scalar_column(GlueDataType::TpInt, "int", None, true, false).unwrap();
+
+        let sub_table = Table::new(&sub_table_path, sub_table_desc, 1, TableCreateMode::New).unwrap();
+        root_table.put_table_keyword("SUB", sub_table).unwrap();
+        
+        assert_eq!(root_table.table_keyword_names().unwrap(), ["SUB"]);
     }
 }

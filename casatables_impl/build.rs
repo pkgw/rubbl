@@ -1,4 +1,4 @@
-// Copyright 2017-2020 Peter Williams <peter@newton.cx> and collaborators
+// Copyright 2017-2021 Peter Williams <peter@newton.cx> and collaborators
 // Licensed under the MIT License.
 
 use std::{env, fs, path::PathBuf};
@@ -8,6 +8,7 @@ fn main() {
         .cpp(true)
         .warnings(true)
         .flag_if_supported("-std=c++11")
+        .define("USE_THREADS", "1")
         .include(".")
         .files(FILES)
         .compile("libcasatables_impl.a");

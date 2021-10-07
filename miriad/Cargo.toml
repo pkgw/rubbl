@@ -3,7 +3,7 @@
 
 [package]
 name = "rubbl_miriad"
-version = "0.2.4"
+version = "0.2.5"
 authors = ["Peter Williams <peter@newton.cx>"]
 license = "MIT"
 edition = "2018"
@@ -23,9 +23,9 @@ rubbl_visdata = "thiscommit:2020-12-15:Rohw0kei"
 byteorder = "^1.4"
 failure = "^0.1"
 failure_derive = "^0.1"
-openat = "^0.1.20"
-rubbl_core = { path = "../core", version ="^0.2.0"}
-rubbl_visdata = { path = "../visdata", version ="^0.2.0"}
+openat = "^0.1.21"
+rubbl_core = { path = "../core", version =">=0.2.0,<1"}
+rubbl_visdata = { path = "../visdata", version =">=0.2.0,<1"}
 
 [dev-dependencies]
 clap = "^2.33"

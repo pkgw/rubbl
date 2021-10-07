@@ -20,4 +20,4 @@ rubbl_core = "thiscommit:2020-12-15:re8eeQu5"
 clap = "^2.33"
 failure = "^0.1"
 failure_derive = "^0.1"
-rubbl_core = { version ="^0.2.0", path = "../core" }
+rubbl_core = { version =">=0.2.0,<1", path = "../core" }

@@ -1,3 +1,14 @@
+# rubbl_core 0.3.0 (2021-10-07)
+
+- Add a dependency on the `approx` crate so that we provide implementations
+  of its traits on our Complex type. If we don't do this, it's not possible
+  for downstream users to do so. This extra dep could be gated behind a Cargo
+  feature, but it's lightweight so we just add it unconditionally to keep
+  things simple (#169, #170, @derwentx)
+- Increase the flexibility of allowed versions of the `ndarray` and
+  `num-complex` dependencies (#154, @cjordan)
+
+
 # rubbl_core 0.2.1 (2021-04-01)
 
 - Update versions of core dependencies

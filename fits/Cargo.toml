@@ -20,8 +20,8 @@ rubbl_visdata = "thiscommit:2020-12-15:Ox8roFai"
 [dependencies]
 failure = "^0.1"
 failure_derive = "^0.1"
-rubbl_core = { path = "../core", version ="^0.2.0"}
-rubbl_visdata = { path = "../visdata", version ="^0.2.0"}
+rubbl_core = { path = "../core", version =">=0.2.0,<1"}
+rubbl_visdata = { path = "../visdata", version =">=0.2.0,<1"}
 
 [dev-dependencies]
 clap = "^2.33"
