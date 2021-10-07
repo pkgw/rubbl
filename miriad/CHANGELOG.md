@@ -1,5 +1,9 @@
 # rc: micro bump
 
+- build(deps): bump openat from 0.1.20 to 0.1.21
+
+# rubbl_miriad 0.2.4 (2021-04-01)
+
 - Remove a bunch of superfluous dependencies
 
 # rubbl_miriad 0.2.3 (2021-04-01)

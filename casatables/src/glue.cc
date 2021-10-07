@@ -12,8 +12,10 @@
 
 #define CASA_TYPES_ALREADY_DECLARED
 #define GlueTable casacore::Table
+#define GlueTableDesc casacore::TableDesc
 #define GlueTableRow casacore::ROTableRow
 #define GlueDataType casacore::DataType
+#define GlueUInt casacore::uInt
 
 #include "glue.h"
 
@@ -131,7 +133,267 @@ extern "C" {
         return -1;
     }
 
+    // TableDesc
+
+    GlueTableDesc *
+    tabledesc_create(
+        const StringBridge &type,
+        const TableDescCreateMode mode,
+        ExcInfo &exc
+    )
+    {
+        GlueTableDesc::TDOption td_option;
+        try {
+            switch(mode) {
+                case TDM_NEW: td_option = GlueTableDesc::TDOption::New; break;
+                case TDM_NEW_NO_REPLACE: td_option = GlueTableDesc::TDOption::NewNoReplace; break;
+                case TDM_SCRATCH: td_option = GlueTableDesc::TDOption::Scratch; break;
+                default: throw std::invalid_argument( "invalid TableDescCreateMode" );
+            }
+            return new GlueTableDesc(bridge_string(type), td_option);
+        } catch (...) {
+            handle_exception(exc);
+            return NULL;
+        }
+    }
+
+    GlueTableDesc *
+    tabledesc_add_scalar_column(
+        GlueTableDesc &table_desc,
+        GlueDataType data_type,
+        const StringBridge &col_name,
+        const StringBridge &comment,
+        // see casacore::ColumnDesc::Direct
+        bool direct,
+        // undefined values are possible, see casacore::ColumnDesc::Direct
+        bool undefined,
+        ExcInfo &exc
+    )
+    {
+        // scalar columns are never fixed.
+        int opt = 0;
+        if (direct) {
+            opt |= casacore::ColumnDesc::Direct;
+        }
+        if (undefined) {
+            opt |= casacore::ColumnDesc::Undefined;
+        }
+
+        try {
+            switch (data_type) {
+
+#define CASE(DTYPE, CPPTYPE) \
+            case casacore::DTYPE: { \
+                table_desc.addColumn(casacore::ScalarColumnDesc<CPPTYPE>( \
+                    bridge_string(col_name), \
+                    bridge_string(comment), \
+                    opt \
+                )); \
+                break; \
+            }
+
+            CASE(TpBool, casacore::Bool)
+            CASE(TpChar, casacore::Char)
+            CASE(TpUChar, casacore::uChar)
+            CASE(TpShort, casacore::Short)
+            CASE(TpUShort, casacore::uShort)
+            CASE(TpInt, casacore::Int)
+            CASE(TpUInt, casacore::uInt)
+            CASE(TpFloat, float)
+            CASE(TpDouble, double)
+            CASE(TpComplex, casacore::Complex)
+            CASE(TpDComplex, casacore::DComplex)
+            CASE(TpString, casacore::String)
+#undef CASE
+
+            default:
+                throw std::runtime_error("unhandled scalar column data type");
+            }
+        } catch (...) {
+            handle_exception(exc);
+            return NULL;
+        }
+
+        return &table_desc;
+    }
+
+    GlueTableDesc *
+    tabledesc_add_array_column(
+        GlueTableDesc &table_desc,
+        GlueDataType data_type,
+        const StringBridge &col_name,
+        const StringBridge &comment,
+        // see casacore::ColumnDesc::Direct
+        bool direct,
+        // undefined values are possible, see casacore::ColumnDesc::Direct
+        bool undefined,
+        ExcInfo &exc
+    )
+    {
+        int opt = 0;
+        if (direct) {
+            opt |= casacore::ColumnDesc::Direct;
+        }
+        if (undefined) {
+            opt |= casacore::ColumnDesc::Undefined;
+        }
+
+        try {
+            switch (data_type) {
+
+#define CASE(DTYPE, CPPTYPE) \
+            case casacore::DTYPE: { \
+                table_desc.addColumn(casacore::ArrayColumnDesc<CPPTYPE>( \
+                    bridge_string(col_name), \
+                    bridge_string(comment), \
+                    -1, \
+                    opt \
+                )); \
+                break; \
+            }
+
+            CASE(TpBool, casacore::Bool)
+            CASE(TpChar, casacore::Char)
+            CASE(TpUChar, casacore::uChar)
+            CASE(TpShort, casacore::Short)
+            CASE(TpUShort, casacore::uShort)
+            CASE(TpInt, casacore::Int)
+            CASE(TpUInt, casacore::uInt)
+            CASE(TpFloat, float)
+            CASE(TpDouble, double)
+            CASE(TpComplex, casacore::Complex)
+            CASE(TpDComplex, casacore::DComplex)
+            CASE(TpString, casacore::String)
+#undef CASE
+
+            default:
+                throw std::runtime_error("unhandled array column data type");
+            }
+        } catch (...) {
+            handle_exception(exc);
+            return NULL;
+        }
+
+        return &table_desc;
+    }
+
+    GlueTableDesc *
+    tabledesc_add_fixed_array_column(
+        GlueTableDesc &table_desc,
+        GlueDataType data_type,
+        const StringBridge &col_name,
+        const StringBridge &comment,
+        // number of dimensions
+        const unsigned long n_dims,
+        // dimensions array
+        const unsigned long *dims,
+        // see casacore::ColumnDesc::Direct
+        bool direct,
+        // undefined values are possible, see casacore::ColumnDesc::Direct
+        bool undefined,
+        ExcInfo &exc
+    )
+    {
+        int opt = casacore::ColumnDesc::FixedShape;
+        if (direct) {
+            opt |= casacore::ColumnDesc::Direct;
+        }
+        if (undefined) {
+            opt |= casacore::ColumnDesc::Undefined;
+        }
+
+        casacore::IPosition shape(n_dims); \
+        for (casacore::uInt i = 0; i < n_dims; i++) \
+            shape[i] = dims[n_dims - 1 - i]; \
+
+        try {
+            switch (data_type) {
+
+#define CASE(DTYPE, CPPTYPE) \
+            case casacore::DTYPE: { \
+                table_desc.addColumn(casacore::ArrayColumnDesc<CPPTYPE>( \
+                    bridge_string(col_name), \
+                    bridge_string(comment), \
+                    shape, \
+                    opt \
+                )); \
+                break; \
+            }
+
+            CASE(TpBool, casacore::Bool)
+            CASE(TpChar, casacore::Char)
+            CASE(TpUChar, casacore::uChar)
+            CASE(TpShort, casacore::Short)
+            CASE(TpUShort, casacore::uShort)
+            CASE(TpInt, casacore::Int)
+            CASE(TpUInt, casacore::uInt)
+            CASE(TpFloat, float)
+            CASE(TpDouble, double)
+            CASE(TpComplex, casacore::Complex)
+            CASE(TpDComplex, casacore::DComplex)
+            CASE(TpString, casacore::String)
+#undef CASE
+
+            default:
+                throw std::runtime_error("unhandled array column data type");
+            }
+        } catch (...) {
+            handle_exception(exc);
+            return NULL;
+        }
+
+        return &table_desc;
+    }
+
     // Tables
+
+    GlueTable *
+    table_create(
+        const StringBridge &path, 
+        // Description of columns and keys in the table
+        GlueTableDesc &table_desc,
+        // number of rows
+        unsigned long n_rows,
+        const TableCreateMode mode,
+        ExcInfo &exc
+    )
+    {
+
+        // TOOD: expose this as an argument?
+        // the enum is either either `Plain` or `Memory`
+        GlueTable::TableType type = GlueTable::TableType::Plain;
+
+        // TODO: expose this as an argument?
+        // const casacore::TSMOption tsmOption();
+
+        // TODO: expose this as an argument?
+        casacore::Bool initialize = true;
+
+        // always use the local endianness
+        GlueTable::EndianFormat endian_format = GlueTable::EndianFormat::LocalEndian;
+
+        try {
+            GlueTable::TableOption table_option;
+
+            switch(mode) {
+                case TCM_NEW: table_option = GlueTable::TableOption::New; break;
+                case TCM_NEW_NO_REPLACE: table_option = GlueTable::TableOption::NewNoReplace; break;
+                case TCM_SCRATCH: table_option = GlueTable::TableOption::Scratch; break;
+                default: throw std::invalid_argument( "invalid TableCreateMode" );
+            }
+
+            // create a an object containing some information about the table we're creating
+            casacore::SetupNewTable newTable(
+                bridge_string(path),
+                table_desc,
+                table_option
+            );
+            return new GlueTable(newTable, type, n_rows, initialize, endian_format, casacore::TSMOption());
+        } catch (...) {
+            handle_exception(exc);
+            return NULL;
+        }
+    }
 
     GlueTable *
     table_alloc_and_open(const StringBridge &path, const TableOpenMode mode, ExcInfo &exc)
@@ -202,6 +464,193 @@ extern "C" {
         return 0;
     }
 
+    int 
+    table_add_scalar_column(
+        GlueTable &table, 
+        GlueDataType data_type,
+        const StringBridge &col_name, 
+        const StringBridge &comment,
+        // see casacore::ColumnDesc::Direct
+        bool direct,
+        // undefined values are possible, see casacore::ColumnDesc::Direct
+        bool undefined,
+        ExcInfo &exc
+    ) {
+        // scalar columns are never fixed.
+        int opt = 0;
+        if (direct) {
+            opt |= casacore::ColumnDesc::Direct;
+        }
+        if (undefined) {
+            opt |= casacore::ColumnDesc::Undefined;
+        }
+
+        try {
+            switch (data_type) {
+
+#define CASE(DTYPE, CPPTYPE) \
+            case casacore::DTYPE: { \
+                table.addColumn(casacore::ScalarColumnDesc<CPPTYPE>( \
+                    bridge_string(col_name), \
+                    bridge_string(comment), \
+                    opt \
+                )); \
+                break; \
+            }
+
+            CASE(TpBool, casacore::Bool)
+            CASE(TpChar, casacore::Char)
+            CASE(TpUChar, casacore::uChar)
+            CASE(TpShort, casacore::Short)
+            CASE(TpUShort, casacore::uShort)
+            CASE(TpInt, casacore::Int)
+            CASE(TpUInt, casacore::uInt)
+            CASE(TpFloat, float)
+            CASE(TpDouble, double)
+            CASE(TpComplex, casacore::Complex)
+            CASE(TpDComplex, casacore::DComplex)
+            CASE(TpString, casacore::String)
+#undef CASE
+
+            default:
+                throw std::runtime_error("unhandled scalar column data type");
+            }
+        } catch (...) {
+            handle_exception(exc);
+            return 1;
+        }
+        return 0;
+    }
+
+    int
+    table_add_array_column(
+        GlueTable &table,
+        GlueDataType data_type,
+        const StringBridge &col_name,
+        const StringBridge &comment,
+        // see casacore::ColumnDesc::Direct
+        bool direct,
+        // undefined values are possible, see casacore::ColumnDesc::Direct
+        bool undefined,
+        ExcInfo &exc
+    )
+    {
+        int opt = 0;
+        if (direct) {
+            opt |= casacore::ColumnDesc::Direct;
+        }
+        if (undefined) {
+            opt |= casacore::ColumnDesc::Undefined;
+        }
+
+        try {
+            switch (data_type) {
+
+#define CASE(DTYPE, CPPTYPE) \
+            case casacore::DTYPE: { \
+                table.addColumn(casacore::ArrayColumnDesc<CPPTYPE>( \
+                    bridge_string(col_name), \
+                    bridge_string(comment), \
+                    -1, \
+                    opt \
+                )); \
+                break; \
+            }
+
+            CASE(TpBool, casacore::Bool)
+            CASE(TpChar, casacore::Char)
+            CASE(TpUChar, casacore::uChar)
+            CASE(TpShort, casacore::Short)
+            CASE(TpUShort, casacore::uShort)
+            CASE(TpInt, casacore::Int)
+            CASE(TpUInt, casacore::uInt)
+            CASE(TpFloat, float)
+            CASE(TpDouble, double)
+            CASE(TpComplex, casacore::Complex)
+            CASE(TpDComplex, casacore::DComplex)
+            CASE(TpString, casacore::String)
+#undef CASE
+
+            default:
+                throw std::runtime_error("unhandled array column data type");
+            }
+        } catch (...) {
+            handle_exception(exc);
+            return 1;
+        }
+
+        return 0;
+    }
+
+    int
+    table_add_fixed_array_column(
+        GlueTable &table,
+        GlueDataType data_type,
+        const StringBridge &col_name,
+        const StringBridge &comment,
+        // number of dimensions
+        const unsigned long n_dims,
+        // dimensions array
+        const unsigned long *dims,
+        // see casacore::ColumnDesc::Direct
+        bool direct,
+        // undefined values are possible, see casacore::ColumnDesc::Direct
+        bool undefined,
+        ExcInfo &exc
+    )
+    {
+        int opt = casacore::ColumnDesc::FixedShape;
+        if (direct) {
+            opt |= casacore::ColumnDesc::Direct;
+        }
+        if (undefined) {
+            opt |= casacore::ColumnDesc::Undefined;
+        }
+
+        casacore::IPosition shape(n_dims); \
+        for (casacore::uInt i = 0; i < n_dims; i++) \
+            shape[i] = dims[n_dims - 1 - i]; \
+
+        try {
+            switch (data_type) {
+
+#define CASE(DTYPE, CPPTYPE) \
+            case casacore::DTYPE: { \
+                table.addColumn(casacore::ArrayColumnDesc<CPPTYPE>( \
+                    bridge_string(col_name), \
+                    bridge_string(comment), \
+                    shape, \
+                    opt \
+                )); \
+                break; \
+            }
+
+            CASE(TpBool, casacore::Bool)
+            CASE(TpChar, casacore::Char)
+            CASE(TpUChar, casacore::uChar)
+            CASE(TpShort, casacore::Short)
+            CASE(TpUShort, casacore::uShort)
+            CASE(TpInt, casacore::Int)
+            CASE(TpUInt, casacore::uInt)
+            CASE(TpFloat, float)
+            CASE(TpDouble, double)
+            CASE(TpComplex, casacore::Complex)
+            CASE(TpDComplex, casacore::DComplex)
+            CASE(TpString, casacore::String)
+#undef CASE
+
+            default:
+                throw std::runtime_error("unhandled scalar column data type");
+            }
+        } catch (...) {
+            handle_exception(exc);
+            return 1;
+        }
+
+        return 0;
+    }
+
+
     unsigned long
     table_n_keywords(const GlueTable &table)
     {
@@ -230,6 +679,32 @@ extern "C" {
             return 1;
         }
 
+        return 0;
+    }
+
+    int
+    table_put_keyword(GlueTable &table, const StringBridge &kw_name, 
+                      const GlueDataType data_type, void *data, ExcInfo &exc)
+    {
+        try {
+            casacore::TableRecord &rec = table.rwKeywordSet();
+
+            switch(data_type) {
+
+            case casacore::TpTable: {
+                rec.defineTable(
+                    bridge_string(kw_name),
+                    *((const casacore::Table *)(data))
+                );
+                break;
+            }
+            default:
+                throw std::runtime_error("unhandled keyword data type");
+            }
+        } catch (...) {
+            handle_exception(exc);
+            return 1;
+        }
         return 0;
     }
 

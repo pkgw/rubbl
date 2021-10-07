@@ -1,21 +1,8 @@
-# rc: micro bump
+# See elsewhere for changelog
 
-- Remove a bunch of superfluous dependencies
+This project’s release notes are curated from the Git history of its main
+branch. You can find them by looking at [the version of this file on the
+`release` branch][branch] or the [GitHub release history][gh-releases].
 
-# rubbl_fits 0.2.3 (2021-04-01)
-
-- Dependency bump: byteorder 1.3.4 to 1.4.2
-
-# rubbl_fits 0.2.2 (2020-12-15)
-
-- No code changes from notional 0.2.1, but 0.2.1 *also* wasn't successfully
-  published to Cargo.
-
-# rubbl_fits 0.2.1 (2020-12-15)
-
-- No code changes from notional 0.2.0, but 0.2.0 wasn't successfully published
-  to Cargo.
-
-# rubbl_fits 0.2.0 (2020-12-15)
-
-- Bump to the 2018 edition
+[branch]: https://github.com/pkgw/rubbl/blob/release/fits/CHANGELOG.md
+[gh-releases]: https://github.com/pkgw/rubbl/releases

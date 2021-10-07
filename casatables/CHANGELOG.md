@@ -1,4 +1,17 @@
-# rc: micro bump
+# rc: minor bump
+
+It is now possible to create CASA tables thanks to [@derwentx]!
+
+[@derwentx]: https://github.com/derwentx
+
+- Derive Eq, PartialEq, and Debug for ColumnDescription (#167, #168, @derwentx)
+- Add `Table::put_table_keyword` (#164, #166, @derwentx)
+- Add `Table::add_scalar_column` and `Table::add_array_column` (#162, #163, @derwentx)
+- Add `Table::new` and supporting machinery (#114, #160, @derwentx)
+- Increase the flexibility of allowed versions of the `ndarray` and
+  `num-complex` dependencies (#154, @cjordan)
+
+# rubbl_casatables 0.3.1 (2021-04-01)
 
 - Remove a bunch of superfluous dependencies
 
