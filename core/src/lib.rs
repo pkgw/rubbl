@@ -16,6 +16,7 @@ the Rubbl framework.
 pub use failure::{Error, Fail, ResultExt};
 pub use ndarray::Array;
 pub use num_complex::Complex;
+pub use approx;
 
 /// A “contextualized try” macro.
 ///
