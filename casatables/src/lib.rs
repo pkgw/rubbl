@@ -282,6 +282,11 @@ impl CasaDataType for Vec<String> {
         }
     }
 
+    fn casatables_put_shape(&self, shape_dest: &mut Vec<u64>) {
+        shape_dest.truncate(0);
+        shape_dest.push(self.len() as u64);
+    }
+
     fn casatables_stringvec_pass_through(s: Vec<String>) -> Self {
         s
     }
