@@ -146,6 +146,9 @@ extern "C"
                                                     const StringBridge &col_name, const StringBridge &comment, 
                                                     const unsigned long n_dims, const unsigned long *dims, 
                                                     bool direct, bool undefined, ExcInfo &exc);
+    GlueTableDesc *tabledesc_set_ndims(GlueTableDesc &table_desc, const StringBridge &col_name, 
+                                                    const unsigned long n_dims,
+                                                    ExcInfo &exc);
     GlueTable *table_create(const StringBridge &path, GlueTableDesc &table_desc, 
                             unsigned long n_rows, const TableCreateMode mode, ExcInfo &exc);
     GlueTable *table_alloc_and_open(const StringBridge &path, const TableOpenMode mode, ExcInfo &exc);
