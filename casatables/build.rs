@@ -12,6 +12,7 @@ fn main() {
         .cpp(true)
         .warnings(true)
         .flag_if_supported("-std=c++11")
+        .define("casacore", "rubbl_casacore")
         .include("src")
         .include(env::var_os("DEP_CASA_INCLUDE").unwrap())
         .files(FILES)

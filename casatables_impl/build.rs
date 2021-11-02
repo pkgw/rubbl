@@ -8,6 +8,7 @@ fn main() {
         .cpp(true)
         .warnings(true)
         .flag_if_supported("-std=c++11")
+        .define("casacore", "rubbl_casacore")
         .define("USE_THREADS", "1")
         .include(".")
         .files(FILES)
