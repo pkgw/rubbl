@@ -1780,9 +1780,9 @@ mod tests {
     use super::*;
     use crate::glue::{GlueDataType, TableDescCreateMode};
     use ndarray::array;
-    use rubbl_core::Complex;
     use tempfile::tempdir;
 
+    #[allow(non_camel_case_types)]
     type c64 = Complex<f64>;
 
     #[test]
