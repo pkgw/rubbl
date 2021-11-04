@@ -1,3 +1,9 @@
+# rubbl_casatables 0.5.1 (2021-11-04)
+
+- No code changes from previous release. There was a problem publishing the
+  updated Cargo package.
+
+
 # rubbl_casatables 0.5.0 (2021-11-04)
 
 - Require the latest release of `casatables_impl` and track its rename of the
