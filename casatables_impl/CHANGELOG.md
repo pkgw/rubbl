@@ -1,4 +1,16 @@
-# rc: micro bump
+# rc: force 0.3.31100
+
+- Use a preprocessor `#define` to put the underlying C++ code in the namespace
+  `rubbl_casacore` (#178, @derwentx). The most important effect of this is to
+  make it possible to build an executable that links with both Rubbl *and* the
+  "standard" `libcasa_*` shared libraries. This is desirable if you want to
+  combine Rubbl-based I/O with existing C++/CASA analysis libraries. There might
+  be a possibility of strange issues if you use both I/O subsystems on the same
+  data at the same time, but we think that you would have to try pretty hard to
+  cause issues.
+
+
+# rubbl_casatables_impl 0.2.31105 (2021-10-07)
 
 - Define `USE_THREADS=1` when building the C++ code to make it threadsafe. Yikes!
   (@pkgw)

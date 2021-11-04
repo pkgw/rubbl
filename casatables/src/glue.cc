@@ -231,14 +231,18 @@ extern "C" {
     )
     {
         int opt = 0;
-        if (direct) {
-            opt |= casacore::ColumnDesc::Direct;
-        }
-        if (undefined) {
-            opt |= casacore::ColumnDesc::Undefined;
-        }
 
         try {
+            if (direct) {
+                // opt |= casacore::ColumnDesc::Direct;
+                throw std::runtime_error(
+                    "array columns with the direct option must have a fixed shape."
+                );
+            }
+            if (undefined) {
+                opt |= casacore::ColumnDesc::Undefined;
+            }
+
             switch (data_type) {
 
 #define CASE(DTYPE, CPPTYPE) \
@@ -337,6 +341,26 @@ extern "C" {
             default:
                 throw std::runtime_error("unhandled array column data type");
             }
+        } catch (...) {
+            handle_exception(exc);
+            return NULL;
+        }
+
+        return &table_desc;
+    }
+
+    GlueTableDesc *
+    tabledesc_set_ndims(
+        GlueTableDesc &table_desc,
+        const StringBridge &col_name,
+        // number of dimensions
+        const unsigned long n_dims,
+        ExcInfo &exc
+    )
+    {
+        try {
+            casacore::ColumnDesc& column_desc = table_desc.rwColumnDesc(bridge_string(col_name));
+            column_desc.setNdim(n_dims);
         } catch (...) {
             handle_exception(exc);
             return NULL;
