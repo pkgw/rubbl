@@ -3,7 +3,7 @@
 
 [package]
 name = "rubbl_casatables"
-version = "0.4.0"
+version = "0.5.0"
 authors = ["Peter Williams <peter@newton.cx>"]
 license = "MIT"
 edition = "2018"
@@ -14,14 +14,14 @@ Interfacing to the CASA table format within the Rubbl framework.
 """
 
 [package.metadata.internal_dep_versions]
-rubbl_casatables_impl = "1d861e38cc1a40a6f0c984a58ae3dee54c27d127"
+rubbl_casatables_impl = "thiscommit:2021-11-04:9Lgzrtq"
 rubbl_core = "thiscommit:2020-12-15:EiT8sa0a"
 
 [dependencies]
 failure = "^0.1"
 failure_derive = "^0.1"
 ndarray = ">=0.8"
-rubbl_casatables_impl = { version =">=0.2.31101,<1", path = "../casatables_impl" }
+rubbl_casatables_impl = { version =">=0.3.31100,<1", path = "../casatables_impl" }
 rubbl_core = { version =">=0.2.0,<1", path = "../core" }
 
 [build-dependencies]

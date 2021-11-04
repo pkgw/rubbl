@@ -28,11 +28,11 @@ dependencies = [
 
 [[package]]
 name = "approx"
-version = "0.4.0"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3f2a05fd1bd10b2527e20a2cd32d8873d115b8b39fe219ee25f42a8aca6ba278"
+checksum = "072df7202e63b127ab55acfe16ce97013d5b97bf160489336d3f1840fd78e99e"
 dependencies = [
- "num-complex 0.3.1",
+ "num-complex",
  "num-traits",
 ]
 
@@ -225,19 +225,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "08e854964160a323e65baa19a0b1a027f76d590faba01f05c0cbc3187221a8c9"
 dependencies = [
  "matrixmultiply",
- "num-complex 0.4.0",
+ "num-complex",
  "num-integer",
  "num-traits",
  "rawpointer",
-]
-
-[[package]]
-name = "num-complex"
-version = "0.3.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "747d632c0c558b87dbabbe6a82f3b4ae03720d0646ac5b7b4dae89394be5f2c5"
-dependencies = [
- "num-traits",
 ]
 
 [[package]]
@@ -395,7 +386,7 @@ dependencies = [
 
 [[package]]
 name = "rubbl_casatables"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "cc",
  "clap",
@@ -409,7 +400,7 @@ dependencies = [
 
 [[package]]
 name = "rubbl_casatables_impl"
-version = "0.2.31105"
+version = "0.3.31100"
 dependencies = [
  "cc",
 ]
@@ -424,7 +415,7 @@ dependencies = [
  "failure",
  "failure_derive",
  "ndarray",
- "num-complex 0.3.1",
+ "num-complex",
  "termcolor",
 ]
 

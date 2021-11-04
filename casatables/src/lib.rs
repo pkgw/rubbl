@@ -5,7 +5,7 @@ use failure::{err_msg, Error};
 use failure_derive::Fail;
 use ndarray::Dimension;
 use rubbl_core::num::{DimFromShapeSlice, DimensionMismatchError};
-use rubbl_core::{Array, Complex};
+pub use rubbl_core::{Array, Complex};
 use std::fmt;
 use std::path::Path;
 
@@ -280,6 +280,11 @@ impl CasaDataType for Vec<String> {
             }
             Ok(rv)
         }
+    }
+
+    fn casatables_put_shape(&self, shape_dest: &mut Vec<u64>) {
+        shape_dest.truncate(0);
+        shape_dest.push(self.len() as u64);
     }
 
     fn casatables_stringvec_pass_through(s: Vec<String>) -> Self {
@@ -668,6 +673,29 @@ impl TableDesc {
                     &mut self.exc_info,
                 )
             }
+        };
+
+        if new_handle.is_null() {
+            return self.exc_info.as_err();
+        }
+
+        Ok(())
+    }
+
+    /// Set the number of dimensions of a column
+    pub fn set_ndims(
+        &mut self,
+        col_name: &str,
+        ndims: u64,
+    ) -> Result<(), Error> {
+        let cname = glue::StringBridge::from_rust(col_name);
+        let new_handle = unsafe {
+            glue::tabledesc_set_ndims(
+                self.handle,
+                &cname,
+                ndims,
+                &mut self.exc_info,
+            )
         };
 
         if new_handle.is_null() {
@@ -1752,9 +1780,9 @@ mod tests {
     use super::*;
     use crate::glue::{GlueDataType, TableDescCreateMode};
     use ndarray::array;
-    use rubbl_core::Complex;
     use tempfile::tempdir;
 
+    #[allow(non_camel_case_types)]
     type c64 = Complex<f64>;
 
     #[test]
@@ -2084,6 +2112,45 @@ mod tests {
         assert!(!data_tabledesc.is_scalar());
         assert_eq!(data_tabledesc.shape().unwrap(), data_shape);
         assert_eq!(uvw_tabledesc.shape().unwrap(), &[3]);
+    }
+
+    #[test]
+    fn table_add_ndim_1_string_array_column() {
+        // tempdir is only necessary to avoid writing to disk each time this example is run
+        let tmp_dir = tempdir().unwrap();
+        let table_path = tmp_dir.path().join("test.ms");
+        // First create a table description for our base table.
+        // Use TDM_SCRATCH to avoid writing the .tabdsc to disk.
+        let mut table_desc = TableDesc::new("", TableDescCreateMode::TDM_SCRATCH).unwrap();
+        // Define the columns in your table description
+        table_desc
+            .add_array_column(
+                GlueDataType::TpString,
+                "APP_PARAMS",
+                Some("Application parameters"),
+                None,
+                false,
+                false,
+            )
+            .unwrap();
+        table_desc.set_ndims("APP_PARAMS", 1).unwrap();
+        // Create your new table with 1 rows
+        let mut table = Table::new(&table_path, table_desc, 1, TableCreateMode::New).unwrap();
+        // write to the first row in the uvw column
+        let cell_value: Vec<String> = vec!["app params".to_string()];
+        table.put_cell("APP_PARAMS", 0, &cell_value).unwrap();
+        // This writes the table to disk and closes the file pointer.
+        drop(table);
+
+        let mut table = Table::open(&table_path, TableOpenMode::Read).unwrap();
+        let aparams_tabledesc = table.get_col_desc("APP_PARAMS").unwrap();
+        assert_eq!(aparams_tabledesc.data_type(), GlueDataType::TpString);
+        assert_eq!(aparams_tabledesc.shape(), None);
+        assert!(!aparams_tabledesc.is_fixed_shape());
+        assert!(!aparams_tabledesc.is_scalar());
+        
+        let cell_value_read: Vec<String> = table.get_cell_as_vec("APP_PARAMS", 0).unwrap();
+        assert_eq!(cell_value_read, cell_value);
     }
 
     #[test]

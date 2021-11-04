@@ -12,6 +12,10 @@ fn main() {
         .cpp(true)
         .warnings(true)
         .flag_if_supported("-std=c++11")
+        // This allows us to treat rubbl's modified casacore as a separate 
+        // namespace, so that both vanilla casacore and rubbl can be linked
+        // at the same time. 
+        .define("casacore", "rubbl_casacore")
         .include("src")
         .include(env::var_os("DEP_CASA_INCLUDE").unwrap())
         .files(FILES)
