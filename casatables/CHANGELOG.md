@@ -1,4 +1,10 @@
-# rc: minor bump
+# rc: micro bump
+
+- No code changes from previous release. There was a problem publishing the
+  updated Cargo package.
+
+
+# rubbl_casatables 0.5.0 (2021-11-04)
 
 - Require the latest release of `casatables_impl` and track its rename of the
   C++ namespace used for the table I/O implementation (#178, @derwentx). The
