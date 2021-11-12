@@ -7,15 +7,16 @@
 // translating from C++-land to Rust-land.
 
 #include <stdexcept>
-#include <casacore/casa/BasicSL.h>
 #include <casacore/tables/Tables.h>
+#include <casacore/casa/Containers/ValueHolder.h>
 
 #define CASA_TYPES_ALREADY_DECLARED
 #define GlueTable casacore::Table
 #define GlueTableDesc casacore::TableDesc
 #define GlueTableRow casacore::ROTableRow
 #define GlueDataType casacore::DataType
-#define GlueUInt casacore::uInt
+#define GlueTableRecord casacore::TableRecord
+#define GlueColumnDesc casacore::ColumnDesc
 
 #include "glue.h"
 
@@ -133,7 +134,391 @@ extern "C" {
         return -1;
     }
 
-    // TableDesc
+    // Table Records
+
+    GlueTableRecord * 
+    tablerec_create(ExcInfo &exc)
+    {
+        try {
+            casacore::TableRecord *rec = new GlueTableRecord();
+            return rec;
+        } catch (...) {
+            handle_exception(exc);
+            return NULL;
+        }
+    }
+
+    GlueTableRecord * 
+    tablerec_copy(const GlueTableRecord& other, ExcInfo &exc)
+    {
+        try {
+            casacore::TableRecord *rec = new GlueTableRecord(other);
+            return rec;
+        } catch (...) {
+            handle_exception(exc);
+            return NULL;
+        }
+    }
+
+    bool 
+    tablerec_eq(const GlueTableRecord& rec, const GlueTableRecord& other)
+    {
+        return rec.description() == other.description();
+    }
+
+    int
+    tablerec_get_keyword_info(
+        const GlueTableRecord &rec, 
+        KeywordReprCallback callback, 
+        void *ctxt, 
+        ExcInfo &exc
+    )
+    {
+        try {
+            StringBridge name;
+            StringBridge repr;
+            casacore::uInt n_kws = rec.nfields();
+
+            for (casacore::uInt i = 0; i < n_kws; i++) {
+                // Note: must preserve string variable as a local until after
+                // the callback is called; otherwise it can be deleted before
+                // we copy its data.
+                const casacore::String n = rec.name(i);
+                name.data = n.data();
+                name.n_bytes = n.length();
+
+                std::ostringstream os;
+                const casacore::ValueHolder vh = rec.asValueHolder(i);
+                if (rec.type(i) == casacore::TpRecord) {
+                    os << "{" << std::endl;
+                }
+                os << vh;
+                if (rec.type(i) == casacore::TpRecord) {
+                    os << "}";
+                }
+
+                const casacore::String r(os.str());
+                repr.data = r.data();
+                repr.n_bytes = r.length();
+                callback(&name, rec.type(i), &repr, ctxt);
+            }
+        } catch (...) {
+            handle_exception(exc);
+            return 1;
+        }
+
+        return 0;
+    }
+
+    int
+    tablerec_get_field_info(
+        const GlueTableRecord &rec, 
+        const StringBridge &col_name,
+        GlueDataType *data_type, 
+        int *n_dim,
+        unsigned long dims[8], 
+        ExcInfo &exc
+    )
+    {
+        try {
+            const casacore::RecordDesc &desc = rec.description();
+            casacore::Int field_num = rec.fieldNumber(bridge_string(col_name));
+
+            if (field_num < 0)
+                throw std::runtime_error("unrecognized column name");
+
+            *data_type = rec.type(field_num);
+
+            if (desc.isScalar(field_num))
+                *n_dim = 0;
+            else {
+                const casacore::IPosition shape = rec.shape(field_num);
+                *n_dim = (int) shape.nelements();
+
+                for (int i = 0; i < *n_dim; i++)
+                    dims[*n_dim - 1 - i] = (unsigned long) shape[i];
+            }
+
+        } catch (...) {
+            handle_exception(exc);
+            return 1;
+        }
+        return 0;
+    }
+    
+    int
+    tablerec_get_field(
+        const GlueTableRecord &rec, 
+        const StringBridge &field_name,
+        void *data, 
+        ExcInfo &exc
+    )
+    {
+        try {
+            const casacore::RecordDesc &desc = rec.description();
+            casacore::Int field_num = rec.fieldNumber(bridge_string(field_name));
+            casacore::IPosition shape;
+
+            if (field_num < 0)
+                throw std::runtime_error("unrecognized keyword name");
+
+            if (!desc.isScalar(field_num)) {                
+                shape = rec.shape(field_num);
+            }
+
+            switch (rec.type(field_num)) {
+
+#define SCALAR_CASE(DTYPE, CPPTYPE) \
+            case casacore::DTYPE: { \
+                CPPTYPE datum; \
+                rec.get(field_num, datum); \
+                *((CPPTYPE *) data) = datum; \
+                break; \
+            }
+
+#define VECTOR_CASE(DTYPE, CPPTYPE) \
+            case casacore::DTYPE: { \
+                casacore::Array<CPPTYPE> array(shape, (CPPTYPE *) data, casacore::SHARE); \
+                rec.get(field_num, array); \
+                break; \
+            }
+
+            SCALAR_CASE(TpBool, casacore::Bool)
+            //SCALAR_CASE(TpChar, casacore::Char)
+            SCALAR_CASE(TpUChar, casacore::uChar)
+            SCALAR_CASE(TpShort, casacore::Short)
+            //SCALAR_CASE(TpUShort, casacore::uShort)
+            SCALAR_CASE(TpInt, casacore::Int)
+            SCALAR_CASE(TpUInt, casacore::uInt)
+            SCALAR_CASE(TpFloat, float)
+            SCALAR_CASE(TpDouble, double)
+            SCALAR_CASE(TpComplex, casacore::Complex)
+            SCALAR_CASE(TpDComplex, casacore::DComplex)
+
+            VECTOR_CASE(TpArrayBool, casacore::Bool)
+            //VECTOR_CASE(TpArrayChar, casacore::Char)
+            VECTOR_CASE(TpArrayUChar, casacore::uChar)
+            VECTOR_CASE(TpArrayShort, casacore::Short)
+            //VECTOR_CASE(TpArrayUShort, casacore::uShort)
+            VECTOR_CASE(TpArrayInt, casacore::Int)
+            VECTOR_CASE(TpArrayUInt, casacore::uInt)
+            VECTOR_CASE(TpArrayFloat, float)
+            VECTOR_CASE(TpArrayDouble, double)
+            VECTOR_CASE(TpArrayComplex, casacore::Complex)
+            VECTOR_CASE(TpArrayDComplex, casacore::DComplex)
+
+#undef SCALAR_CASE
+#undef VECTOR_CASE
+
+            case casacore::TpRecord: 
+                throw std::runtime_error("you must use tablerec_get_field_subrecord() for record fields");
+            case casacore::TpString:
+                throw std::runtime_error("you must use tablerec_get_field_string() for string fields");
+            case casacore::TpArrayString:
+                throw std::runtime_error("you must use tablerec_get_field_string_array() for string-array fields");
+            default:
+                throw std::runtime_error("unhandled field data type");
+            }
+        } catch (...) {
+            handle_exception(exc);
+            return 1;
+        }
+
+        return 0;
+    }
+
+    int
+    tablerec_get_field_string(
+        const GlueTableRecord &rec, 
+        const StringBridge &col_name,
+        StringBridgeCallback callback, 
+        void *ctxt,
+        ExcInfo &exc
+    )
+    {
+        try {
+            casacore::Int field_num = rec.fieldNumber(bridge_string(col_name));
+
+            if (field_num < 0)
+                throw std::runtime_error("unrecognized keyword name");
+
+            if (rec.type(field_num) != casacore::TpString)
+                throw std::runtime_error("tablerec cell must be of TpString type");
+
+            casacore::String datum;
+            rec.get(field_num, datum);
+            unbridge_string(datum, callback, ctxt);
+        } catch (...) {
+            handle_exception(exc);
+            return 1;
+        }
+
+        return 0;
+    }
+
+    int
+    tablerec_get_field_string_array(
+        const GlueTableRecord &rec, 
+        const StringBridge &col_name,
+        StringBridgeCallback callback,
+        void *ctxt,
+        ExcInfo &exc
+    )
+    {
+        try {
+            casacore::Int field_num = rec.fieldNumber(bridge_string(col_name));
+
+            if (field_num < 0)
+                throw std::runtime_error("unrecognized column name");
+
+            casacore::IPosition shape = rec.shape(field_num);
+
+            if (rec.type(field_num) != casacore::TpArrayString)
+                throw std::runtime_error("row cell must be of TpStringArray type");
+
+            casacore::Array<casacore::String> array(shape);
+            rec.get(field_num, array);
+            unbridge_string_array(array, callback, ctxt);
+        } catch (...) {
+            handle_exception(exc);
+            return 1;
+        }
+
+        return 0;
+    }
+
+    int
+    tablerec_get_field_subrecord(
+        const GlueTableRecord &rec, 
+        const StringBridge &col_name,
+        GlueTableRecord &sub_rec,
+        ExcInfo &exc
+    )
+    {
+        try {
+            casacore::Int field_num = rec.fieldNumber(bridge_string(col_name));
+
+            if (field_num < 0)
+                throw std::runtime_error("unrecognized column name");
+
+
+            if (rec.type(field_num) != casacore::TpRecord)
+                throw std::runtime_error("row cell must be of TpRecord type");
+            
+            sub_rec.assign(rec.subRecord( field_num ));
+        } catch (...) {
+            handle_exception(exc);
+            return 1;
+        }
+
+        return 0;
+    }
+
+    int
+    tablerec_put_field(
+        GlueTableRecord &rec, 
+        const StringBridge &field_name,
+        const GlueDataType data_type, 
+        const unsigned long n_dims,
+        const unsigned long *dims, 
+        void *data, 
+        ExcInfo &exc
+    )
+    {
+        try {
+
+            switch (data_type) {
+
+#define SCALAR_CASE(DTYPE, CPPTYPE) \
+            case casacore::DTYPE: { \
+                rec.define(bridge_string(field_name), *(CPPTYPE *) data); \
+                break; \
+            }
+
+#define VECTOR_CASE(DTYPE, CPPTYPE) \
+            case casacore::DTYPE: { \
+                casacore::IPosition shape(n_dims); \
+                for (casacore::uInt i = 0; i < n_dims; i++) \
+                    shape[i] = dims[n_dims - 1 - i]; \
+                casacore::Array<CPPTYPE> array(shape, (CPPTYPE *) data, casacore::SHARE); \
+                rec.define(bridge_string(field_name), array); \
+                break; \
+            }
+
+            SCALAR_CASE(TpBool, casacore::Bool)
+            //SCALAR_CASE(TpChar, casacore::Char)
+            SCALAR_CASE(TpUChar, casacore::uChar)
+            SCALAR_CASE(TpShort, casacore::Short)
+            //SCALAR_CASE(TpUShort, casacore::uShort)
+            SCALAR_CASE(TpInt, casacore::Int)
+            SCALAR_CASE(TpUInt, casacore::uInt)
+            SCALAR_CASE(TpFloat, float)
+            SCALAR_CASE(TpDouble, double)
+            SCALAR_CASE(TpComplex, casacore::Complex)
+            SCALAR_CASE(TpDComplex, casacore::DComplex)
+
+            VECTOR_CASE(TpArrayBool, casacore::Bool)
+            //VECTOR_CASE(TpArrayChar, casacore::Char)
+            VECTOR_CASE(TpArrayUChar, casacore::uChar)
+            VECTOR_CASE(TpArrayShort, casacore::Short)
+            //VECTOR_CASE(TpArrayUShort, casacore::uShort)
+            VECTOR_CASE(TpArrayInt, casacore::Int)
+            VECTOR_CASE(TpArrayUInt, casacore::uInt)
+            VECTOR_CASE(TpArrayFloat, float)
+            VECTOR_CASE(TpArrayDouble, double)
+            VECTOR_CASE(TpArrayComplex, casacore::Complex)
+            VECTOR_CASE(TpArrayDComplex, casacore::DComplex)
+
+#undef SCALAR_CASE
+#undef VECTOR_CASE
+
+            case casacore::TpString: {
+                rec.define(bridge_string(field_name), bridge_string(*(StringBridge *) data));
+                break;
+            }
+
+            case casacore::TpArrayString: {
+                casacore::IPosition shape(n_dims);
+                for (casacore::uInt i = 0; i < n_dims; i++)
+                    shape[i] = dims[n_dims - 1 - i];
+                rec.define(bridge_string(field_name), bridge_string_array((const StringBridge *) data, shape));
+                break;
+            }
+
+            case casacore::TpTable: {
+                rec.defineTable( bridge_string(field_name), *((const casacore::Table *)(data)) );
+                break;
+            }
+
+            case casacore::TpRecord: {
+                rec.defineRecord( bridge_string(field_name), *((const casacore::TableRecord *)(data)) );
+                break;
+            }
+
+            default:
+                throw std::runtime_error("unhandled cell data type");
+            }
+        } catch (...) {
+            handle_exception(exc);
+            return 1;
+        }
+
+        return 0;
+    }
+
+    int
+    tablerec_free(GlueTableRecord *rec, ExcInfo &exc)
+    {
+        try {
+            delete rec;
+            return 0;
+        } catch (...) {
+            handle_exception(exc);
+            return 1;
+        }
+    }
+
+    // Table Description
 
     GlueTableDesc *
     tabledesc_create(
@@ -157,7 +542,7 @@ extern "C" {
         }
     }
 
-    GlueTableDesc *
+    int
     tabledesc_add_scalar_column(
         GlueTableDesc &table_desc,
         GlueDataType data_type,
@@ -211,19 +596,20 @@ extern "C" {
             }
         } catch (...) {
             handle_exception(exc);
-            return NULL;
+            return 1;
         }
 
-        return &table_desc;
+        return 0;
     }
 
-    GlueTableDesc *
+    int
     tabledesc_add_array_column(
         GlueTableDesc &table_desc,
         GlueDataType data_type,
         const StringBridge &col_name,
         const StringBridge &comment,
         // see casacore::ColumnDesc::Direct
+        // TODO: remove direct?
         bool direct,
         // undefined values are possible, see casacore::ColumnDesc::Direct
         bool undefined,
@@ -275,13 +661,13 @@ extern "C" {
             }
         } catch (...) {
             handle_exception(exc);
-            return NULL;
+            return 1;
         }
 
-        return &table_desc;
+        return 0;
     }
 
-    GlueTableDesc *
+    int
     tabledesc_add_fixed_array_column(
         GlueTableDesc &table_desc,
         GlueDataType data_type,
@@ -343,13 +729,13 @@ extern "C" {
             }
         } catch (...) {
             handle_exception(exc);
-            return NULL;
+            return 1;
         }
 
-        return &table_desc;
+        return 0;
     }
 
-    GlueTableDesc *
+    int
     tabledesc_set_ndims(
         GlueTableDesc &table_desc,
         const StringBridge &col_name,
@@ -363,10 +749,71 @@ extern "C" {
             column_desc.setNdim(n_dims);
         } catch (...) {
             handle_exception(exc);
+            return 1;
+        }
+        return 0;
+    }
+
+    int
+    tabledesc_put_keyword(
+        GlueTableDesc &table_desc,
+        const StringBridge &kw_name, 
+        const GlueDataType data_type, 
+        const unsigned long n_dims,
+        const unsigned long *dims, 
+        void *data, 
+        ExcInfo &exc
+    )
+    {
+        try {
+            return tablerec_put_field(table_desc.rwKeywordSet(), kw_name, data_type, n_dims, dims, data, exc);
+        } catch (...) {
+            handle_exception(exc);
+            return 1;
+        }
+    }
+
+    int
+    tabledesc_put_column_keyword(
+        GlueTableDesc &table_desc,
+        const StringBridge &col_name,
+        const StringBridge &kw_name,
+        const GlueDataType data_type,
+        const unsigned long n_dims,
+        const unsigned long *dims,
+        void *data,
+        ExcInfo &exc
+    )
+    {
+        try {
+            casacore::ColumnDesc& column_desc = table_desc.rwColumnDesc(bridge_string(col_name));
+            return tablerec_put_field(column_desc.rwKeywordSet(), kw_name, data_type, n_dims, dims, data, exc);
+        } catch (...) {
+            handle_exception(exc);
+            return 1;
+        }
+    }
+
+    const GlueTableRecord * 
+    tabledesc_get_keywords( GlueTableDesc &table_desc, ExcInfo &exc )
+    {
+        try {
+            return &table_desc.keywordSet();
+        } catch (...) {
+            handle_exception(exc);
             return NULL;
         }
+    }
 
-        return &table_desc;
+    const GlueTableRecord * 
+    tabledesc_get_column_keywords( GlueTableDesc &table_desc, const StringBridge &col_name, ExcInfo &exc )
+    {
+        try {
+            return &table_desc.columnDesc(bridge_string(col_name)).keywordSet();
+        } catch (...) {
+            handle_exception(exc);
+            return NULL;
+        }
     }
 
     // Tables
@@ -488,6 +935,8 @@ extern "C" {
         return 0;
     }
 
+    // TODO: dedup this from tabledesc_add_scalar_column
+
     int 
     table_add_scalar_column(
         GlueTable &table, 
@@ -546,6 +995,8 @@ extern "C" {
         return 0;
     }
 
+    // TODO: dedup this from tabledesc_add_array_column
+
     int
     table_add_array_column(
         GlueTable &table,
@@ -602,9 +1053,10 @@ extern "C" {
             handle_exception(exc);
             return 1;
         }
-
         return 0;
     }
+
+    // TODO: dedup this from tabledesc_add_fixed_array_column
 
     int
     table_add_fixed_array_column(
@@ -682,54 +1134,107 @@ extern "C" {
     }
 
     int
-    table_get_keyword_info(const GlueTable &table, KeywordInfoCallback callback, void *ctxt, ExcInfo &exc)
+    table_get_keyword_info(
+        const GlueTable &table, 
+        KeywordReprCallback callback, 
+        void *ctxt, 
+        ExcInfo &exc
+    )
     {
         try {
-            StringBridge name;
-            const casacore::TableRecord &rec = table.keywordSet();
-            casacore::uInt n_kws = rec.nfields();
-
-            for (casacore::uInt i = 0; i < n_kws; i++) {
-                // Note: must preserve string variable as a local until after
-                // the callback is called; otherwise it can be deleted before
-                // we copy its data.
-                const casacore::String n = rec.name(i);
-                name.data = n.data();
-                name.n_bytes = n.length();
-                callback(&name, rec.type(i), ctxt);
-            }
+            return tablerec_get_keyword_info(table.keywordSet(), callback, ctxt, exc);
         } catch (...) {
             handle_exception(exc);
             return 1;
         }
-
-        return 0;
     }
 
     int
-    table_put_keyword(GlueTable &table, const StringBridge &kw_name, 
-                      const GlueDataType data_type, void *data, ExcInfo &exc)
+    table_get_column_keyword_info(
+        const GlueTable &table, 
+        const StringBridge &col_name, 
+        KeywordReprCallback callback,
+        void *ctxt, 
+        ExcInfo &exc
+    )
     {
         try {
-            casacore::TableRecord &rec = table.rwKeywordSet();
-
-            switch(data_type) {
-
-            case casacore::TpTable: {
-                rec.defineTable(
-                    bridge_string(kw_name),
-                    *((const casacore::Table *)(data))
-                );
-                break;
-            }
-            default:
-                throw std::runtime_error("unhandled keyword data type");
-            }
+            const casacore::TableColumn col(table, bridge_string(col_name));
+            return tablerec_get_keyword_info(col.keywordSet(), callback, ctxt, exc);
         } catch (...) {
             handle_exception(exc);
             return 1;
         }
-        return 0;
+    }
+
+    const GlueTableRecord* 
+    table_get_keywords(
+        GlueTable &table, 
+        ExcInfo &exc
+    )
+    {
+        try {
+            return &table.keywordSet();
+        } catch (...) {
+            handle_exception(exc);
+            return NULL;
+        }
+    }
+
+    const GlueTableRecord* 
+    table_get_column_keywords(
+        GlueTable &table, 
+        const StringBridge &col_name, 
+        ExcInfo &exc
+    )
+    {
+        try {
+            const casacore::TableColumn col(table, bridge_string(col_name));
+            return &col.keywordSet();
+        } catch (...) {
+            handle_exception(exc);
+            return NULL;
+        }
+    }
+
+    int
+    table_put_keyword(
+        GlueTable &table, 
+        const StringBridge &kw_name, 
+        const GlueDataType data_type, 
+        const unsigned long n_dims,
+        const unsigned long *dims, 
+        void *data, 
+        ExcInfo &exc
+    )
+    {
+        try {
+            return tablerec_put_field(
+                table.rwKeywordSet(), kw_name, data_type, n_dims, dims, data, exc
+            );
+        } catch (...) {
+            handle_exception(exc);
+            return 1;
+        }
+    }
+
+    int
+    table_put_column_keyword(
+        GlueTable &table, 
+        const StringBridge &col_name, 
+        const StringBridge &kw_name, 
+        const GlueDataType data_type, 
+        const unsigned long n_dims, const unsigned long *dims, void *data, 
+        ExcInfo &exc
+    )
+    {
+        try {
+            casacore::TableColumn col(table, bridge_string(col_name));
+            return tablerec_put_field(col.rwKeywordSet(), kw_name, data_type, n_dims, dims, data, exc);
+        } catch (...) {
+            handle_exception(exc);
+            return 1;
+        }
     }
 
     int
@@ -1157,34 +1662,7 @@ extern "C" {
                             unsigned long dims[8], ExcInfo &exc)
     {
         try {
-            const casacore::TableRecord &rec = row.record();
-            const casacore::RecordDesc &desc = rec.description();
-            casacore::Int field_num = rec.fieldNumber(bridge_string(col_name));
-
-            if (field_num < 0)
-                throw std::runtime_error("unrecognized column name");
-
-            *data_type = rec.type(field_num);
-
-            if (desc.isScalar(field_num))
-                *n_dim = 0;
-            else {
-                // desc.shape() is generic, not specific to the row we're
-                // looking at, so we have to create a TableColumn to get the
-                // cell's shape.
-                casacore::TableColumn col(row.table(), bridge_string(col_name));
-                *n_dim = (int) col.ndim(row.rowNumber());
-
-                if (*n_dim > 8)
-                    throw std::runtime_error("cannot handle cells with data of dimensionality greater than 8");
-
-                const casacore::IPosition shape = col.shape(row.rowNumber());
-
-                for (int i = 0; i < *n_dim; i++)
-                    dims[*n_dim - 1 - i] = (unsigned long) shape[i];
-            }
-
-            return 0;
+            return tablerec_get_field_info(row.record(), col_name, data_type, n_dim, dims, exc);
         } catch (...) {
             handle_exception(exc);
             return 1;
@@ -1198,78 +1676,11 @@ extern "C" {
                        void *data, ExcInfo &exc)
     {
         try {
-            const casacore::TableRecord &rec = row.record();
-            const casacore::RecordDesc &desc = rec.description();
-            casacore::Int field_num = rec.fieldNumber(bridge_string(col_name));
-            casacore::IPosition shape;
-
-            if (field_num < 0)
-                throw std::runtime_error("unrecognized column name");
-
-            if (!desc.isScalar(field_num)) {
-                casacore::TableColumn col(row.table(), bridge_string(col_name));
-                shape = col.shape(row.rowNumber());
-            }
-
-            switch (rec.type(field_num)) {
-
-#define SCALAR_CASE(DTYPE, CPPTYPE) \
-            case casacore::DTYPE: { \
-                CPPTYPE datum; \
-                rec.get(field_num, datum); \
-                *((CPPTYPE *) data) = datum; \
-                break; \
-            }
-
-#define VECTOR_CASE(DTYPE, CPPTYPE) \
-            case casacore::DTYPE: { \
-                casacore::Array<CPPTYPE> array(shape, (CPPTYPE *) data, casacore::SHARE); \
-                rec.get(field_num, array); \
-                break; \
-            }
-
-            SCALAR_CASE(TpBool, casacore::Bool)
-            //SCALAR_CASE(TpChar, casacore::Char)
-            SCALAR_CASE(TpUChar, casacore::uChar)
-            SCALAR_CASE(TpShort, casacore::Short)
-            //SCALAR_CASE(TpUShort, casacore::uShort)
-            SCALAR_CASE(TpInt, casacore::Int)
-            SCALAR_CASE(TpUInt, casacore::uInt)
-            SCALAR_CASE(TpFloat, float)
-            SCALAR_CASE(TpDouble, double)
-            SCALAR_CASE(TpComplex, casacore::Complex)
-            SCALAR_CASE(TpDComplex, casacore::DComplex)
-
-            VECTOR_CASE(TpArrayBool, casacore::Bool)
-            //VECTOR_CASE(TpArrayChar, casacore::Char)
-            VECTOR_CASE(TpArrayUChar, casacore::uChar)
-            VECTOR_CASE(TpArrayShort, casacore::Short)
-            //VECTOR_CASE(TpArrayUShort, casacore::uShort)
-            VECTOR_CASE(TpArrayInt, casacore::Int)
-            VECTOR_CASE(TpArrayUInt, casacore::uInt)
-            VECTOR_CASE(TpArrayFloat, float)
-            VECTOR_CASE(TpArrayDouble, double)
-            VECTOR_CASE(TpArrayComplex, casacore::Complex)
-            VECTOR_CASE(TpArrayDComplex, casacore::DComplex)
-
-#undef SCALAR_CASE
-#undef VECTOR_CASE
-
-            case casacore::TpString:
-                throw std::runtime_error("you must use table_get_cell_string() for string cells");
-
-            case casacore::TpArrayString:
-                throw std::runtime_error("you must use table_get_cell_string_array() for string-array cells");
-
-            default:
-                throw std::runtime_error("unhandled cell data type");
-            }
+            return tablerec_get_field(row.record(), col_name, data, exc);
         } catch (...) {
             handle_exception(exc);
             return 1;
         }
-
-        return 0;
     }
 
     int
@@ -1278,24 +1689,11 @@ extern "C" {
                               ExcInfo &exc)
     {
         try {
-            const casacore::TableRecord &rec = row.record();
-            casacore::Int field_num = rec.fieldNumber(bridge_string(col_name));
-
-            if (field_num < 0)
-                throw std::runtime_error("unrecognized column name");
-
-            if (rec.type(field_num) != casacore::TpString)
-                throw std::runtime_error("row cell must be of TpString type");
-
-            casacore::String datum;
-            rec.get(field_num, datum);
-            unbridge_string(datum, callback, ctxt);
+            return tablerec_get_field_string(row.record(), col_name, callback, ctxt, exc);
         } catch (...) {
             handle_exception(exc);
             return 1;
         }
-
-        return 0;
     }
 
     int
@@ -1304,27 +1702,11 @@ extern "C" {
                                     ExcInfo &exc)
     {
         try {
-            const casacore::TableRecord &rec = row.record();
-            casacore::Int field_num = rec.fieldNumber(bridge_string(col_name));
-
-            if (field_num < 0)
-                throw std::runtime_error("unrecognized column name");
-
-            casacore::TableColumn col(row.table(), bridge_string(col_name));
-            casacore::IPosition shape = col.shape(row.rowNumber());
-
-            if (rec.type(field_num) != casacore::TpArrayString)
-                throw std::runtime_error("row cell must be of TpStringArray type");
-
-            casacore::Array<casacore::String> array(shape);
-            rec.get(field_num, array);
-            unbridge_string_array(array, callback, ctxt);
+            return tablerec_get_field_string_array(row.record(), col_name, callback, ctxt, exc);
         } catch (...) {
             handle_exception(exc);
             return 1;
         }
-
-        return 0;
     }
 
     int
@@ -1333,78 +1715,12 @@ extern "C" {
                        const unsigned long *dims, void *data, ExcInfo &exc)
     {
         casacore::TableRow &row = (casacore::TableRow &) wrap_row;
-
         try {
-            casacore::TableRecord &rec = row.record();
-            casacore::Int field_num = rec.fieldNumber(bridge_string(col_name));
-
-            switch (data_type) {
-
-#define SCALAR_CASE(DTYPE, CPPTYPE) \
-            case casacore::DTYPE: { \
-                rec.define(field_num, *(CPPTYPE *) data); \
-                break; \
-            }
-
-#define VECTOR_CASE(DTYPE, CPPTYPE) \
-            case casacore::DTYPE: { \
-                casacore::IPosition shape(n_dims); \
-                for (casacore::uInt i = 0; i < n_dims; i++) \
-                    shape[i] = dims[n_dims - 1 - i]; \
-                casacore::Array<CPPTYPE> array(shape, (CPPTYPE *) data, casacore::SHARE); \
-                rec.define(field_num, array); \
-                break; \
-            }
-
-            SCALAR_CASE(TpBool, casacore::Bool)
-            //SCALAR_CASE(TpChar, casacore::Char)
-            SCALAR_CASE(TpUChar, casacore::uChar)
-            SCALAR_CASE(TpShort, casacore::Short)
-            //SCALAR_CASE(TpUShort, casacore::uShort)
-            SCALAR_CASE(TpInt, casacore::Int)
-            SCALAR_CASE(TpUInt, casacore::uInt)
-            SCALAR_CASE(TpFloat, float)
-            SCALAR_CASE(TpDouble, double)
-            SCALAR_CASE(TpComplex, casacore::Complex)
-            SCALAR_CASE(TpDComplex, casacore::DComplex)
-
-            VECTOR_CASE(TpArrayBool, casacore::Bool)
-            //VECTOR_CASE(TpArrayChar, casacore::Char)
-            VECTOR_CASE(TpArrayUChar, casacore::uChar)
-            VECTOR_CASE(TpArrayShort, casacore::Short)
-            //VECTOR_CASE(TpArrayUShort, casacore::uShort)
-            VECTOR_CASE(TpArrayInt, casacore::Int)
-            VECTOR_CASE(TpArrayUInt, casacore::uInt)
-            VECTOR_CASE(TpArrayFloat, float)
-            VECTOR_CASE(TpArrayDouble, double)
-            VECTOR_CASE(TpArrayComplex, casacore::Complex)
-            VECTOR_CASE(TpArrayDComplex, casacore::DComplex)
-
-#undef SCALAR_CASE
-#undef VECTOR_CASE
-
-            case casacore::TpString: {
-                rec.define(field_num, bridge_string(*(StringBridge *) data));
-                break;
-            }
-
-            case casacore::TpArrayString: {
-                casacore::IPosition shape(n_dims);
-                for (casacore::uInt i = 0; i < n_dims; i++)
-                    shape[i] = dims[n_dims - 1 - i];
-                rec.define(field_num, bridge_string_array((const StringBridge *) data, shape));
-                break;
-            }
-
-            default:
-                throw std::runtime_error("unhandled cell data type");
-            }
+            return tablerec_put_field(row.record(), col_name, data_type, n_dims, dims, data, exc);
         } catch (...) {
             handle_exception(exc);
             return 1;
         }
-
-        return 0;
     }
 
     int
