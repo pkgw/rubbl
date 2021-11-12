@@ -6,7 +6,7 @@ use failure_derive::Fail;
 use ndarray::Dimension;
 use rubbl_core::num::{DimFromShapeSlice, DimensionMismatchError};
 pub use rubbl_core::{Array, Complex};
-use std::fmt;
+use std::fmt::{self, Debug};
 use std::path::Path;
 
 mod glue;
@@ -417,6 +417,18 @@ unsafe extern "C" fn casatables_keyword_info_cb<F>(
     f((&*name).to_rust(), dtype)
 }
 
+unsafe extern "C" fn casatables_keyword_repr_cb<F>(
+    name: *const glue::StringBridge,
+    dtype: glue::GlueDataType,
+    repr: *const glue::StringBridge,
+    ctxt: *mut std::os::raw::c_void,
+) where
+    F: FnMut(String, glue::GlueDataType, String),
+{
+    let f: &mut F = &mut *(ctxt as *mut F);
+    f((&*name).to_rust(), dtype, (&*repr).to_rust())
+}
+
 // The next part: wrappers that allow us to invoke the various callback-having
 // functions with Rust closures. The main point to having these functions is
 // basically to be able to assign a name to the function type `F`.
@@ -540,6 +552,22 @@ where
     glue::tablerec_get_keyword_info(
         handle,
         Some(casatables_keyword_info_cb::<F>),
+        &mut f as *mut _ as *mut std::os::raw::c_void,
+        exc_info,
+    )
+}
+
+unsafe fn invoke_tablerec_get_keyword_repr<F>(
+    handle: *mut glue::GlueTableRecord,
+    exc_info: &mut glue::ExcInfo,
+    mut f: F,
+) -> std::os::raw::c_int
+where
+    F: FnMut(String, glue::GlueDataType, String),
+{
+    glue::tablerec_get_keyword_repr(
+        handle,
+        Some(casatables_keyword_repr_cb::<F>),
         &mut f as *mut _ as *mut std::os::raw::c_void,
         exc_info,
     )
@@ -1280,6 +1308,149 @@ impl Table {
         Ok(())
     }
 
+    // TODO: dedup from TableDesc::put_keyword
+    pub fn put_keyword<T: CasaDataType>(
+        &mut self,
+        kw_name: &str,
+        value: &T,
+    ) -> Result<(), CasacoreError> {
+        let ckw_name = glue::StringBridge::from_rust(kw_name);
+        let mut shape = Vec::new();
+
+        value.casatables_put_shape(&mut shape);
+
+        if T::DATA_TYPE == glue::GlueDataType::TpString {
+            let as_string = T::casatables_string_pass_through_out(value);
+            let glue_string = glue::StringBridge::from_rust(&as_string);
+
+            let rv = unsafe {
+                glue::table_put_keyword(
+                    self.handle,
+                    &ckw_name,
+                    T::DATA_TYPE,
+                    shape.len() as u64,
+                    shape.as_ptr(),
+                    &glue_string as *const glue::StringBridge as _,
+                    &mut self.exc_info,
+                )
+            };
+
+            if rv != 0 {
+                return self.exc_info.as_err();
+            }
+        } else if T::DATA_TYPE == glue::GlueDataType::TpArrayString {
+            let glue_strings = T::casatables_stringvec_pass_through_out(value);
+
+            let rv = unsafe {
+                glue::table_put_keyword(
+                    self.handle,
+                    &ckw_name,
+                    T::DATA_TYPE,
+                    shape.len() as u64,
+                    shape.as_ptr(),
+                    glue_strings.as_ptr() as _,
+                    &mut self.exc_info,
+                )
+            };
+
+            if rv != 0 {
+                return self.exc_info.as_err();
+            }
+        } else {
+            let rv = unsafe {
+                glue::table_put_keyword(
+                    self.handle,
+                    &ckw_name,
+                    T::DATA_TYPE,
+                    shape.len() as u64,
+                    shape.as_ptr(),
+                    value.casatables_as_buf() as _,
+                    &mut self.exc_info,
+                )
+            };
+
+            if rv != 0 {
+                return self.exc_info.as_err();
+            }
+        }
+
+        Ok(())
+    }
+
+    // TODO: dedup from TableDesc::put_column_keyword
+    pub fn put_column_keyword<T: CasaDataType>(
+        &mut self,
+        col_name: &str,
+        kw_name: &str,
+        value: &T,
+    ) -> Result<(), CasacoreError> {
+        let ckw_name = glue::StringBridge::from_rust(kw_name);
+        let ccol_name = glue::StringBridge::from_rust(col_name);
+        let mut shape = Vec::new();
+
+        value.casatables_put_shape(&mut shape);
+
+        if T::DATA_TYPE == glue::GlueDataType::TpString {
+            let as_string = T::casatables_string_pass_through_out(value);
+            let glue_string = glue::StringBridge::from_rust(&as_string);
+
+            let rv = unsafe {
+                glue::table_put_column_keyword(
+                    self.handle,
+                    &ccol_name,
+                    &ckw_name,
+                    T::DATA_TYPE,
+                    shape.len() as u64,
+                    shape.as_ptr(),
+                    &glue_string as *const glue::StringBridge as _,
+                    &mut self.exc_info,
+                )
+            };
+
+            if rv != 0 {
+                return self.exc_info.as_err();
+            }
+        } else if T::DATA_TYPE == glue::GlueDataType::TpArrayString {
+            let glue_strings = T::casatables_stringvec_pass_through_out(value);
+
+            let rv = unsafe {
+                glue::table_put_column_keyword(
+                    self.handle,
+                    &ccol_name,
+                    &ckw_name,
+                    T::DATA_TYPE,
+                    shape.len() as u64,
+                    shape.as_ptr(),
+                    glue_strings.as_ptr() as _,
+                    &mut self.exc_info,
+                )
+            };
+
+            if rv != 0 {
+                return self.exc_info.as_err();
+            }
+        } else {
+            let rv = unsafe {
+                glue::table_put_column_keyword(
+                    self.handle,
+                    &ccol_name,
+                    &ckw_name,
+                    T::DATA_TYPE,
+                    shape.len() as u64,
+                    shape.as_ptr(),
+                    value.casatables_as_buf() as _,
+                    &mut self.exc_info,
+                )
+            };
+
+            if rv != 0 {
+                return self.exc_info.as_err();
+            }
+        }
+
+        Ok(())
+    }
+
     /// Return a TableRecord containing all keyword / value pairs for this table
     pub fn get_keyword_record(&mut self) -> Result<TableRecord, CasacoreError> {
         let handle = unsafe { glue::table_get_keywords(self.handle, &mut self.exc_info) };
@@ -1346,12 +1517,15 @@ impl Table {
             Some(v)
         };
 
+        let keywords = self.get_column_keyword_record(col_name).unwrap();
+
         Ok(ColumnDescription {
             name: col_name.to_owned(),
-            data_type: data_type,
+            data_type,
             is_scalar: is_scalar != 0,
             is_fixed_shape: is_fixed_shape != 0,
-            shape: shape,
+            shape,
+            keywords
         })
     }
 
@@ -1815,6 +1989,7 @@ pub struct ColumnDescription {
     is_scalar: bool,
     is_fixed_shape: bool,
     shape: Option<Vec<u64>>,
+    keywords: TableRecord,
 }
 
 impl ColumnDescription {
@@ -2080,6 +2255,22 @@ impl TableRecord {
         Ok(result)
     }
 
+    pub fn keyword_names_types_reprs(&mut self) -> Result<Vec<(String, GlueDataType, String)>, CasacoreError> {
+        let mut result = Vec::new();
+
+        let rv = unsafe {
+            invoke_tablerec_get_keyword_repr(self.handle, &mut self.exc_info, |name, type_, repr | {
+                result.push((name, type_, repr));
+            })
+        };
+
+        if rv != 0 {
+            return self.exc_info.as_err();
+        }
+
+        Ok(result)
+    }
+
     pub fn get_field<T: CasaDataType>(&mut self, col_name: &str) -> Result<T, Error> {
         let ccol_name = glue::StringBridge::from_rust(col_name);
         let mut data_type = glue::GlueDataType::TpOther;
@@ -2250,6 +2441,20 @@ impl TableRecord {
 impl PartialEq for TableRecord {
     fn eq(&self, other: &Self) -> bool {
         unsafe { glue::tablerec_eq(self.handle, other.handle) }
+    }
+}
+
+impl Eq for TableRecord {}
+
+impl Debug for TableRecord {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        // This is to avoid mutably borrowing self
+        let mut exc_info = unsafe { std::mem::zeroed::<glue::ExcInfo>() };
+        write!(f, "TableRecord {{ ").unwrap();
+        unsafe { invoke_tablerec_get_keyword_repr(self.handle, &mut exc_info, |name, type_, repr| {
+            write!(f, "{}:{} = {}, ", name, type_, repr).unwrap();
+        }) };
+        write!(f, " }}")
     }
 }
 
@@ -2783,5 +2988,17 @@ mod tests {
         assert_eq!(meas_type, "frequency");
         let meas_ref: String = result_meas_info.get_field("Ref").unwrap();
         assert_eq!(meas_ref, "LSRK");
+    }
+
+    #[test]
+    pub fn tablerec_equality() {
+        let mut rec1 = TableRecord::new().unwrap();
+        rec1.put_field("field1", &"value1".to_string()).unwrap();
+        let mut rec2 = TableRecord::new().unwrap();
+        rec2.put_field("field1", &"value1".to_string()).unwrap();
+        assert_eq!(rec1, rec2);
+
+        rec2.put_field("field2", &"value2".to_string()).unwrap();
+        assert_ne!(rec1, rec2);
     }
 }

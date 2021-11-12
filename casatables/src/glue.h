@@ -88,6 +88,7 @@ typedef void (*StringBridgeCallback)(const StringBridge *name, void *ctxt);
 // A more specific callback type for table_get_keyword_info, in which there is
 // additional information we'd like to to transfer.
 typedef void (*KeywordInfoCallback)(const StringBridge *name, GlueDataType dtype, void *ctxt);
+typedef void (*KeywordReprCallback)(const StringBridge *name, GlueDataType dtype, const StringBridge *repr, void *ctxt);
 
 typedef enum TableOpenMode
 {
@@ -146,6 +147,13 @@ extern "C"
         KeywordInfoCallback callback,
         void *ctxt,
         ExcInfo &exc);
+    int
+    tablerec_get_keyword_repr(
+        const GlueTableRecord &rec, 
+        KeywordReprCallback callback, 
+        void *ctxt, 
+        ExcInfo &exc
+    );
     int tablerec_get_field_info(
         const GlueTableRecord &rec,
         const StringBridge &col_name,
