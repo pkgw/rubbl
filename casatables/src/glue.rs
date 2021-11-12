@@ -163,22 +163,6 @@ pub type KeywordInfoCallback = ::std::option::Option<
         ctxt: *mut ::std::os::raw::c_void,
     ),
 >;
-pub type KeywordReprCallback = ::std::option::Option<
-    unsafe extern "C" fn(
-        name: *const StringBridge,
-        dtype: GlueDataType,
-        repr: *const StringBridge,
-        ctxt: *mut ::std::os::raw::c_void,
-    ),
->;
-pub type KeywordRecordCallback = ::std::option::Option<
-    unsafe extern "C" fn(
-        name: *const StringBridge,
-        dtype: GlueDataType,
-        rec: *mut ::std::os::raw::c_void,
-        ctxt: *mut ::std::os::raw::c_void,
-    ),
->;
 #[repr(u32)]
 #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
 pub enum TableOpenMode {
@@ -216,7 +200,7 @@ extern "C" {
 extern "C" {
     pub fn tablerec_get_keyword_info(
         rec: *const GlueTableRecord,
-        callback: KeywordReprCallback,
+        callback: KeywordInfoCallback,
         ctxt: *mut ::std::os::raw::c_void,
         exc: *mut ExcInfo,
     ) -> ::std::os::raw::c_int;
@@ -404,7 +388,7 @@ extern "C" {
 extern "C" {
     pub fn table_get_keyword_info(
         table: *const GlueTable,
-        callback: KeywordReprCallback,
+        callback: KeywordInfoCallback,
         ctxt: *mut ::std::os::raw::c_void,
         exc: *mut ExcInfo,
     ) -> ::std::os::raw::c_int;
@@ -413,7 +397,7 @@ extern "C" {
     pub fn table_get_column_keyword_info(
         table: *const GlueTable,
         col_name: *const StringBridge,
-        callback: KeywordReprCallback,
+        callback: KeywordInfoCallback,
         ctxt: *mut ::std::os::raw::c_void,
         exc: *mut ExcInfo,
     ) -> ::std::os::raw::c_int;

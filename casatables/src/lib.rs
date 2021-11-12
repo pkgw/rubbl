@@ -417,18 +417,6 @@ unsafe extern "C" fn casatables_keyword_info_cb<F>(
     f((&*name).to_rust(), dtype)
 }
 
-unsafe extern "C" fn casatables_keyword_repr_cb<F>(
-    name: *const glue::StringBridge,
-    dtype: glue::GlueDataType,
-    repr: *const glue::StringBridge,
-    ctxt: *mut std::os::raw::c_void,
-) where
-    F: FnMut(String, glue::GlueDataType, String),
-{
-    let f: &mut F = &mut *(ctxt as *mut F);
-    f((&*name).to_rust(), dtype, (&*repr).to_rust())
-}
-
 // The next part: wrappers that allow us to invoke the various callback-having
 // functions with Rust closures. The main point to having these functions is
 // basically to be able to assign a name to the function type `F`.
@@ -455,11 +443,11 @@ unsafe fn invoke_table_get_keyword_info<F>(
     mut f: F,
 ) -> std::os::raw::c_int
 where
-    F: FnMut(String, glue::GlueDataType, String),
+    F: FnMut(String, glue::GlueDataType),
 {
     glue::table_get_keyword_info(
         handle,
-        Some(casatables_keyword_repr_cb::<F>),
+        Some(casatables_keyword_info_cb::<F>),
         &mut f as *mut _ as *mut std::os::raw::c_void,
         exc_info,
     )
@@ -472,12 +460,12 @@ unsafe fn invoke_table_get_column_keyword_info<F>(
     mut f: F,
 ) -> std::os::raw::c_int
 where
-    F: FnMut(String, glue::GlueDataType, String),
+    F: FnMut(String, glue::GlueDataType),
 {
     glue::table_get_column_keyword_info(
         handle,
         ccol_name,
-        Some(casatables_keyword_repr_cb::<F>),
+        Some(casatables_keyword_info_cb::<F>),
         &mut f as *mut _ as *mut std::os::raw::c_void,
         exc_info,
     )
@@ -547,11 +535,11 @@ unsafe fn invoke_tablerec_get_keyword_info<F>(
     mut f: F,
 ) -> std::os::raw::c_int
 where
-    F: FnMut(String, glue::GlueDataType, String),
+    F: FnMut(String, glue::GlueDataType),
 {
     glue::tablerec_get_keyword_info(
         handle,
-        Some(casatables_keyword_repr_cb::<F>),
+        Some(casatables_keyword_info_cb::<F>),
         &mut f as *mut _ as *mut std::os::raw::c_void,
         exc_info,
     )
@@ -1233,13 +1221,11 @@ impl Table {
     }
 
     /// Return all of the names of keywords whose values are type `TpTable`.
-    ///
-    /// TODO: move this into `TableRecord`?
     pub fn table_keyword_names(&mut self) -> Result<Vec<String>, CasacoreError> {
         let mut result = Vec::new();
 
         let rv = unsafe {
-            invoke_table_get_keyword_info(self.handle, &mut self.exc_info, |name, dtype, _| {
+            invoke_table_get_keyword_info(self.handle, &mut self.exc_info, |name, dtype| {
                 if dtype == glue::GlueDataType::TpTable {
                     result.push(name);
                 }
@@ -1253,10 +1239,14 @@ impl Table {
         Ok(result)
     }
 
-    pub fn keyword_dump(&mut self) -> Result<(), CasacoreError> {
+    /// Return all of the names of keywords for a given column
+    pub fn column_keyword_names(&mut self, col_name: &str) -> Result<Vec<String>, CasacoreError> {
+        let ccol_name = glue::StringBridge::from_rust(col_name);
+        let mut result = Vec::new();
+
         let rv = unsafe {
-            invoke_table_get_keyword_info(self.handle, &mut self.exc_info, |name, dtype, repr| {
-                println!(" -> {}:{:?} = {}", name, dtype, repr);
+            invoke_table_get_column_keyword_info(self.handle, &ccol_name, &mut self.exc_info, |name, dtype| {
+                result.push(name);
             })
         };
 
@@ -1264,33 +1254,10 @@ impl Table {
             return self.exc_info.as_err();
         }
 
-        Ok(())
-    }
-
-    pub fn column_keyword_dump(&mut self, col_name: &str) -> Result<(), CasacoreError> {
-        let ccol_name = glue::StringBridge::from_rust(col_name);
-
-        let rv = unsafe {
-            invoke_table_get_column_keyword_info(
-                self.handle,
-                &ccol_name,
-                &mut self.exc_info,
-                |name, dtype, repr| {
-                    println!(" -> {}:{:?} = {}", name, dtype, repr);
-                },
-            )
-        };
-
-        if rv != 0 {
-            return self.exc_info.as_err();
-        }
-
-        Ok(())
+        Ok(result)
     }
 
     /// Define a keyword of type `TpTable` in this table
-    ///
-    /// TODO: move this into `TableRecord`?
     pub fn put_table_keyword(&mut self, kw_name: &str, table: Table) -> Result<(), CasacoreError> {
         let ckw_name = glue::StringBridge::from_rust(kw_name);
         let shape = Vec::new();
@@ -2101,7 +2068,7 @@ impl TableRecord {
         let mut result = Vec::new();
 
         let rv = unsafe {
-            invoke_tablerec_get_keyword_info(self.handle, &mut self.exc_info, |name, _, _| {
+            invoke_tablerec_get_keyword_info(self.handle, &mut self.exc_info, |name, _| {
                 result.push(name);
             })
         };
@@ -2111,25 +2078,6 @@ impl TableRecord {
         }
 
         Ok(result)
-    }
-
-    /// Dump all of the keywords in the record.
-    pub fn keyword_dump(&mut self) -> Result<(), CasacoreError> {
-        let rv = unsafe {
-            invoke_tablerec_get_keyword_info(
-                self.handle,
-                &mut self.exc_info,
-                |name, dtype, repr| {
-                    println!(" -> {}:{:?} = {}", name, dtype, repr);
-                },
-            )
-        };
-
-        if rv != 0 {
-            return self.exc_info.as_err();
-        }
-
-        Ok(())
     }
 
     pub fn get_field<T: CasaDataType>(&mut self, col_name: &str) -> Result<T, Error> {
@@ -2820,6 +2768,8 @@ mod tests {
             .unwrap();
         let keywords = result_tablerec.keyword_names().unwrap();
         assert_eq!(keywords, vec!["QuantumUnits", "MEASINFO"]);
+        let col_keywords = source_table.column_keyword_names("REST_FREQUENCY").unwrap();
+        assert_eq!(keywords, col_keywords);
 
         let units: Vec<String> = result_tablerec.get_field("QuantumUnits").unwrap();
         assert_eq!(units, ["Hz"]);

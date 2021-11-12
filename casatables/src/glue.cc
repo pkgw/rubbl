@@ -169,14 +169,13 @@ extern "C" {
     int
     tablerec_get_keyword_info(
         const GlueTableRecord &rec, 
-        KeywordReprCallback callback, 
+        KeywordInfoCallback callback, 
         void *ctxt, 
         ExcInfo &exc
     )
     {
         try {
             StringBridge name;
-            StringBridge repr;
             casacore::uInt n_kws = rec.nfields();
 
             for (casacore::uInt i = 0; i < n_kws; i++) {
@@ -186,21 +185,7 @@ extern "C" {
                 const casacore::String n = rec.name(i);
                 name.data = n.data();
                 name.n_bytes = n.length();
-
-                std::ostringstream os;
-                const casacore::ValueHolder vh = rec.asValueHolder(i);
-                if (rec.type(i) == casacore::TpRecord) {
-                    os << "{" << std::endl;
-                }
-                os << vh;
-                if (rec.type(i) == casacore::TpRecord) {
-                    os << "}";
-                }
-
-                const casacore::String r(os.str());
-                repr.data = r.data();
-                repr.n_bytes = r.length();
-                callback(&name, rec.type(i), &repr, ctxt);
+                callback(&name, rec.type(i),  ctxt);
             }
         } catch (...) {
             handle_exception(exc);
@@ -1136,7 +1121,7 @@ extern "C" {
     int
     table_get_keyword_info(
         const GlueTable &table, 
-        KeywordReprCallback callback, 
+        KeywordInfoCallback callback, 
         void *ctxt, 
         ExcInfo &exc
     )
@@ -1153,7 +1138,7 @@ extern "C" {
     table_get_column_keyword_info(
         const GlueTable &table, 
         const StringBridge &col_name, 
-        KeywordReprCallback callback,
+        KeywordInfoCallback callback,
         void *ctxt, 
         ExcInfo &exc
     )

@@ -88,8 +88,6 @@ typedef void (*StringBridgeCallback)(const StringBridge *name, void *ctxt);
 // A more specific callback type for table_get_keyword_info, in which there is
 // additional information we'd like to to transfer.
 typedef void (*KeywordInfoCallback)(const StringBridge *name, GlueDataType dtype, void *ctxt);
-typedef void (*KeywordReprCallback)(const StringBridge *name, GlueDataType dtype, const StringBridge *repr, void *ctxt);
-typedef void (*KeywordRecordCallback)(const StringBridge *name, GlueDataType dtype, void *rec, void *ctxt);
 
 typedef enum TableOpenMode
 {
@@ -145,7 +143,7 @@ extern "C"
     bool tablerec_eq(const GlueTableRecord &rec, const GlueTableRecord &other);
     int tablerec_get_keyword_info(
         const GlueTableRecord &rec,
-        KeywordReprCallback callback,
+        KeywordInfoCallback callback,
         void *ctxt,
         ExcInfo &exc);
     int tablerec_get_field_info(
@@ -258,10 +256,10 @@ extern "C"
     int table_get_column_names(const GlueTable &table, StringBridgeCallback callback,
                                void *ctxt, ExcInfo &exc);
     unsigned long table_n_keywords(const GlueTable &table);
-    int table_get_keyword_info(const GlueTable &table, KeywordReprCallback callback,
+    int table_get_keyword_info(const GlueTable &table, KeywordInfoCallback callback,
                                void *ctxt, ExcInfo &exc);
     int table_get_column_keyword_info(const GlueTable &table, const StringBridge &col_name,
-                                      KeywordReprCallback callback, void *ctxt, ExcInfo &exc);
+                                      KeywordInfoCallback callback, void *ctxt, ExcInfo &exc);
     const GlueTableRecord *table_get_keywords(GlueTable &table, ExcInfo &exc);
     const GlueTableRecord *table_get_column_keywords(
         GlueTable &table,
