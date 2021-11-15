@@ -2209,6 +2209,13 @@ impl Drop for TableRow {
     }
 }
 
+/// FIXME: currently, to avoid potential double-frees, TableRecords are only created standalone, or 
+/// as copies of TableRecords owned by something else.
+/// 
+/// Ideally, there would be a lot of utility in having rewritable TableRecords, however this would 
+/// require keeping track of whether a TableRecord is owned, and not freeing owned TableRecords.
+/// 
+/// Further discussion here: https://github.com/pkgw/rubbl/pull/181#issuecomment-968493738
 #[derive(Clone)]
 pub struct TableRecord {
     handle: *mut glue::GlueTableRecord,
@@ -2487,6 +2494,7 @@ impl CasaDataType for TableRecord {
 }
 
 impl Drop for TableRecord {
+    /// Free the casacore::TableRecord handle
     fn drop(&mut self) {
         // TODO: we want to free standalone tablerecords, but not those which
         // are associated with a table, because they are freed automatically
