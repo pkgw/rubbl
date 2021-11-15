@@ -1273,7 +1273,7 @@ impl Table {
         let mut result = Vec::new();
 
         let rv = unsafe {
-            invoke_table_get_column_keyword_info(self.handle, &ccol_name, &mut self.exc_info, |name, dtype| {
+            invoke_table_get_column_keyword_info(self.handle, &ccol_name, &mut self.exc_info, |name, _dtype| {
                 result.push(name);
             })
         };
