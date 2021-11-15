@@ -939,6 +939,24 @@ extern "C" {
     }
 
     int
+    table_get_file_name(
+        const GlueTable &table,
+        StringBridgeCallback callback, 
+        void *ctxt,
+        ExcInfo &exc
+    )
+    {
+        try {
+            casacore::String file_name = table.tableName();
+            unbridge_string(file_name, callback, ctxt);
+        } catch (...) {
+            handle_exception(exc);
+            return 1;
+        }
+        return 0;
+    }
+
+    int
     table_get_column_names(const GlueTable &table, StringBridgeCallback callback,
                            void *ctxt, ExcInfo &exc)
     {

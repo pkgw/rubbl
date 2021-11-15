@@ -391,6 +391,14 @@ extern "C" {
     pub fn table_n_columns(table: *const GlueTable) -> ::std::os::raw::c_ulong;
 }
 extern "C" {
+    pub fn table_get_file_name(
+        table: *const GlueTable,
+        callback: StringBridgeCallback,
+        ctxt: *mut ::std::os::raw::c_void,
+        exc: *mut ExcInfo,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
     pub fn table_get_column_names(
         table: *const GlueTable,
         callback: StringBridgeCallback,

@@ -261,6 +261,7 @@ extern "C"
     void table_close_and_free(GlueTable *table, ExcInfo &exc);
     unsigned long table_n_rows(const GlueTable &table);
     unsigned long table_n_columns(const GlueTable &table);
+    int table_get_file_name(const GlueTable &table, StringBridgeCallback callback, void *ctxt, ExcInfo &exc);
     int table_get_column_names(const GlueTable &table, StringBridgeCallback callback,
                                void *ctxt, ExcInfo &exc);
     unsigned long table_n_keywords(const GlueTable &table);

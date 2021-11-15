@@ -521,6 +521,22 @@ where
     )
 }
 
+unsafe fn invoke_table_get_file_name<F>(
+    handle: *mut glue::GlueTable,
+    exc_info: &mut glue::ExcInfo,
+    mut f: F,
+) -> std::os::raw::c_int
+where
+    F: FnMut(String),
+{
+    glue::table_get_file_name(
+        handle,
+        Some(casatables_string_bridge_cb::<F>),
+        &mut f as *mut _ as *mut std::os::raw::c_void,
+        exc_info,
+    )
+}
+
 unsafe fn invoke_table_get_cell_string_array<F>(
     handle: *mut glue::GlueTable,
     ccol_name: &glue::StringBridge,
@@ -1112,6 +1128,24 @@ impl Table {
         unsafe { glue::table_n_columns(self.handle) as usize }
     }
 
+    /// The path containing the table.
+    pub fn file_name(&self) -> Result<String, CasacoreError> {
+        // this is to allow filename access without &mut.
+        let mut exc_info = unsafe { std::mem::zeroed::<glue::ExcInfo>() };
+        let mut result: String = "".into();
+        let rv = unsafe {
+            invoke_table_get_file_name(self.handle, &mut exc_info, |file_name| {
+                result.extend(file_name.chars());
+            }) as usize
+        };
+
+        if rv != 0 {
+            return exc_info.as_err();
+        }
+
+        Ok(result)
+    }
+
     /// A vector containing all of the column names in the table
     ///
     /// # Errors
@@ -1273,9 +1307,14 @@ impl Table {
         let mut result = Vec::new();
 
         let rv = unsafe {
-            invoke_table_get_column_keyword_info(self.handle, &ccol_name, &mut self.exc_info, |name, _dtype| {
-                result.push(name);
-            })
+            invoke_table_get_column_keyword_info(
+                self.handle,
+                &ccol_name,
+                &mut self.exc_info,
+                |name, _dtype| {
+                    result.push(name);
+                },
+            )
         };
 
         if rv != 0 {
@@ -1525,7 +1564,7 @@ impl Table {
             is_scalar: is_scalar != 0,
             is_fixed_shape: is_fixed_shape != 0,
             shape,
-            keywords
+            keywords,
         })
     }
 
@@ -1974,6 +2013,15 @@ impl Table {
     }
 }
 
+impl Debug for Table {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Table")
+            .field("handle", &self.handle)
+            .field("name", &self.file_name().unwrap())
+            .finish()
+    }
+}
+
 impl Drop for Table {
     fn drop(&mut self) {
         // FIXME: not sure if this function can actually produce useful
@@ -2209,12 +2257,12 @@ impl Drop for TableRow {
     }
 }
 
-/// FIXME: currently, to avoid potential double-frees, TableRecords are only created standalone, or 
+/// FIXME: currently, to avoid potential double-frees, TableRecords are only created standalone, or
 /// as copies of TableRecords owned by something else.
-/// 
-/// Ideally, there would be a lot of utility in having rewritable TableRecords, however this would 
+///
+/// Ideally, there would be a lot of utility in having rewritable TableRecords, however this would
 /// require keeping track of whether a TableRecord is owned, and not freeing owned TableRecords.
-/// 
+///
 /// Further discussion here: https://github.com/pkgw/rubbl/pull/181#issuecomment-968493738
 #[derive(Clone)]
 pub struct TableRecord {
@@ -2262,13 +2310,19 @@ impl TableRecord {
         Ok(result)
     }
 
-    pub fn keyword_names_types_reprs(&mut self) -> Result<Vec<(String, GlueDataType, String)>, CasacoreError> {
+    pub fn keyword_names_types_reprs(
+        &mut self,
+    ) -> Result<Vec<(String, GlueDataType, String)>, CasacoreError> {
         let mut result = Vec::new();
 
         let rv = unsafe {
-            invoke_tablerec_get_keyword_repr(self.handle, &mut self.exc_info, |name, type_, repr | {
-                result.push((name, type_, repr));
-            })
+            invoke_tablerec_get_keyword_repr(
+                self.handle,
+                &mut self.exc_info,
+                |name, type_, repr| {
+                    result.push((name, type_, repr));
+                },
+            )
         };
 
         if rv != 0 {
@@ -2458,9 +2512,11 @@ impl Debug for TableRecord {
         // This is to avoid mutably borrowing self
         let mut exc_info = unsafe { std::mem::zeroed::<glue::ExcInfo>() };
         write!(f, "TableRecord {{ ").unwrap();
-        unsafe { invoke_tablerec_get_keyword_repr(self.handle, &mut exc_info, |name, type_, repr| {
-            write!(f, "{}:{} = {}, ", name, type_, repr).unwrap();
-        }) };
+        unsafe {
+            invoke_tablerec_get_keyword_repr(self.handle, &mut exc_info, |name, type_, repr| {
+                write!(f, "{}:{} = {}, ", name, type_, repr).unwrap();
+            })
+        };
         write!(f, " }}")
     }
 }
@@ -3008,5 +3064,21 @@ mod tests {
 
         rec2.put_field("field2", &"value2".to_string()).unwrap();
         assert_ne!(rec1, rec2);
+    }
+
+    #[test]
+    pub fn table_debug() {
+        let tmp_dir = tempdir().unwrap();
+        let root_table_path = tmp_dir.path().join("test.ms");
+        // First create a table description for our base table.
+        // Use TDM_SCRATCH to avoid writing the .tabdsc to disk.
+        let root_table_desc = TableDesc::new("", TableDescCreateMode::TDM_SCRATCH).unwrap();
+        let root_table = Table::new(&root_table_path, root_table_desc, 1, TableCreateMode::New).unwrap();
+
+        assert_eq!(root_table.file_name().unwrap(), root_table_path.to_str().unwrap());
+
+        let table_debug = format!("{:?}", root_table);
+
+        assert!(table_debug.contains(root_table_path.to_str().unwrap()));
     }
 }
