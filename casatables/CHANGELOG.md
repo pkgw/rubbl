@@ -1,3 +1,16 @@
+# rubbl_casatables 0.6.0 (2021-11-16)
+
+Lots more work on the `rubbl_casatables` crate, including the last piece of
+functionality needed to create Measurement Sets from scratch using the Rubbl
+framework!
+
+- Add the ability to work with keyword records for tables and individual columns
+  (#181, @derwentx). 
+- Implement `Debug` for `Table` (#181, @derwentx).
+- Add `Table::file_name` (#181, @derwentx).
+- Expand and improve the API documentation (#181, @derwentx).
+
+
 # rubbl_casatables 0.5.1 (2021-11-04)
 
 - No code changes from previous release. There was a problem publishing the
