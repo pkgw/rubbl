@@ -68,6 +68,16 @@ impl Clone for GlueTableDesc {
 }
 #[repr(C)]
 #[derive(Debug, Copy)]
+pub struct GlueTableRecord {
+    _unused: [u8; 0],
+}
+impl Clone for GlueTableRecord {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[derive(Debug, Copy)]
 pub struct StringBridge {
     pub data: *const ::std::os::raw::c_void,
     pub n_bytes: ::std::os::raw::c_ulong,
@@ -153,6 +163,14 @@ pub type KeywordInfoCallback = ::std::option::Option<
         ctxt: *mut ::std::os::raw::c_void,
     ),
 >;
+pub type KeywordReprCallback = ::std::option::Option<
+    unsafe extern "C" fn(
+        name: *const StringBridge,
+        dtype: GlueDataType,
+        repr: *const StringBridge,
+        ctxt: *mut ::std::os::raw::c_void,
+    ),
+>;
 #[repr(u32)]
 #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
 pub enum TableOpenMode {
@@ -179,6 +197,89 @@ extern "C" {
     pub fn data_type_get_element_size(ty: GlueDataType) -> ::std::os::raw::c_int;
 }
 extern "C" {
+    pub fn tablerec_create(exc: *mut ExcInfo) -> *mut GlueTableRecord;
+}
+extern "C" {
+    pub fn tablerec_copy(other: *const GlueTableRecord, exc: *mut ExcInfo) -> *mut GlueTableRecord;
+}
+extern "C" {
+    pub fn tablerec_eq(rec: *const GlueTableRecord, other: *const GlueTableRecord) -> bool;
+}
+extern "C" {
+    pub fn tablerec_get_keyword_info(
+        rec: *const GlueTableRecord,
+        callback: KeywordInfoCallback,
+        ctxt: *mut ::std::os::raw::c_void,
+        exc: *mut ExcInfo,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn tablerec_get_keyword_repr(
+        rec: *const GlueTableRecord,
+        callback: KeywordReprCallback,
+        ctxt: *mut ::std::os::raw::c_void,
+        exc: *mut ExcInfo,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn tablerec_get_field_info(
+        rec: *const GlueTableRecord,
+        col_name: *const StringBridge,
+        data_type: *mut GlueDataType,
+        n_dim: *mut ::std::os::raw::c_int,
+        dims: *mut ::std::os::raw::c_ulong,
+        exc: *mut ExcInfo,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn tablerec_get_field(
+        rec: *const GlueTableRecord,
+        field_name: *const StringBridge,
+        data: *mut ::std::os::raw::c_void,
+        exc: *mut ExcInfo,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn tablerec_get_field_string(
+        rec: *const GlueTableRecord,
+        col_name: *const StringBridge,
+        callback: StringBridgeCallback,
+        ctxt: *mut ::std::os::raw::c_void,
+        exc: *mut ExcInfo,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn tablerec_get_field_string_array(
+        rec: *const GlueTableRecord,
+        col_name: *const StringBridge,
+        callback: StringBridgeCallback,
+        ctxt: *mut ::std::os::raw::c_void,
+        exc: *mut ExcInfo,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn tablerec_get_field_subrecord(
+        rec: *const GlueTableRecord,
+        col_name: *const StringBridge,
+        sub_rec: *mut GlueTableRecord,
+        exc: *mut ExcInfo,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn tablerec_put_field(
+        rec: *mut GlueTableRecord,
+        field_name: *const StringBridge,
+        data_type: GlueDataType,
+        n_dims: ::std::os::raw::c_ulong,
+        dims: *const ::std::os::raw::c_ulong,
+        data: *mut ::std::os::raw::c_void,
+        exc: *mut ExcInfo,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn tablerec_free(rec: *mut GlueTableRecord, exc: *mut ExcInfo) -> ::std::os::raw::c_int;
+}
+extern "C" {
     pub fn tabledesc_create(
         type_: *const StringBridge,
         mode: TableDescCreateMode,
@@ -194,7 +295,7 @@ extern "C" {
         direct: bool,
         undefined: bool,
         exc: *mut ExcInfo,
-    ) -> *mut GlueTableDesc;
+    ) -> ::std::os::raw::c_int;
 }
 extern "C" {
     pub fn tabledesc_add_array_column(
@@ -205,7 +306,7 @@ extern "C" {
         direct: bool,
         undefined: bool,
         exc: *mut ExcInfo,
-    ) -> *mut GlueTableDesc;
+    ) -> ::std::os::raw::c_int;
 }
 extern "C" {
     pub fn tabledesc_add_fixed_array_column(
@@ -218,7 +319,7 @@ extern "C" {
         direct: bool,
         undefined: bool,
         exc: *mut ExcInfo,
-    ) -> *mut GlueTableDesc;
+    ) -> ::std::os::raw::c_int;
 }
 extern "C" {
     pub fn tabledesc_set_ndims(
@@ -226,7 +327,43 @@ extern "C" {
         col_name: *const StringBridge,
         n_dims: ::std::os::raw::c_ulong,
         exc: *mut ExcInfo,
-    ) -> *mut GlueTableDesc;
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn tabledesc_get_keywords(
+        table_desc: *mut GlueTableDesc,
+        exc: *mut ExcInfo,
+    ) -> *const GlueTableRecord;
+}
+extern "C" {
+    pub fn tabledesc_get_column_keywords(
+        table_desc: *mut GlueTableDesc,
+        col_name: *const StringBridge,
+        exc: *mut ExcInfo,
+    ) -> *const GlueTableRecord;
+}
+extern "C" {
+    pub fn tabledesc_put_keyword(
+        table_desc: *mut GlueTableDesc,
+        kw_name: *const StringBridge,
+        data_type: GlueDataType,
+        n_dims: ::std::os::raw::c_ulong,
+        dims: *const ::std::os::raw::c_ulong,
+        data: *mut ::std::os::raw::c_void,
+        exc: *mut ExcInfo,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn tabledesc_put_column_keyword(
+        table_desc: *mut GlueTableDesc,
+        col_name: *const StringBridge,
+        kw_name: *const StringBridge,
+        data_type: GlueDataType,
+        n_dims: ::std::os::raw::c_ulong,
+        dims: *const ::std::os::raw::c_ulong,
+        data: *mut ::std::os::raw::c_void,
+        exc: *mut ExcInfo,
+    ) -> ::std::os::raw::c_int;
 }
 extern "C" {
     pub fn table_create(
@@ -254,6 +391,14 @@ extern "C" {
     pub fn table_n_columns(table: *const GlueTable) -> ::std::os::raw::c_ulong;
 }
 extern "C" {
+    pub fn table_get_file_name(
+        table: *const GlueTable,
+        callback: StringBridgeCallback,
+        ctxt: *mut ::std::os::raw::c_void,
+        exc: *mut ExcInfo,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
     pub fn table_get_column_names(
         table: *const GlueTable,
         callback: StringBridgeCallback,
@@ -273,10 +418,43 @@ extern "C" {
     ) -> ::std::os::raw::c_int;
 }
 extern "C" {
+    pub fn table_get_column_keyword_info(
+        table: *const GlueTable,
+        col_name: *const StringBridge,
+        callback: KeywordInfoCallback,
+        ctxt: *mut ::std::os::raw::c_void,
+        exc: *mut ExcInfo,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn table_get_keywords(table: *mut GlueTable, exc: *mut ExcInfo) -> *const GlueTableRecord;
+}
+extern "C" {
+    pub fn table_get_column_keywords(
+        table: *mut GlueTable,
+        col_name: *const StringBridge,
+        exc: *mut ExcInfo,
+    ) -> *const GlueTableRecord;
+}
+extern "C" {
     pub fn table_put_keyword(
         table: *mut GlueTable,
         kw_name: *const StringBridge,
         data_type: GlueDataType,
+        n_dims: ::std::os::raw::c_ulong,
+        dims: *const ::std::os::raw::c_ulong,
+        data: *mut ::std::os::raw::c_void,
+        exc: *mut ExcInfo,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn table_put_column_keyword(
+        table: *mut GlueTable,
+        col_name: *const StringBridge,
+        kw_name: *const StringBridge,
+        data_type: GlueDataType,
+        n_dims: ::std::os::raw::c_ulong,
+        dims: *const ::std::os::raw::c_ulong,
         data: *mut ::std::os::raw::c_void,
         exc: *mut ExcInfo,
     ) -> ::std::os::raw::c_int;
