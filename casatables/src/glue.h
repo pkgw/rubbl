@@ -16,38 +16,70 @@
 #ifndef CASA_TYPES_ALREADY_DECLARED
 
 // copied from casa/Utilities/DataType.h:
+/**Different data types supported by the CASA tables format.*/
 typedef enum GlueDataType
 {
+    /**A boolean value.*/
     TpBool,
+    /**A signed 8-bit integer value.*/ 
     TpChar,
+    /**An unsigned 8-bit integer value.*/ 
     TpUChar,
+    /**A signed 16-bit integer value.*/ 
     TpShort,
+    /**An unsigned 16-bit integer value.*/ 
     TpUShort,
+    /**A signed 32-bit integer value.*/ 
     TpInt,
+    /**An unsigned 32-bit integer value.*/ 
     TpUInt,
+    /**A 32-bit IEEE754 floating-point value.*/
     TpFloat,
+    /**A 64-bit IEEE754 double-precision floating-point value.*/
     TpDouble,
+    /**A complex number composed of two single-precision floating-point values.*/
     TpComplex,
+    /**A complex number composed of two double-precision floating-point values.*/
     TpDComplex,
+    /**A string value. **Todo:** encoding???*/
     TpString,
+    /**A value that is its own CASA table.*/
     TpTable,
+    /**A value that is an array of booleans.*/ 
     TpArrayBool,
+    /**A value that is an array of signed 8-bit integers.*/
     TpArrayChar,
+    /**A value that is an array of unsigned 8-bit integers.*/
     TpArrayUChar,
+    /**A value that is an array of signed 16-bit integers.*/
     TpArrayShort,
+    /**A value that is an array of unsigned 16-bit integers.*/
     TpArrayUShort,
+    /**A value that is an array of signed 32-bit integers.*/
     TpArrayInt,
+    /**A value that is an array of unsigned 32-bit integers.*/
     TpArrayUInt,
+    /**A value that is an array of 32-bit single-precision floating-point numbers.*/
     TpArrayFloat,
+    /**A value that is an array of 64-bit double-precision floating-point numbers.*/
     TpArrayDouble,
+    /**A value that is an array of complex numbers with single-precision components.*/
     TpArrayComplex,
+    /**A value that is an array of complex numbers with double-precision components.*/
     TpArrayDComplex,
+    /**A value that is an array of strings. **Todo:** encoding???*/
     TpArrayString,
+    /**A value that is a dictionary of name-value pairs.*/
     TpRecord,
+    /**A value of some other type.*/
     TpOther,
+    /**A value that is a physical quantity with associated dimensions.*/
     TpQuantity,
+    /**A value that is an array of physical quantities with associated dimensions.*/
     TpArrayQuantity,
+    /**A signed 64-bit integer value.*/ 
     TpInt64,
+    /**A value that is an array of unsigned 8-bit integers.*/
     TpArrayInt64,
 } GlueDataType;
 
@@ -107,21 +139,24 @@ typedef enum TableCreateMode
     TCM_SCRATCH = 3,
 } TableCreateMode;
 
+/**Different modes for creating a CASA table description.*/
 typedef enum TableDescCreateMode
 {
-    //    Create a new table description file.
-    //    The TableDesc destructor will write the table description into the file.
+    // NB: bindgenc can't handle multiline docstrings here.
+    /** Create a new table description file.*/
+    // "The TableDesc destructor will write the table description into the file.""
     TDM_NEW,
-    //    As option New, but an exception will be thrown if the table
-    //    description file already exists.
+
+    /** Create a new file, raising an error if it already exists.*/
     TDM_NEW_NO_REPLACE,
-    //    Create a temporary table description. The table description will
-    //    be lost when the TableDesc object is destructed.
-    //    This is useful to create a Table object without storing the
-    //    description separately.
-    //    Note that the Table object maintains its own description (i.e. it
-    //    copies the description when being constructed).
+
+    /** Create a table description without an associated file on disk.*/
+    // "The table description will be lost when the TableDesc object is
+    // destructed. This is useful to create a Table object without storing the
+    // description separately. Note that the Table object maintains its own
+    // description (i.e. it copies the description when being constructed)."
     TDM_SCRATCH,
+
     // Note, there are other options here which could be enabled if needed.
     //  <li> Old
     //    Open an existing table description file as readonly.
