@@ -9,7 +9,7 @@
 #![deny(missing_docs)]
 
 // convenience re-exports
-pub use ndarray::Array;
+pub use ndarray::{Array, CowArray};
 pub use num_complex::Complex;
 
 // `approx` isn't (as of October 2021) used anywhere in Rubbl, but by including

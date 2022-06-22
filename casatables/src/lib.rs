@@ -37,7 +37,7 @@ use std::{
 };
 use thiserror::Error;
 
-pub use rubbl_core::{Array, Complex};
+pub use rubbl_core::{Array, Complex, CowArray};
 
 #[allow(missing_docs)]
 mod glue;
