@@ -15,7 +15,7 @@ Core types and traits for Rubbl, a Rust package for astrophysics.
 
 [dependencies]
 byteorder = "^1.4"
-clap = "^2.34"
+clap = "^4.0"
 failure = "^0.1"
 failure_derive = "^0.1"
 ndarray = ">=0.8"
