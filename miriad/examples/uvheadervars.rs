@@ -1,24 +1,24 @@
 //! Print out the values of all of the UV variables as they are set in the very
 //! first record of a UV data stream.
 
-use clap::{App, Arg};
+use clap::{Arg, Command};
 use failure::{Error, ResultExt};
-use std::ffi::OsStr;
+use std::ffi::{OsStr, OsString};
 use std::process;
 
 fn main() {
-    let matches = App::new("uvheadervars")
+    let matches = Command::new("uvheadervars")
         .version("0.1.0")
         .about("Print initial values of UV variables")
         .arg(
-            Arg::with_name("PATH")
+            Arg::new("PATH")
                 .help("The path to the dataset directory")
                 .required(true)
                 .index(1),
         )
         .get_matches();
 
-    let path = matches.value_of_os("PATH").unwrap();
+    let path = matches.get_one::<OsString>("PATH").unwrap();
 
     process::exit(match inner(path.as_ref()) {
         Ok(code) => code,
