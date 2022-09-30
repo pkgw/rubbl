@@ -1,7 +1,7 @@
 //! Hack for Paul La Plante: synthesize a 352-antenna dataset from a smaller
 //! one, so that we can see how our algorithms scale.
 
-use clap::{App, Arg};
+use clap::{Arg, Command};
 use failure::{format_err, Error, ResultExt};
 use rubbl_miriad::mask::{MaskDecoder, MaskEncoder};
 use rubbl_miriad::visdata::{
@@ -9,7 +9,7 @@ use rubbl_miriad::visdata::{
 };
 use rubbl_miriad::{DataSet, ReadStream, Type, WriteStream};
 use std::collections::HashMap;
-use std::ffi::OsStr;
+use std::ffi::{OsStr, OsString};
 use std::io;
 use std::process;
 use std::time::Instant;
@@ -17,25 +17,25 @@ use std::time::Instant;
 const NANTS: usize = 352;
 
 fn main() {
-    let matches = App::new("hera352")
+    let matches = Command::new("hera352")
         .version("0.1.0")
         .about("Make a fake 352-antenna HERA UV dataset")
         .arg(
-            Arg::with_name("INPATH")
+            Arg::new("INPATH")
                 .help("The path to the input dataset directory")
                 .required(true)
                 .index(1),
         )
         .arg(
-            Arg::with_name("OUTPATH")
+            Arg::new("OUTPATH")
                 .help("The path to the (preexistin!) output dataset directory")
                 .required(true)
                 .index(2),
         )
         .get_matches();
 
-    let in_path = matches.value_of_os("INPATH").unwrap();
-    let out_path = matches.value_of_os("OUTPATH").unwrap();
+    let in_path = matches.get_one::<OsString>("INPATH").unwrap();
+    let out_path = matches.get_one::<OsString>("OUTPATH").unwrap();
 
     process::exit(
         match UvInflator::process(in_path.as_ref(), out_path.as_ref()) {

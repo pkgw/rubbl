@@ -1,4 +1,4 @@
-// Copyright 2017 Peter Williams and collaborators
+// Copyright 2017-2022 Peter Williams and collaborators
 // Licensed under the MIT License.
 
 /*!
@@ -209,33 +209,33 @@ impl NotificationBackend for BufferingNotificationBackend {
 }
 
 /// An extension trait for adding standard notification arguments to a clap
-/// App object.
+/// Command object.
 pub trait ClapNotificationArgsExt {
-    /// Add standard Rubbl notification-related arguments to this App.
+    /// Add standard Rubbl notification-related arguments to this Command.
     fn rubbl_notify_args(self) -> Self;
 }
 
-impl<'a, 'b> ClapNotificationArgsExt for clap::App<'a, 'b> {
+impl ClapNotificationArgsExt for clap::Command {
     fn rubbl_notify_args(self) -> Self {
         self.arg(
-            clap::Arg::with_name("chatter_level")
+            clap::Arg::new("chatter_level")
                 .long("chatter")
-                .short("c")
+                .short('c')
                 .value_name("LEVEL")
                 .help("How much chatter to print when running")
-                .possible_values(&["default", "minimal"])
+                .value_parser(["default", "minimal"])
                 .default_value("default"),
         )
     }
 }
 
 /// Run a function with colorized reporting of errors.
-pub fn run_with_notifications<'a, E, F>(matches: clap::ArgMatches<'a>, inner: F) -> i32
+pub fn run_with_notifications<E, F>(matches: clap::ArgMatches, inner: F) -> i32
 where
     E: Into<Error>,
-    F: FnOnce(clap::ArgMatches<'a>, &mut dyn NotificationBackend) -> StdResult<i32, E>,
+    F: FnOnce(clap::ArgMatches, &mut dyn NotificationBackend) -> StdResult<i32, E>,
 {
-    let chatter = match matches.value_of("chatter_level").unwrap() {
+    let chatter = match matches.get_one::<String>("chatter_level").unwrap().as_ref() {
         "default" => ChatterLevel::Normal,
         "minimal" => ChatterLevel::Minimal,
         _ => unreachable!(),

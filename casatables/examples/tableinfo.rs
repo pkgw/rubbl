@@ -3,17 +3,17 @@
 
 //! Summarize the structure of a CASA table.
 
-use clap::{App, Arg};
+use clap::{Arg, Command};
 use rubbl_casatables::{Table, TableOpenMode};
 use rubbl_core::{ctry, notify::ClapNotificationArgsExt, Error};
-use std::{cmp::max, path::Path, process};
+use std::{cmp::max, path::PathBuf, process};
 
 fn main() {
-    let matches = App::new("tableinfo")
+    let matches = Command::new("tableinfo")
         .version("0.1.0")
         .rubbl_notify_args()
         .arg(
-            Arg::with_name("IN-TABLE")
+            Arg::new("IN-TABLE")
                 .help("The path of the input data set")
                 .required(true)
                 .index(1),
@@ -23,7 +23,7 @@ fn main() {
     process::exit(rubbl_core::notify::run_with_notifications(
         matches,
         |matches, _nbe| -> Result<i32, Error> {
-            let inpath = Path::new(matches.value_of_os("IN-TABLE").unwrap()).to_owned();
+            let inpath = matches.get_one::<PathBuf>("IN-TABLE").unwrap();
 
             let mut t = ctry!(Table::open(&inpath, TableOpenMode::Read);
                           "failed to open input table \"{}\"", inpath.display());

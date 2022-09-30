@@ -1,4 +1,4 @@
-// Copyright 2017 Peter Williams <peter@newton.cx> and collaborators
+// Copyright 2022 Peter Williams <peter@newton.cx> and collaborators
 // Licensed under the MIT License.
 
 /*! The main rubbl driver command
@@ -10,7 +10,7 @@ Heavily modeled on Cargo's implementation of the same sort of functionality.
 
 */
 
-use clap::{crate_version, App, AppSettings, Arg, ArgMatches, SubCommand};
+use clap::{crate_version, Arg, ArgMatches, Command};
 use failure::Error;
 use failure_derive::Fail;
 use rubbl_core::{
@@ -32,18 +32,18 @@ use std::{
 pub struct NoSuchSubcommandError(String);
 
 fn main() {
-    let matches = make_app().get_matches();
+    let matches = make_command().get_matches();
 
     process::exit(rubbl_core::notify::run_with_notifications(
         matches,
         |matches, nbe| -> Result<i32> {
             match matches.subcommand() {
-                ("help", Some(m)) => do_help(m, nbe),
-                ("list", Some(m)) => do_list(m, nbe),
-                (external, Some(m)) => do_external(external, m, nbe),
-                (_, None) => {
+                Some(("help", m)) => do_help(m, nbe),
+                Some(("list", m)) => do_list(m, nbe),
+                Some((external, m)) => do_external(external, m, nbe),
+                None => {
                     // No sub-command provided; can't use do_help() since it wants sub-matches.
-                    make_app().print_long_help()?;
+                    make_command().print_long_help()?;
                     Ok(0)
                 }
             }
@@ -52,20 +52,20 @@ fn main() {
 }
 
 /// It seems that the best way to re-print the help in the "help" subcommand
-/// is to be able to make multiple App objects.
-fn make_app<'a, 'b>() -> App<'a, 'b> {
-    App::new("rubbl")
+/// is to be able to make multiple Command objects.
+fn make_command() -> Command {
+    Command::new("rubbl")
         .version(crate_version!())
-        .setting(AppSettings::AllowExternalSubcommands)
-        .setting(AppSettings::DisableHelpSubcommand)
+        .allow_external_subcommands(true)
+        .disable_help_subcommand(true)
         .rubbl_notify_args()
         .subcommand(
-            SubCommand::with_name("help")
+            Command::new("help")
                 .about("Get help information for sub-commands")
-                .arg(Arg::with_name("command").help("The name of a sub-command to get help for")),
+                .arg(Arg::new("command").help("The name of a sub-command to get help for")),
         )
-        .subcommand(SubCommand::with_name("list").about("List the available sub-commands"))
-        .help(
+        .subcommand(Command::new("list").about("List the available sub-commands"))
+        .help_template(
             r#"rubbl -- dispatcher for command-line access to Rubbl tools
 
 USAGE:
@@ -88,9 +88,9 @@ SUBCOMMANDS:
 
 /// Get help on a subcommand, or on the main program.
 fn do_help(matches: &ArgMatches, _nbe: &mut dyn NotificationBackend) -> Result<i32> {
-    match matches.value_of("command") {
+    match matches.get_one::<String>("command").map(|s| s.as_ref()) {
         None | Some("help") | Some("list") => {
-            make_app().print_long_help()?;
+            make_command().print_long_help()?;
             Ok(0)
         }
 
@@ -115,8 +115,8 @@ fn do_list(_matches: &ArgMatches, _nbe: &mut dyn NotificationBackend) -> Result<
 /// Run an external command by executing a subprocess
 fn do_external(cmd: &str, matches: &ArgMatches, _nbe: &mut dyn NotificationBackend) -> Result<i32> {
     // TODO: propagate chatter settings downstream.
-    let args: Vec<&str> = match matches.values_of("") {
-        Some(v) => v.collect(),
+    let args: Vec<&str> = match matches.get_many::<String>("") {
+        Some(v) => v.map(|s| s.as_ref()).collect(),
         None => Vec::new(),
     };
 

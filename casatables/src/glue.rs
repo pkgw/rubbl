@@ -69,47 +69,27 @@ pub enum GlueDataType {
     TpArrayInt64 = 30,
 }
 #[repr(C)]
-#[derive(Debug, Copy)]
+#[derive(Debug, Copy, Clone)]
 pub struct GlueTable {
     _unused: [u8; 0],
 }
-impl Clone for GlueTable {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[repr(C)]
-#[derive(Debug, Copy)]
+#[derive(Debug, Copy, Clone)]
 pub struct GlueTableRow {
     _unused: [u8; 0],
 }
-impl Clone for GlueTableRow {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[repr(C)]
-#[derive(Debug, Copy)]
+#[derive(Debug, Copy, Clone)]
 pub struct GlueTableDesc {
     _unused: [u8; 0],
 }
-impl Clone for GlueTableDesc {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[repr(C)]
-#[derive(Debug, Copy)]
+#[derive(Debug, Copy, Clone)]
 pub struct GlueTableRecord {
     _unused: [u8; 0],
 }
-impl Clone for GlueTableRecord {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[repr(C)]
-#[derive(Debug, Copy)]
+#[derive(Debug, Copy, Clone)]
 pub struct StringBridge {
     pub data: *const ::std::os::raw::c_void,
     pub n_bytes: ::std::os::raw::c_ulong,
@@ -147,13 +127,8 @@ fn bindgen_test_layout_StringBridge() {
         )
     );
 }
-impl Clone for StringBridge {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[repr(C)]
-#[derive(Copy)]
+#[derive(Debug, Copy, Clone)]
 pub struct ExcInfo {
     pub message: [::std::os::raw::c_char; 512usize],
 }
@@ -179,11 +154,6 @@ fn bindgen_test_layout_ExcInfo() {
             stringify!(message)
         )
     );
-}
-impl Clone for ExcInfo {
-    fn clone(&self) -> Self {
-        *self
-    }
 }
 pub type StringBridgeCallback = ::std::option::Option<
     unsafe extern "C" fn(name: *const StringBridge, ctxt: *mut ::std::os::raw::c_void),
