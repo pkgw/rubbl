@@ -14,6 +14,8 @@ TODO:
 
  */
 
+#![allow(dead_code)]
+
 use byteorder::{BigEndian, ByteOrder, ReadBytesExt, WriteBytesExt};
 use failure::Error;
 use rubbl_core::io::{AligningReader, AligningWriter, OpenResultExt};

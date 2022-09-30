@@ -353,6 +353,8 @@ impl<R: Read> FitsDecoder<R> {
 pub struct FitsParser<R: Read + Seek> {
     inner: R,
     hdus: Vec<ParsedHdu>,
+
+    #[allow(dead_code)]
     special_record_size: u64,
 }
 
@@ -391,8 +393,12 @@ pub enum HduKind {
 pub struct ParsedHdu {
     kind: HduKind,
     name: String,
+
+    #[allow(dead_code)]
     header_offset: u64,
+    #[allow(dead_code)]
     n_header_records: usize,
+
     bitpix: Bitpix,
     pcount: isize,
     gcount: usize,
