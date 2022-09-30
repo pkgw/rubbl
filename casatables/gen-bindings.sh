@@ -9,7 +9,7 @@ cat >src/glue.rs <<'EOF'
 EOF
 
 exec bindgen \
-     --rust-target=1.19 \
+     --rust-target=1.47 \
      --rustified-enum '.*' \
      src/glue.h \
      -- \
