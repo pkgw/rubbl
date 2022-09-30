@@ -1,4 +1,4 @@
-# Copyright 2018-2021 Peter Williams <peter@newton.cx> and collaborators
+# Copyright 2018-2022 Peter Williams <peter@newton.cx> and collaborators
 # Licensed under the MIT License.
 
 [package]
@@ -24,4 +24,4 @@ rubbl_core = { path = "../core", version ="0.0.0-dev.0"}
 rubbl_visdata = { path = "../visdata", version ="0.0.0-dev.0"}
 
 [dev-dependencies]
-clap = "^2.34"
+clap = { version = "^4", features = ["cargo"] }

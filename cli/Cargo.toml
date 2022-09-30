@@ -1,4 +1,4 @@
-# Copyright 2017-2020 Peter Williams <peter@newton.cx> and collaborators
+# Copyright 2017-2022 Peter Williams <peter@newton.cx> and collaborators
 # Licensed under the MIT License.
 
 [package]
@@ -17,7 +17,7 @@ Facade crate and CLI interface for the Rubbl astrophysics data analysis framewor
 rubbl_core = "thiscommit:2020-12-15:re8eeQu5"
 
 [dependencies]
-clap = "^2.34"
+clap = { version = "^4", features = ["cargo"] }
 failure = "^0.1"
 failure_derive = "^0.1"
 rubbl_core = { version ="0.0.0-dev.0", path = "../core" }
