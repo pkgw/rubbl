@@ -37,7 +37,7 @@ fn main() {
 }
 
 fn inner(path: &OsStr) -> Result<i32, anyhow::Error> {
-    let file = fs::File::open(path).with_context(|| "error opening file")?;
+    let file = fs::File::open(path).context("error opening file")?;
     let fits = rubbl_fits::FitsParser::new(file)?;
 
     for (num, hdu) in fits.hdus().iter().enumerate() {

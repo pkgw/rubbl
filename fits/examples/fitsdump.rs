@@ -39,13 +39,13 @@ fn main() {
 }
 
 fn inner(path: &OsStr) -> Result<i32, anyhow::Error> {
-    let file = fs::File::open(path).with_context(|| "error opening file")?;
+    let file = fs::File::open(path).context("error opening file")?;
     let mut dec = rubbl_fits::FitsDecoder::new(AligningReader::new(file));
     let t0 = Instant::now();
     let mut last_was_data = false;
 
     loop {
-        match dec.next().with_context(|| "error parsing FITS")? {
+        match dec.next().context("error parsing FITS")? {
             None => {
                 break;
             }

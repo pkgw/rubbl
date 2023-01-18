@@ -35,15 +35,13 @@ fn main() {
 }
 
 fn inner(path: &OsStr) -> Result<i32, Error> {
-    let mut ds = rubbl_miriad::DataSet::open(path).with_context(|| "error opening dataset")?;
-    let mut uv = ds
-        .open_uv()
-        .with_context(|| "could not open as UV dataset")?;
+    let mut ds = rubbl_miriad::DataSet::open(path).context("error opening dataset")?;
+    let mut uv = ds.open_uv().context("could not open as UV dataset")?;
     let mib = uv.visdata_bytes() as f64 / (1024. * 1024.);
     let mut n = 0usize;
     let t0 = Instant::now();
 
-    while uv.next().with_context(|| "could not read UV data")? {
+    while uv.next().context("could not read UV data")? {
         n += 1
     }
 

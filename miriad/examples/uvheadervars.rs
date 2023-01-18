@@ -34,13 +34,10 @@ fn main() {
 }
 
 fn inner(path: &OsStr) -> Result<i32, Error> {
-    let mut ds =
-        rubbl_miriad::DataSet::open(path).with_context(|| "error opening input dataset")?;
-    let mut uv = ds
-        .open_uv()
-        .with_context(|| "could not open input as UV dataset")?;
+    let mut ds = rubbl_miriad::DataSet::open(path).context("error opening input dataset")?;
+    let mut uv = ds.open_uv().context("could not open input as UV dataset")?;
 
-    uv.next().with_context(|| "could not read UV data")?;
+    uv.next().context("could not read UV data")?;
 
     for var in uv.variables() {
         let n = var.n_vals();

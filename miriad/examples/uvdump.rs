@@ -34,10 +34,8 @@ fn main() {
 }
 
 fn inner(path: &OsStr) -> Result<i32, Error> {
-    let mut ds = rubbl_miriad::DataSet::open(path).with_context(|| "error opening dataset")?;
-    let mut uv = ds
-        .open_uv()
-        .with_context(|| "could not open as UV dataset")?;
+    let mut ds = rubbl_miriad::DataSet::open(path).context("error opening dataset")?;
+    let mut uv = ds.open_uv().context("could not open as UV dataset")?;
     uv.dump_diagnostic(io::stdout())?;
     Ok(0)
 }
