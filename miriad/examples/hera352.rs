@@ -3,6 +3,7 @@
 
 use anyhow::{bail, Context, Error};
 use clap::{Arg, Command};
+use rubbl_core::ctry;
 use rubbl_miriad::mask::{MaskDecoder, MaskEncoder};
 use rubbl_miriad::visdata::{
     decode_baseline, encode_baseline, Decoder, Encoder, UvVariableReference,
@@ -511,9 +512,10 @@ impl UvInflator {
                     conj = true;
                 }
 
-                let rec = self.records.get(&(src_mir_1, src_mir_2)).with_context(|| {
-                    format!("missing data for source {src_mir_1}-{src_mir_2} baseline")
-                })?;
+                let rec = ctry!(
+                    self.records.get(&(src_mir_1, src_mir_2));
+                    "missing data for source {src_mir_1}-{src_mir_2} baseline"
+                );
 
                 if rec.update_time != time {
                     bail!(
