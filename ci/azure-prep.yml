@@ -43,12 +43,12 @@ jobs:
   # the `if` statement doesn't provide any true security since an attacker can
   # just remove it — the CI system has to know that the token is secure and
   # refuse to provide it.
-  ###- bash: |
-  ###    cranko zenodo preregister --metadata=ci/zenodo.json5 rubbl cli/src/main.rs CHANGELOG.md
-  ###  displayName: "cranko zenodo preregister"
-  ###  ${{ if and(eq(variables['Build.SourceBranchName'], 'rc'), ne(variables['build.reason'], 'PullRequest')) }}:
-  ###    env:
-  ###        ZENODO_TOKEN: $(ZENODO_TOKEN)
+  - bash: |
+      cranko zenodo preregister --metadata=ci/zenodo.json5 rubbl cli/src/main.rs cli/CHANGELOG.md
+    displayName: "cranko zenodo preregister"
+    ${{ if and(eq(variables['Build.SourceBranchName'], 'rc'), ne(variables['build.reason'], 'PullRequest')) }}:
+      env:
+          ZENODO_TOKEN: $(ZENODO_TOKEN)
 
   # Do an extremely minimal build to get Cargo.lock updated.
   - bash: cargo build -p rubbl_core
