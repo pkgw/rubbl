@@ -13,13 +13,12 @@ parameters:
 jobs:
 
 - ${{ if parameters.isMainDev }}:
+  # For merges to `master`, we don't have any continuous-depoloyment logic to run.
   - job: dummy_setup_only
     pool:
       vmImage: ubuntu-20.04
     steps:
-    - template: azure-deployment-setup.yml
-      parameters:
-        setupGit: false
+    - template: azure-job-setup.yml
 
 - ${{ if parameters.isRelease }}:
   - job: branch_and_tag
@@ -28,7 +27,7 @@ jobs:
     variables:
     - group: Deployment Credentials
     steps:
-    - template: azure-deployment-setup.yml
+    - template: azure-job-setup.yml
       parameters:
         setupGit: true
     - bash: |
@@ -45,10 +44,10 @@ jobs:
     variables:
     - group: Deployment Credentials
     steps:
-    - template: azure-deployment-setup.yml
+    - template: azure-job-setup.yml
     - bash: |
         set -xeou pipefail
-        cranko cargo foreach-released -- publish --no-verify
+        cranko cargo foreach-released --pause=30 -- publish --no-verify
       displayName: Publish updated Cargo crates
       env:
         CARGO_REGISTRY_TOKEN: $(CARGO_REGISTRY_TOKEN)
@@ -60,7 +59,7 @@ jobs:
     variables:
     - group: Deployment Credentials
     steps:
-    - template: azure-deployment-setup.yml
+    - template: azure-job-setup.yml
       parameters:
         setupGit: true
     - bash: |
