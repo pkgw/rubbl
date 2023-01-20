@@ -17,7 +17,6 @@ TODO:
 #![allow(dead_code)]
 
 use byteorder::{BigEndian, ByteOrder, ReadBytesExt, WriteBytesExt};
-use failure::Error;
 use rubbl_core::io::{AligningReader, AligningWriter, OpenResultExt};
 use std::collections::HashMap;
 use std::fs::File;
@@ -96,7 +95,7 @@ pub struct Decoder {
 }
 
 impl Decoder {
-    pub fn create(ds: &mut DataSet) -> Result<Self, Error> {
+    pub fn create(ds: &mut DataSet) -> Result<Self, MiriadFormatError> {
         let vislen = ds.get("vislen").require_found()?.read_scalar::<i64>()?;
         let mut vars = Vec::new();
         let mut vars_by_name = HashMap::new();
@@ -106,13 +105,17 @@ impl Decoder {
             let line = maybe_line?;
 
             if line.len() < 3 {
-                return mirerr!("illegal vartable line: {}", line);
+                return Err(MiriadFormatError::Generic(format!(
+                    "illegal vartable line: {line}"
+                )));
             }
 
             let pieces: Vec<_> = line.split_whitespace().collect();
 
             if pieces.len() != 2 {
-                return mirerr!("illegal vartable line: {}", line);
+                return Err(MiriadFormatError::Generic(format!(
+                    "illegal vartable line: {line}"
+                )));
             }
 
             let ty = Type::try_from_abbrev(pieces[0])?;
@@ -124,7 +127,9 @@ impl Decoder {
             vars_by_name.insert(name.to_owned(), var_num);
 
             if var_num == 255 {
-                return mirerr!("too many UV variables");
+                return Err(MiriadFormatError::Generic(
+                    "too many UV variables".to_string(),
+                ));
             }
 
             var_num += 1;
@@ -151,7 +156,7 @@ impl Decoder {
     }
 
     /// Returns Ok(false) on EOF, Ok(true) if there are more data.
-    pub fn next(&mut self) -> Result<bool, Error> {
+    pub fn next(&mut self) -> Result<bool, MiriadFormatError> {
         let mut keep_going = true;
         let mut header_buf = [0u8; 4];
 
@@ -171,20 +176,24 @@ impl Decoder {
             match entry_type {
                 SIZE => {
                     if varnum as usize >= self.vars.len() {
-                        return mirerr!("invalid visdata: too-large variable number");
+                        return Err(MiriadFormatError::Generic(
+                            "invalid visdata: too-large variable number".to_string(),
+                        ));
                     }
 
                     let var = &mut self.vars[varnum as usize];
                     let n_bytes = self.stream.read_i32::<BigEndian>()?;
 
                     if n_bytes < 0 {
-                        return mirerr!("invalid visdata: negative data size");
+                        return Err(MiriadFormatError::Generic(
+                            "invalid visdata: negative data size".to_string(),
+                        ));
                     }
 
                     if n_bytes % var.ty.size() as i32 != 0 {
-                        return mirerr!(
-                            "invalid visdata: non-integral number of elements in array"
-                        );
+                        return Err(MiriadFormatError::Generic(
+                            "invalid visdata: non-integral number of elements in array".to_string(),
+                        ));
                     }
 
                     var.n_vals = (n_bytes / (var.ty.size() as i32)) as isize;
@@ -192,7 +201,9 @@ impl Decoder {
                 }
                 DATA => {
                     if varnum as usize >= self.vars.len() {
-                        return mirerr!("invalid visdata: too-large variable number");
+                        return Err(MiriadFormatError::Generic(
+                            "invalid visdata: too-large variable number".to_string(),
+                        ));
                     }
 
                     let var = &mut self.vars[varnum as usize];
@@ -204,7 +215,9 @@ impl Decoder {
                     keep_going = false;
                 }
                 z => {
-                    return mirerr!("invalid visdata: unrecognized record code {}", z);
+                    return Err(MiriadFormatError::Generic(format!(
+                        "invalid visdata: unrecognized record code {z}"
+                    )));
                 }
             }
 
@@ -264,7 +277,7 @@ impl Decoder {
     }
 
     /// Diagnostic helper.
-    pub fn dump_diagnostic<W: Write>(&mut self, mut dest: W) -> Result<(), Error> {
+    pub fn dump_diagnostic<W: Write>(&mut self, mut dest: W) -> Result<(), MiriadFormatError> {
         let mut header_buf = [0u8; 4];
         let mut bl_buf = vec![0f32];
 
@@ -280,20 +293,24 @@ impl Decoder {
             match entry_type {
                 SIZE => {
                     if varnum as usize >= self.vars.len() {
-                        return mirerr!("invalid visdata: too-large variable number");
+                        return Err(MiriadFormatError::Generic(
+                            "invalid visdata: too-large variable number".to_string(),
+                        ));
                     }
 
                     let var = &mut self.vars[varnum as usize];
                     let n_bytes = self.stream.read_i32::<BigEndian>()?;
 
                     if n_bytes < 0 {
-                        return mirerr!("invalid visdata: negative data size");
+                        return Err(MiriadFormatError::Generic(
+                            "invalid visdata: negative data size".to_string(),
+                        ));
                     }
 
                     if n_bytes % var.ty.size() as i32 != 0 {
-                        return mirerr!(
-                            "invalid visdata: non-integral number of elements in array"
-                        );
+                        return Err(MiriadFormatError::Generic(
+                            "invalid visdata: non-integral number of elements in array".to_string(),
+                        ));
                     }
 
                     var.n_vals = (n_bytes / (var.ty.size() as i32)) as isize;
@@ -303,7 +320,9 @@ impl Decoder {
 
                 DATA => {
                     if varnum as usize >= self.vars.len() {
-                        return mirerr!("invalid visdata: too-large variable number");
+                        return Err(MiriadFormatError::Generic(
+                            "invalid visdata: too-large variable number".to_string(),
+                        ));
                     }
 
                     let var = &mut self.vars[varnum as usize];
@@ -328,7 +347,9 @@ impl Decoder {
                 }
 
                 z => {
-                    return mirerr!("invalid visdata: unrecognized record code {}", z);
+                    return Err(MiriadFormatError::Generic(format!(
+                        "invalid visdata: unrecognized record code {z}"
+                    )));
                 }
             }
 
@@ -371,7 +392,7 @@ impl<'a> Iterator for UvVariablesIterator<'a> {
 /// Because of the antnum limitation we could return u16s, but ant numbers are
 /// often used as array indices, so it's more convenient to keep them as
 /// usizes.
-pub fn decode_baseline(bl_float: f32) -> Result<(usize, usize), Error> {
+pub fn decode_baseline(bl_float: f32) -> Result<(usize, usize), MiriadFormatError> {
     let bl = bl_float as isize;
 
     let (ant1, ant2) = if bl > 65536 {
@@ -384,38 +405,33 @@ pub fn decode_baseline(bl_float: f32) -> Result<(usize, usize), Error> {
     };
 
     if ant1 < 1 {
-        return mirerr!(
-            "illegal baseline value {:?}: resulting ant1 is < 1",
-            bl_float
-        );
+        return Err(MiriadFormatError::Generic(format!(
+            "illegal baseline value {bl_float:?}: resulting ant1 is < 1"
+        )));
     }
 
     if ant2 < 1 {
-        return mirerr!(
-            "illegal baseline value {:?}: resulting ant2 is < 1",
-            bl_float
-        );
+        return Err(MiriadFormatError::Generic(format!(
+            "illegal baseline value {bl_float:?}: resulting ant2 is < 1"
+        )));
     }
 
     if ant1 > 2048 {
-        return mirerr!(
-            "illegal baseline value {:?}: resulting ant1 is > 2048",
-            bl_float
-        );
+        return Err(MiriadFormatError::Generic(format!(
+            "illegal baseline value {bl_float:?}: resulting ant1 is > 2048"
+        )));
     }
 
     if ant2 > 2048 {
-        return mirerr!(
-            "illegal baseline value {:?}: resulting ant2 is > 2048",
-            bl_float
-        );
+        return Err(MiriadFormatError::Generic(format!(
+            "illegal baseline value {bl_float:?}: resulting ant2 is > 2048"
+        )));
     }
 
     if ant1 > ant2 {
-        return mirerr!(
-            "illegal baseline value {:?}: resulting ant1 is > ant2",
-            bl_float
-        );
+        return Err(MiriadFormatError::Generic(format!(
+            "illegal baseline value {bl_float:?}: resulting ant1 is > ant2"
+        )));
     }
 
     Ok((ant1 as usize - 1, ant2 as usize - 1))
@@ -426,27 +442,23 @@ pub fn decode_baseline(bl_float: f32) -> Result<(usize, usize), Error> {
 /// Antenna numbers may be between 0 and 2047, and ant1 must be less than or
 /// equal to ant2. In Rubbl's convention, antenna numbers begin at 0; this is
 /// different than MIRIAD!
-pub fn encode_baseline(ant1: usize, ant2: usize) -> Result<f32, Error> {
+pub fn encode_baseline(ant1: usize, ant2: usize) -> Result<f32, MiriadFormatError> {
     if ant1 > 2047 {
-        return mirerr!(
-            "illegal baseline value: antenna1 is {} but limit is 2047",
-            ant1
-        );
+        return Err(MiriadFormatError::Generic(format!(
+            "illegal baseline value: antenna1 is {ant1} but limit is 2047"
+        )));
     }
 
     if ant2 > 2047 {
-        return mirerr!(
-            "illegal baseline value: antenna2 is {} but limit is 2047",
-            ant2
-        );
+        return Err(MiriadFormatError::Generic(format!(
+            "illegal baseline value: antenna2 is {ant2} but limit is 2047"
+        )));
     }
 
     if ant1 > ant2 {
-        return mirerr!(
-            "illegal baseline pair ({}, {}); ant1 may not exceed ant2",
-            ant1,
-            ant2
-        );
+        return Err(MiriadFormatError::Generic(format!(
+            "illegal baseline pair ({ant1}, {ant2}); ant1 may not exceed ant2"
+        )));
     }
 
     Ok(if ant2 > 254 {
@@ -468,7 +480,7 @@ pub struct Reader {
 }
 
 impl Reader {
-    pub fn create(ds: &mut DataSet) -> Result<Self, Error> {
+    pub fn create(ds: &mut DataSet) -> Result<Self, MiriadFormatError> {
         let ot_str: String = ds.get("obstype").require_found()?.read_scalar()?;
 
         let obstype = if ot_str.starts_with("auto") {
@@ -478,7 +490,9 @@ impl Reader {
         } else if ot_str.starts_with("mixed") {
             ObsType::MixedAutoCross
         } else {
-            return mirerr!("unexpected \"obstype\" value {}", ot_str);
+            return Err(MiriadFormatError::Generic(format!(
+                "unexpected \"obstype\" value {ot_str}"
+            )));
         };
 
         let ncorr = ds.get("ncorr").require_found()?.read_scalar::<i64>()?;
@@ -525,7 +539,7 @@ pub struct Encoder {
 impl Encoder {
     /// Create a new Encoder that has the same variables as some input Decoder
     /// struct.
-    pub fn new_like(ds: &mut DataSet, template: &Decoder) -> Result<Self, Error> {
+    pub fn new_like(ds: &mut DataSet, template: &Decoder) -> Result<Self, MiriadFormatError> {
         let mut vars = template.vars.clone();
         let vars_by_name = template.vars_by_name.clone();
         let mut vartable = ds.create_large_item("vartable", Type::Text)?;
@@ -551,11 +565,11 @@ impl Encoder {
         })
     }
 
-    pub fn write_var(&mut self, var: &UvVariable) -> Result<(), Error> {
+    pub fn write_var(&mut self, var: &UvVariable) -> Result<(), MiriadFormatError> {
         let our_num = self
             .vars_by_name
             .get(&var.name)
-            .ok_or(MiriadFormatError(format!(
+            .ok_or(MiriadFormatError::Generic(format!(
                 "target stream does not have variable named \"{}\"",
                 var.name
             )))?;
@@ -566,10 +580,10 @@ impl Encoder {
         const DATA: u8 = 1;
 
         if var.data.len() == 0 {
-            return mirerr!(
+            return Err(MiriadFormatError::Generic(format!(
                 "may not write zero-size array for variable \"{}\"",
                 var.name
-            );
+            )));
         }
 
         if var.name == "nschan" {
@@ -600,23 +614,32 @@ impl Encoder {
         Ok(())
     }
 
-    pub fn write<T: MiriadMappedType>(&mut self, name: &str, values: &[T]) -> Result<(), Error> {
+    pub fn write<T: MiriadMappedType>(
+        &mut self,
+        name: &str,
+        values: &[T],
+    ) -> Result<(), MiriadFormatError> {
         let num = self
             .vars_by_name
             .get(name)
-            .ok_or(MiriadFormatError(format!(
+            .ok_or(MiriadFormatError::Generic(format!(
                 "target stream does not have variable named \"{}\"",
                 name
             )))?;
         let var = &mut self.vars[*num as usize];
 
         if values.len() == 0 {
-            return mirerr!("may not write zero-size array for variable \"{}\"", name);
+            return Err(MiriadFormatError::Generic(format!(
+                "may not write zero-size array for variable \"{}\"",
+                name
+            )));
         }
 
         // TODO: upcasting
         if T::TYPE != var.ty {
-            return mirerr!("attempting to encode UV variable of incompatible type");
+            return Err(MiriadFormatError::Generic(
+                "attempting to encode UV variable of incompatible type".to_string(),
+            ));
         }
 
         let mut header_buf = [0u8; 4];
@@ -657,11 +680,15 @@ impl Encoder {
         Ok(())
     }
 
-    pub fn write_scalar<T: MiriadMappedType>(&mut self, name: &str, value: T) -> Result<(), Error> {
+    pub fn write_scalar<T: MiriadMappedType>(
+        &mut self,
+        name: &str,
+        value: T,
+    ) -> Result<(), MiriadFormatError> {
         self.write(name, &[value])
     }
 
-    pub fn finish_record(&mut self) -> Result<(), Error> {
+    pub fn finish_record(&mut self) -> Result<(), std::io::Error> {
         self.ncorr += self.tot_nschan;
         self.nwcorr += self.tot_nwchan;
 
@@ -672,7 +699,7 @@ impl Encoder {
     }
 
     /// Returns the number of visdata bytes written thus far.
-    pub fn flush(&mut self, ds: &mut DataSet) -> Result<u64, Error> {
+    pub fn flush(&mut self, ds: &mut DataSet) -> Result<u64, MiriadFormatError> {
         ds.set_scalar_item("ncorr", self.ncorr)?;
         ds.set_scalar_item("nwcorr", self.nwcorr)?;
         ds.set_scalar_item("vislen", (self.stream.offset() + 4) as i64)?;

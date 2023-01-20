@@ -1,8 +1,8 @@
 //! Decode a FITS file in a very low-level way, and report how long it took.
 //! This should basically just be a test of the system's I/O throughput.
 
+use anyhow::Context;
 use clap::{Arg, Command};
-use failure::{Error, ResultExt};
 use rubbl_core::io::AligningReader;
 use rubbl_fits::LowLevelFitsItem;
 use std::ffi::{OsStr, OsString};
@@ -30,7 +30,7 @@ fn main() {
 
         Err(e) => {
             println!("fatal error while processing {}", path.to_string_lossy());
-            for cause in e.iter_chain() {
+            for cause in e.chain() {
                 println!("  caused by: {}", cause);
             }
             1
@@ -38,7 +38,7 @@ fn main() {
     });
 }
 
-fn inner(path: &OsStr) -> Result<i32, Error> {
+fn inner(path: &OsStr) -> Result<i32, anyhow::Error> {
     let file = fs::File::open(path).context("error opening file")?;
     let mut dec = rubbl_fits::FitsDecoder::new(AligningReader::new(file));
     let t0 = Instant::now();

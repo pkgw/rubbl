@@ -6,7 +6,7 @@
 //! API currently maps quasi-directly onto the MIRIAD data model since those are
 //! the files I'm working with.
 
-use rubbl_core::Result;
+use anyhow::Error;
 
 /// A "feed pol(arization)" is the polarization component sampled by a
 /// particular receptor on an radio antenna.
@@ -115,7 +115,7 @@ impl BasePol {
 }
 
 pub trait VisStream {
-    fn next(&mut self) -> Result<bool>;
+    fn next(&mut self) -> Result<bool, Error>;
 
     fn basepol(&self) -> BasePol;
 }

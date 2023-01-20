@@ -1,8 +1,8 @@
 //! Read a UV dataset file and report how long it took. This should basically
 //! just be a test of the system's I/O throughput.
 
+use anyhow::{Context, Error};
 use clap::{Arg, Command};
-use failure::{Error, ResultExt};
 use std::ffi::{OsStr, OsString};
 use std::process;
 use std::time::Instant;
@@ -26,7 +26,7 @@ fn main() {
 
         Err(e) => {
             println!("fatal error while processing {}", path.to_string_lossy());
-            for cause in e.iter_chain() {
+            for cause in e.chain() {
                 println!("  caused by: {}", cause);
             }
             1

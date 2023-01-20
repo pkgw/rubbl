@@ -1,8 +1,8 @@
 //! Print out the values of all of the UV variables as they are set in the very
 //! first record of a UV data stream.
 
+use anyhow::{Context, Error};
 use clap::{Arg, Command};
-use failure::{Error, ResultExt};
 use std::ffi::{OsStr, OsString};
 use std::process;
 
@@ -25,7 +25,7 @@ fn main() {
 
         Err(e) => {
             println!("fatal error while processing {}", path.to_string_lossy());
-            for cause in e.iter_chain() {
+            for cause in e.chain() {
                 println!("  caused by: {}", cause);
             }
             1
