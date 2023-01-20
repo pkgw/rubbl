@@ -5,12 +5,29 @@
 //!
 //! This crate provides low-level types that are expected to be used throughout
 //! the Rubbl framework.
+//!
+//! # Crate Duplication and Re-Exports
+//!
+//! This crate depends on several foundational crates that your upstream project
+//! may also explicitly depend on, such as [`ndarray`]. If your project depends
+//! on a version of one of these crates that is not compatible with the version
+//! required by this crate, Cargo will build duplicated versions of these crates
+//! that, while they have the same name, cannot be intermixed. See [this crate’s
+//! Crates.io README][1] for a more detailed discussion.
+//!
+//! [1]: https://crates.io/crates/rubbl_core/
+//!
+//! If you are in a situation where you can't avoid this duplication, this crate
+//! re-exports some of its dependencies, providing a way to reliably name the specific
+//! version that it’s referencing.
 
 #![deny(missing_docs)]
 
-// convenience re-exports
-pub use ndarray::{Array, CowArray};
-pub use num_complex::Complex;
+// convenience re-exports; these can help consumers make sure they're referencing the
+// same types if a crate gets duplicated. See also the README.
+pub use anyhow;
+pub use ndarray::{self, Array, CowArray};
+pub use num_complex::{self, Complex};
 
 pub mod io;
 #[cfg(feature = "notifications")]
