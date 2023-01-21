@@ -14,9 +14,19 @@
     creators: [
       {
         affiliation: 'Center for Astrophysics | Harvard & Smithsonian',
-        name: 'Williams, Peter K. G.',
+        name: 'Williams, P. K. G.',
         orcid: '0000-0003-3734-3587',
-      }
+      },
+      {
+        affiliation: 'Curtin Institute of Radio Astronomy',
+        name: 'Jordan, Christopher H.',
+        orcid: '0000-0002-1220-2940',
+      },
+      {
+        affiliation: 'Curtin Institute of Radio Astronomy',
+        name: 'Null, Dev',
+        orcid: '0000-0003-2159-0911',
+      },
     ],
     // "contributors" can also list people who helped create the deposition
 
