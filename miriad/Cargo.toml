@@ -1,4 +1,4 @@
-# Copyright 2017-2019 Peter Williams <peter@newton.cx> and collaborators
+# Copyright 2017-2022 Peter Williams <peter@newton.cx> and collaborators
 # Licensed under the MIT License.
 
 [package]
@@ -20,13 +20,13 @@ rubbl_core = "thiscommit:2020-12-15:aishi6Ae"
 rubbl_visdata = "thiscommit:2020-12-15:Rohw0kei"
 
 [dependencies]
-byteorder = "^1.4"
-failure = "^0.1"
-failure_derive = "^0.1"
-openat = "^0.1.21"
+byteorder = "1.4.0"
+openat = "0.1.7"
 rubbl_core = { path = "../core", version =">=0.2.0,<1"}
 rubbl_visdata = { path = "../visdata", version =">=0.2.0,<1"}
+thiserror = "1.0.7"
 
 [dev-dependencies]
-clap = "^2.33"
-pbr = "^1.0"
+anyhow = "1.0.0"
+clap = { version = "4.0.26", features = ["cargo"] }
+pbr = "1.0.0"

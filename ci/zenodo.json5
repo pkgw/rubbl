@@ -1,0 +1,38 @@
+{
+  "conceptrecid": "new-for:0.3.0",
+  "metadata": {
+    "access_right": "open",
+    "creators": [
+      {
+        "affiliation": "Center for Astrophysics | Harvard & Smithsonian",
+        "name": "Williams, P. K. G.",
+        "orcid": "0000-0003-3734-3587"
+      },
+      {
+        "affiliation": "Curtin Institute of Radio Astronomy",
+        "name": "Null, Dev",
+        "orcid": "0000-0003-2159-0911"
+      },
+      {
+        "affiliation": "Curtin Institute of Radio Astronomy",
+        "name": "Jordan, Christopher H.",
+        "orcid": "0000-0002-1220-2940"
+      }
+    ],
+    "description": "Rubbl is an exploratory set of basic libraries aimed at allowing astrophysical software, especially astronomy data processing software, to be written in the Rust. Learn more at <a href=\"https://github.com/pkgw/rubbl/\">the Rubbl repository</a>.",
+    "keywords": [
+      "astronomy",
+      "rust"
+    ],
+    "language": "eng",
+    "license": "MIT",
+    "publication_date": "2023-01-23",
+    "title": "rubbl 0.2.2",
+    "upload_type": "software",
+    "version": "0.2.2"
+  },
+  "conceptdoi": "xx.xxxx/dev-build.rubbl.concept",
+  "record_id": "dev.rubbl.v0.2.2",
+  "doi": "xx.xxxx/dev-build.rubbl.v0.2.2",
+  "bucket_link": ""
+}

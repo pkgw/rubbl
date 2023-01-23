@@ -1,32 +1,32 @@
 //! Read a UV dataset file and report how long it took. This should basically
 //! just be a test of the system's I/O throughput.
 
-use clap::{App, Arg};
-use failure::{Error, ResultExt};
-use std::ffi::OsStr;
+use anyhow::{Context, Error};
+use clap::{Arg, Command};
+use std::ffi::{OsStr, OsString};
 use std::process;
 use std::time::Instant;
 
 fn main() {
-    let matches = App::new("uvblast")
+    let matches = Command::new("uvblast")
         .version("0.1.0")
         .about("Read a MIRIAD UV data set as fast as possible.")
         .arg(
-            Arg::with_name("PATH")
+            Arg::new("PATH")
                 .help("The path to the dataset directory")
                 .required(true)
                 .index(1),
         )
         .get_matches();
 
-    let path = matches.value_of_os("PATH").unwrap();
+    let path = matches.get_one::<OsString>("PATH").unwrap();
 
     process::exit(match inner(path.as_ref()) {
         Ok(code) => code,
 
         Err(e) => {
             println!("fatal error while processing {}", path.to_string_lossy());
-            for cause in e.iter_chain() {
+            for cause in e.chain() {
                 println!("  caused by: {}", cause);
             }
             1

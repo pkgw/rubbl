@@ -3,32 +3,32 @@
 //! which doesn't seek but therefore has to actually read through all of the
 //! data.
 
-use clap::{App, Arg};
-use failure::{Error, ResultExt};
-use std::ffi::OsStr;
+use anyhow::Context;
+use clap::{Arg, Command};
+use std::ffi::{OsStr, OsString};
 use std::fs;
 use std::process;
 
 fn main() {
-    let matches = App::new("fitssummary")
+    let matches = Command::new("fitssummary")
         .version("0.1.0")
         .about("Summarize the structure of a FITS file.")
         .arg(
-            Arg::with_name("PATH")
+            Arg::new("PATH")
                 .help("The path to the FITS file")
                 .required(true)
                 .index(1),
         )
         .get_matches();
 
-    let path = matches.value_of_os("PATH").unwrap();
+    let path = matches.get_one::<OsString>("PATH").unwrap();
 
     process::exit(match inner(path.as_ref()) {
         Ok(code) => code,
 
         Err(e) => {
             println!("fatal error while processing {}", path.to_string_lossy());
-            for cause in e.iter_chain() {
+            for cause in e.chain() {
                 println!("  caused by: {}", cause);
             }
             1
@@ -36,7 +36,7 @@ fn main() {
     });
 }
 
-fn inner(path: &OsStr) -> Result<i32, Error> {
+fn inner(path: &OsStr) -> Result<i32, anyhow::Error> {
     let file = fs::File::open(path).context("error opening file")?;
     let fits = rubbl_fits::FitsParser::new(file)?;
 

@@ -1,14 +1,45 @@
-// Copyright 2017-2020 Peter Williams <peter@newton.cx> and collaborators
+// Copyright 2017-2021 Peter Williams <peter@newton.cx> and collaborators
 // Licensed under the MIT License.
 
-use failure::{err_msg, Error};
-use failure_derive::Fail;
+//! I/O on [CASA] table data sets.
+//!
+//! [CASA]: https://casa.nrao.edu/
+//!
+//! This crate provides I/O access to the CASA table data format. This format is
+//! commonly used for storing radio astronomical visibility data in the
+//! [Measurement Set][MS] data model, but is not limited to that particular
+//! application — it is a generic data format for tabular scientific data. This
+//! crate provides only lower-level I/O interfaces and not higher-level
+//! abstractions for dealing with the specific semantics of Measurement Set
+//! data.
+//!
+//! [MS]: https://casa.nrao.edu/Memos/229.html
+//!
+//! Because the on-disk representation of the CASA table format is quite complex
+//! and essentially undocumented, this crate’s implementation relies on wrapping
+//! a substantial quantity of C++ code from the [casacore] project. The goal is
+//! to provide access to the data format in a way that is completely safe and as
+//! idiomatic as possible, given the limitations imposed by the architecture of
+//! the underlying C++ code.
+//!
+//! [casacore]: http://casacore.github.io/casacore/
+//!
+//! The entry point to this crate is typically the [`Table`] struct that
+//! represents a handle to a CASA table data set.
+
+#![deny(missing_docs)]
+
 use ndarray::Dimension;
 use rubbl_core::num::{DimFromShapeSlice, DimensionMismatchError};
-pub use rubbl_core::{Array, Complex};
-use std::fmt::{self, Debug};
-use std::path::Path;
+use std::{
+    fmt::{self, Debug},
+    path::Path,
+};
+use thiserror::Error;
 
+pub use rubbl_core::{Array, Complex, CowArray};
+
+#[allow(missing_docs)]
 mod glue;
 pub use glue::{GlueDataType, TableDescCreateMode};
 
@@ -16,8 +47,8 @@ pub use glue::{GlueDataType, TableDescCreateMode};
 
 /// An error type used when the wrapped "casacore" C++ code raises an
 /// exception.
-#[derive(Fail, Debug)]
-#[fail(display = "{}", _0)]
+#[derive(Error, Debug)]
+#[error("{0}")]
 pub struct CasacoreError(String);
 
 impl glue::ExcInfo {
@@ -92,6 +123,7 @@ impl fmt::Display for glue::GlueDataType {
 
 /// A type that can be translated into a CASA table data type.
 pub trait CasaDataType: Clone + PartialEq + Sized {
+    /// The CASA data type identifier associated with this Rust type.
     const DATA_TYPE: glue::GlueDataType;
 
     #[cfg(test)]
@@ -145,7 +177,7 @@ pub trait CasaDataType: Clone + PartialEq + Sized {
     }
 
     #[doc(hidden)]
-    fn casatables_alloc(shape: &[u64]) -> Result<Self, Error>;
+    fn casatables_alloc(shape: &[u64]) -> Result<Self, TableError>;
 
     #[doc(hidden)]
     fn casatables_as_buf(&self) -> *const () {
@@ -160,6 +192,8 @@ pub trait CasaDataType: Clone + PartialEq + Sized {
 
 /// A type that maps to one of CASA's scalar data types.
 pub trait CasaScalarData: CasaDataType {
+    /// The CASA data type value associated with the vector form of this scalar
+    /// data type.
     const VECTOR_TYPE: glue::GlueDataType;
 }
 
@@ -168,7 +202,7 @@ macro_rules! impl_scalar_data_type {
         impl CasaDataType for $rust_type {
             const DATA_TYPE: glue::GlueDataType = glue::GlueDataType::$casa_scalar_type;
 
-            fn casatables_alloc(_shape: &[u64]) -> Result<Self, Error> {
+            fn casatables_alloc(_shape: &[u64]) -> Result<Self, TableError> {
                 Ok($default)
             }
         }
@@ -203,7 +237,7 @@ impl CasaDataType for String {
         s.to_owned()
     }
 
-    fn casatables_alloc(_shape: &[u64]) -> Result<Self, Error> {
+    fn casatables_alloc(_shape: &[u64]) -> Result<Self, TableError> {
         Ok("".to_owned())
     }
 
@@ -229,7 +263,7 @@ macro_rules! impl_vec_data_type {
         impl CasaDataType for Vec<$rust_type> {
             const DATA_TYPE: glue::GlueDataType = glue::GlueDataType::$casa_type;
 
-            fn casatables_alloc(shape: &[u64]) -> Result<Self, Error> {
+            fn casatables_alloc(shape: &[u64]) -> Result<Self, TableError> {
                 if shape.len() != 1 {
                     Err(DimensionMismatchError {
                         expected: 1,
@@ -277,7 +311,7 @@ impl_vec_data_type! { Complex<f64>, TpArrayDComplex }
 impl CasaDataType for Vec<String> {
     const DATA_TYPE: glue::GlueDataType = glue::GlueDataType::TpArrayString;
 
-    fn casatables_alloc(shape: &[u64]) -> Result<Self, Error> {
+    fn casatables_alloc(shape: &[u64]) -> Result<Self, TableError> {
         if shape.len() != 1 {
             Err(DimensionMismatchError {
                 expected: 1,
@@ -321,7 +355,7 @@ impl CasaDataType for Vec<String> {
 impl<I: CasaScalarData + Copy, D: Dimension + DimFromShapeSlice<u64>> CasaDataType for Array<I, D> {
     const DATA_TYPE: glue::GlueDataType = I::VECTOR_TYPE;
 
-    fn casatables_alloc(shape: &[u64]) -> Result<Self, Error> {
+    fn casatables_alloc(shape: &[u64]) -> Result<Self, TableError> {
         // TODO: this method is deprecated and we are certainly in the danger
         // zone by producing uninitialized memory here. Need to figure out a
         // better approach. We may need to take a closure argument that we can
@@ -661,22 +695,20 @@ where
     )
 }
 
-/// From `casacore::TableDesc`:
+/// Information about the structure of a CASA table.
 ///
-/// Define the structure of a Casacore table
-///
-/// A TableDesc object contains the description, or structure, of a table.
-/// This description is required for the creation of a new table.
-/// Descriptions are subsequently associated with every table and
-/// embedded in them.
+/// From the casacore documentation: "A TableDesc object contains the
+/// description, or structure, of a table. This description is required for the
+/// creation of a new table. Descriptions are subsequently associated with every
+/// table and embedded in them.""
 ///
 /// # Examples
 ///
 /// Create a description of a table named "TYPE", with a scalar string column
 /// named "A" with comment "string", a column of unsigned integer arrays of no
 /// fixed size named "B" with comment "uint array", and a column of double
-/// precision complex number arrays of shape [4] named "C" with comment
-/// "fixed complex vector"
+/// precision complex number arrays of shape `[4]` named "C" with comment "fixed
+/// complex vector"
 ///
 /// ```rust
 /// use rubbl_casatables::{GlueDataType, TableDescCreateMode, TableDesc};
@@ -706,7 +738,7 @@ impl TableDesc {
     ///     however you most likely want to go with Scratch, as this avoids
     ///     writing a .tabdsc file to disk.
     ///
-    pub fn new(name: &str, mode: glue::TableDescCreateMode) -> Result<Self, Error> {
+    pub fn new(name: &str, mode: glue::TableDescCreateMode) -> Result<Self, TableError> {
         let cname = glue::StringBridge::from_rust(name);
         let mut exc_info = unsafe { std::mem::zeroed::<glue::ExcInfo>() };
 
@@ -727,7 +759,7 @@ impl TableDesc {
         comment: Option<&str>,
         direct: bool,
         undefined: bool,
-    ) -> Result<(), Error> {
+    ) -> Result<(), TableError> {
         let cname = glue::StringBridge::from_rust(col_name);
         let comment = if let Some(comment_) = comment {
             comment_
@@ -766,7 +798,7 @@ impl TableDesc {
         dims: Option<&[u64]>,
         direct: bool,
         undefined: bool,
-    ) -> Result<(), Error> {
+    ) -> Result<(), TableError> {
         let cname = glue::StringBridge::from_rust(col_name);
         let comment = if let Some(comment_) = comment {
             comment_
@@ -808,7 +840,7 @@ impl TableDesc {
     }
 
     /// Set the number of dimensions of a column
-    pub fn set_ndims(&mut self, col_name: &str, ndims: u64) -> Result<(), Error> {
+    pub fn set_ndims(&mut self, col_name: &str, ndims: u64) -> Result<(), TableError> {
         let cname = glue::StringBridge::from_rust(col_name);
         let rv =
             unsafe { glue::tabledesc_set_ndims(self.handle, &cname, ndims, &mut self.exc_info) };
@@ -848,6 +880,14 @@ impl TableDesc {
         TableRecord::copy_handle(unsafe { &*handle })
     }
 
+    /// Add a "keyword" to be associated with a particular column in this table
+    /// description.
+    ///
+    /// `col_name` - The name of the affected column.
+    ///
+    /// `kw_name` - The name of the keyword to apply to the column.
+    ///
+    /// `value` - The value to associate with the keyword.
     pub fn put_column_keyword<T: CasaDataType>(
         &mut self,
         col_name: &str,
@@ -924,6 +964,7 @@ impl TableDesc {
 
 // Tables
 
+/// A CASA data table.
 pub struct Table {
     handle: *mut glue::GlueTable,
     exc_info: glue::ExcInfo,
@@ -932,8 +973,13 @@ pub struct Table {
 /// Modes in which a casacore table can be opened.
 ///
 pub enum TableOpenMode {
+    /// Open the table for read-only access.
     Read = 1,
+
+    /// Open the table for read-write access.
     ReadWrite = 2,
+
+    /// Create a new table.
     Create = 3,
 }
 
@@ -941,65 +987,110 @@ pub enum TableOpenMode {
 ///
 /// ## Note
 ///
-/// Casacore allows for an additional mode, `Scratch` which it describes as
-/// "new table, which gets marked for delete".
+/// Casacore allows for an additional mode, `Scratch` which it describes as "new
+/// table, which gets marked for delete".
 ///
-/// The use case for this was unclear, but If you have a use for this mode,
+/// The use case for this was unclear, but if you have a use for this mode,
 /// consider opening an issue in rubbl.
 ///
-/// For more details about the discussion of this mode, see this comment
-/// <https://github.com/pkgw/rubbl/pull/160#discussion_r707433551>
+/// For more details about the discussion of this mode, see [this GitHub
+/// comment][x].
+///
+/// [x]: https://github.com/pkgw/rubbl/pull/160#discussion_r707433551
 ///
 pub enum TableCreateMode {
-    /// create table
+    /// Create a new table.
+    ///
+    /// **To check:** if the table already exists, do we delete it or open
+    /// it as-is or what?
     New = 1,
-    /// create table (may not exist)
+
+    /// Create a new table, raising an error if it already exists.
     NewNoReplace = 2,
 }
 
-#[derive(Fail, Debug)]
-#[fail(
-    display = "Expected a column with a scalar data type, but found a vector of {}",
-    _0
-)]
+/// An error type used when a scalar column was expected but a vector was found.
+#[derive(Error, Debug)]
+#[error("Expected a column with a scalar data type, but found a vector of {0}")]
 pub struct NotScalarColumnError(glue::GlueDataType);
 
-#[derive(Fail, Debug)]
-#[fail(
-    display = "Expected data with the storage type {}, but found {}",
-    _0, _1
-)]
+/// An error type used when the expected data type was not found.
+///
+/// The first element of the tuple is the expected data type, and the second
+/// element is the one that was actually encountered.
+#[derive(Error, Debug)]
+#[error("Expected data with the storage type {0}, but found {1}")]
 pub struct UnexpectedDataTypeError(glue::GlueDataType, glue::GlueDataType);
+
+/// An error type capturing all potential problems when interfacing with
+/// [`Table`]s.
+#[derive(Error, Debug)]
+pub enum TableError {
+    /// Table paths must be representable as UTF-8 strings.
+    #[error("table paths must be representable as UTF-8 strings")]
+    InvalidUtf8,
+
+    /// Expected a scalar, but got a vector.
+    #[error("Expected a column with a scalar data type, but found a vector of {0}")]
+    NotScalarColumnError(glue::GlueDataType),
+
+    /// Received a different type from what was expected.
+    #[error(transparent)]
+    UnexpectedDataType(#[from] UnexpectedDataTypeError),
+
+    /// Generic casacore C++ exception.
+    #[error(transparent)]
+    Casacore(#[from] CasacoreError),
+
+    /// An error type used when two arrays should have the same dimensionality,
+    /// but do not.
+    #[error(transparent)]
+    DimensionMismatch(#[from] DimensionMismatchError),
+}
 
 /// A Rust wrapper for a casacore table.
 ///
-/// For details on the casacore tables, see the [documentation](https://casacore.github.io/casacore/group__Tables__module.html#details)
+/// For details on the casacore table concepts as expressed in the underlying
+/// C++ implementation, see the
+/// [documentation](https://casacore.github.io/casacore/group__Tables__module.html#details).
 impl Table {
-    /// Create a new casacore table
+    /// Create a new casacore table.
     ///
-    /// To open an existing table, use [`Table::open`]
+    /// To open an existing table, use [`Table::open`].
     ///
-    /// Read more about the casacore tables interface
-    /// [here](https://casacore.github.io/casacore/group__Tables__module.html#details)
+    /// Read more about the casacore tables C++ interface
+    /// [here](https://casacore.github.io/casacore/group__Tables__module.html#details).
     ///
     /// # Examples
     ///
-    /// Creating a table
+    /// Creating a table:
     ///
     /// ```rust
     /// use std::path::PathBuf;
     /// use tempfile::tempdir;
-    /// use rubbl_casatables::{ColumnDescription, GlueDataType, Table, TableCreateMode, TableDesc, TableDescCreateMode};
+    /// use rubbl_casatables::{
+    ///     ColumnDescription, GlueDataType, Table,
+    ///     TableCreateMode, TableDesc, TableDescCreateMode,
+    /// };
     ///
     /// // tempdir is only necessary to avoid writing to disk each time this example is run
     /// let tmp_dir = tempdir().unwrap();
     /// let table_path = tmp_dir.path().join("test.ms");
     ///
     /// // First create a table description for our base table.
-    /// // Use TDM_SCRATCH to avoid writing the .tabdsc to disk.
+    /// // Use TDM_SCRATCH to avoid writing a `.tabdsc` file to disk.
     /// let mut table_desc = TableDesc::new("", TableDescCreateMode::TDM_SCRATCH).unwrap();
-    /// // Define the columns in your table description
-    /// table_desc.add_array_column(GlueDataType::TpDouble, "UVW", Some("Vector with uvw coordinates (in meters)"), Some(&[3]), true, false).unwrap();
+    ///
+    /// // Define the columns in your table description:
+    /// table_desc.add_array_column(
+    ///     GlueDataType::TpDouble,                           // the data type
+    ///     "UVW",                                            // the column name
+    ///     Some("Vector with uvw coordinates (in meters)"),  // an optional comment about the column
+    ///     Some(&[3]),                                       // a required vector shape for the volumn
+    ///     true,                                             // "direct": whether data are stored in the table
+    ///     false,                                            // Whether some scalar values are treated as undefined
+    /// ).unwrap();
+    ///
     /// // Create your new table with 0 rows.
     /// Table::new(&table_path, table_desc, 0, TableCreateMode::New).unwrap();
     /// ```
@@ -1008,13 +1099,11 @@ impl Table {
         table_desc: TableDesc,
         n_rows: usize,
         mode: TableCreateMode,
-    ) -> Result<Self, Error> {
+    ) -> Result<Self, TableError> {
         let spath = match path.as_ref().to_str() {
             Some(s) => s,
             None => {
-                return Err(err_msg(
-                    "table paths must be representable as UTF-8 strings",
-                ));
+                return Err(TableError::InvalidUtf8);
             }
         };
 
@@ -1048,11 +1137,12 @@ impl Table {
 
     /// Open an existing casacore table.
     ///
-    /// To create a table, use [`Table::new`] instead of [`Table::open`] with
-    /// [`TableOpenMode::Create`]
+    /// To create a table, use [`Table::new`]. Do not use
+    /// [`TableOpenMode::Create`] with this function — it will not do what you
+    /// want.
     ///
-    /// Read more about the casacore tables interface
-    /// [here](https://casacore.github.io/casacore/group__Tables__module.html#details)
+    /// Read more about the casacore tables C++ interface
+    /// [here](https://casacore.github.io/casacore/group__Tables__module.html#details).
     ///
     /// # Examples
     ///
@@ -1066,37 +1156,46 @@ impl Table {
     /// // tempdir is only necessary to avoid writing to disk each time this example is run
     /// let tmp_dir = tempdir().unwrap();
     /// let table_path = tmp_dir.path().join("test.ms");
+    ///
     /// // First create a table description for our base table.
     /// // Use TDM_SCRATCH to avoid writing the .tabdsc to disk.
     /// let mut table_desc = TableDesc::new("", TableDescCreateMode::TDM_SCRATCH).unwrap();
-    /// // Define the columns in your table description
-    /// table_desc.add_array_column(GlueDataType::TpDouble, "UVW", Some("Vector with uvw coordinates (in meters)"), Some(&[3]), true, false).unwrap();
-    /// // Create your new table with 1 rows
+    ///
+    /// // Define the columns in your table description:
+    /// table_desc.add_array_column(
+    ///     GlueDataType::TpDouble,                           // the data type
+    ///     "UVW",                                            // the column name
+    ///     Some("Vector with uvw coordinates (in meters)"),  // an optional comment about the column
+    ///     Some(&[3]),                                       // a required vector shape for the volumn
+    ///     true,                                             // "direct": whether data are stored in the table
+    ///     false,                                            // Whether some scalar values are treated as undefined
+    /// ).unwrap();
+    ///
+    /// // Create the new table with 1 row.
     /// let mut table = Table::new(&table_path, table_desc, 1, TableCreateMode::New).unwrap();
-    /// // write to the first row in the uvw column
+    ///
+    /// // Write to the first row in the uvw column
     /// let cell_value: Vec<f64> = vec![1.0, 2.0, 3.0];
     /// table.put_cell("UVW", 0, &cell_value).unwrap();
-    /// // This writes the table to disk and closes the file pointer.
+    ///
+    /// // This writes the table to disk and closes the file pointer:
     /// drop(table);
     ///
-    /// // now open the table
+    /// // Now open the table:
     /// let mut table = Table::open(&table_path, TableOpenMode::ReadWrite).unwrap();
-    /// // and extract the cell value we wrote earlier
+    ///
+    /// // ... and extract the cell value we wrote earlier:
     /// let extracted_cell_value: Vec<f64> = table.get_cell_as_vec("UVW", 0).unwrap();
     /// assert_eq!(cell_value, extracted_cell_value);
     /// ```
-    ///     
+    ///
     /// # Errors
     ///
-    /// Can raise [`CasacoreError`] if there was an issue invoking casacore
-    pub fn open<P: AsRef<Path>>(path: P, mode: TableOpenMode) -> Result<Self, Error> {
+    /// Can raise [`CasacoreError`] if there was an issue invoking casacore.
+    pub fn open<P: AsRef<Path>>(path: P, mode: TableOpenMode) -> Result<Self, TableError> {
         let spath = match path.as_ref().to_str() {
             Some(s) => s,
-            None => {
-                return Err(err_msg(
-                    "table paths must be representable as UTF-8 strings",
-                ));
-            }
+            None => return Err(TableError::InvalidUtf8),
         };
         let cpath = glue::StringBridge::from_rust(spath);
         let mut exc_info = unsafe { std::mem::zeroed::<glue::ExcInfo>() };
@@ -1112,23 +1211,23 @@ impl Table {
             return exc_info.as_err();
         }
 
-        Ok(Table {
-            handle: handle,
-            exc_info: exc_info,
-        })
+        Ok(Table { handle, exc_info })
     }
 
-    /// The number of rows in the table
+    /// Get the number of rows in the table.
     pub fn n_rows(&self) -> u64 {
         unsafe { glue::table_n_rows(self.handle) as u64 }
     }
 
-    /// The number of columns in the table
+    /// Get the number of columns in the table.
     pub fn n_columns(&self) -> usize {
         unsafe { glue::table_n_columns(self.handle) as usize }
     }
 
-    /// The path containing the table.
+    /// Get the filesystem path associated with the table.
+    ///
+    /// This function should only fail of the underlying C++ throws an
+    /// exception, which *should* basically never happen for this operation.
     pub fn file_name(&self) -> Result<String, CasacoreError> {
         // this is to allow filename access without &mut.
         let mut exc_info = unsafe { std::mem::zeroed::<glue::ExcInfo>() };
@@ -1146,7 +1245,7 @@ impl Table {
         Ok(result)
     }
 
-    /// A vector containing all of the column names in the table
+    /// Get a vector containing all of the column names in the table.
     ///
     /// # Errors
     ///
@@ -1168,11 +1267,13 @@ impl Table {
         Ok(cnames)
     }
 
-    /// Remove a column from the table
+    /// Remove a column from the table.
     ///
     /// # Errors
     ///
-    /// Can raise [`CasacoreError`] if there was an issue invoking casacore
+    /// Can raise [`CasacoreError`] if there was an issue invoking casacore.
+    /// **To check:** this probably returns an error if the named column was not
+    /// present?
     pub fn remove_column(&mut self, col_name: &str) -> Result<(), CasacoreError> {
         let ccol_name = glue::StringBridge::from_rust(col_name);
 
@@ -1188,8 +1289,11 @@ impl Table {
     /// Add a scalar column to the table.
     ///
     /// `col_name` - column name, must be unique
+    ///
     /// `comment` - optional string field describing how to use the column.
-    /// `direct` -
+    ///
+    /// `direct` - Whether the underyling data are stored directly in the table.
+    ///     This should almost always be `true`.
     ///
     /// # Errors
     ///
@@ -1241,7 +1345,7 @@ impl Table {
         dims: Option<&[u64]>,
         direct: bool,
         undefined: bool,
-    ) -> Result<(), Error> {
+    ) -> Result<(), TableError> {
         let cname = glue::StringBridge::from_rust(col_name);
         let comment = if let Some(comment_) = comment {
             comment_
@@ -1348,6 +1452,12 @@ impl Table {
     }
 
     // TODO: dedup from TableDesc::put_keyword
+    /// Add a "keyword" to be associated with the table.
+    ///
+    /// A keyword is essentially a name-value pair, where the associated value
+    /// need not be a simple data type: it can be a record or even a sub-table.
+    ///
+    /// See also [`Self::put_column_keyword`].
     pub fn put_keyword<T: CasaDataType>(
         &mut self,
         kw_name: &str,
@@ -1417,6 +1527,12 @@ impl Table {
     }
 
     // TODO: dedup from TableDesc::put_column_keyword
+    /// Add a "keyword" to be associated with a particular column of the table.
+    ///
+    /// A keyword is essentially a name-value pair, where the associated value
+    /// need not be a simple data type: it can be a record or even a sub-table.
+    ///
+    /// See also [`Self::put_keyword`] for table-level keywords.
     pub fn put_column_keyword<T: CasaDataType>(
         &mut self,
         col_name: &str,
@@ -1490,7 +1606,8 @@ impl Table {
         Ok(())
     }
 
-    /// Return a TableRecord containing all keyword / value pairs for this table
+    /// Return a TableRecord containing all keyword / value pairs for this
+    /// table.
     pub fn get_keyword_record(&mut self) -> Result<TableRecord, CasacoreError> {
         let handle = unsafe { glue::table_get_keywords(self.handle, &mut self.exc_info) };
 
@@ -1501,7 +1618,8 @@ impl Table {
         TableRecord::copy_handle(unsafe { &*handle })
     }
 
-    /// Return a TableRecord containing all keyword / value pairs for this table
+    /// Return a TableRecord containing all keyword / value pairs for the named
+    /// column.
     pub fn get_column_keyword_record(
         &mut self,
         col_name: &str,
@@ -1517,6 +1635,10 @@ impl Table {
         TableRecord::copy_handle(unsafe { &*handle })
     }
 
+    /// Get the description of the named column.
+    ///
+    /// The returned [`ColumnDescription`] handle provides access to column's
+    /// data type, required vector shape, keywords, and other such metadata.
     pub fn get_col_desc(&mut self, col_name: &str) -> Result<ColumnDescription, CasacoreError> {
         let ccol_name = glue::StringBridge::from_rust(col_name);
         let mut n_rows = 0;
@@ -1568,7 +1690,14 @@ impl Table {
         })
     }
 
-    pub fn get_col_as_vec<T: CasaScalarData>(&mut self, col_name: &str) -> Result<Vec<T>, Error> {
+    /// Get all of the data in a column as one vector.
+    ///
+    /// The underlying data type of the column must be scalar. Use this function
+    /// wisely since some CASA tables may contain millions of rows.
+    pub fn get_col_as_vec<T: CasaScalarData>(
+        &mut self,
+        col_name: &str,
+    ) -> Result<Vec<T>, TableError> {
         let ccol_name = glue::StringBridge::from_rust(col_name);
         let mut n_rows = 0;
         let mut data_type = glue::GlueDataType::TpOther;
@@ -1596,7 +1725,7 @@ impl Table {
         }
 
         if is_scalar == 0 || is_fixed_shape == 0 || n_dim != 0 {
-            return Err(NotScalarColumnError(data_type).into());
+            return Err(TableError::NotScalarColumnError(data_type).into());
         }
 
         if data_type != T::DATA_TYPE {
@@ -1642,7 +1771,8 @@ impl Table {
         Ok(result)
     }
 
-    pub fn get_cell<T: CasaDataType>(&mut self, col_name: &str, row: u64) -> Result<T, Error> {
+    /// Get the value of one cell of the table.
+    pub fn get_cell<T: CasaDataType>(&mut self, col_name: &str, row: u64) -> Result<T, TableError> {
         let ccol_name = glue::StringBridge::from_rust(col_name);
         let mut data_type = glue::GlueDataType::TpOther;
         let mut n_dim = 0;
@@ -1669,7 +1799,8 @@ impl Table {
         }
 
         let result = if data_type != glue::GlueDataType::TpString {
-            let mut result = T::casatables_alloc(&dims[..n_dim as usize])?;
+            let mut result =
+                T::casatables_alloc(&dims[..n_dim as usize]).map_err(|e| TableError::from(e))?;
 
             let rv = unsafe {
                 glue::table_get_cell(
@@ -1711,12 +1842,14 @@ impl Table {
         Ok(result)
     }
 
-    /// This function discards shape information but won't accept scalars.
+    /// Get the contents of one cell of the table as a simple Rust vector.
+    ///
+    /// This function discards shape information and won't accept scalars.
     pub fn get_cell_as_vec<T: CasaScalarData>(
         &mut self,
         col_name: &str,
         row: u64,
-    ) -> Result<Vec<T>, Error> {
+    ) -> Result<Vec<T>, TableError> {
         let ccol_name = glue::StringBridge::from_rust(col_name);
         let mut data_type = glue::GlueDataType::TpOther;
         let mut n_dim = 0;
@@ -1787,6 +1920,7 @@ impl Table {
         Ok(result)
     }
 
+    /// Put a value for one cell of the table.
     pub fn put_cell<T: CasaDataType>(
         &mut self,
         col_name: &str,
@@ -1859,6 +1993,7 @@ impl Table {
         Ok(())
     }
 
+    /// Add additional, empty rows to the table.
     pub fn add_rows(&mut self, n_rows: usize) -> Result<(), CasacoreError> {
         if unsafe { glue::table_add_rows(self.handle, n_rows as u64, &mut self.exc_info) != 0 } {
             self.exc_info.as_err()
@@ -1876,21 +2011,32 @@ impl Table {
             return exc_info.as_err();
         }
 
-        Ok(TableRow {
-            handle: handle,
-            exc_info: exc_info,
-        })
+        Ok(TableRow { handle, exc_info })
     }
 
+    /// Get an object for read-only access to individual rows of the table.
+    ///
+    /// The row reader can be used to iterate through the rows of the table
+    /// efficiently.
+    ///
+    /// See also [`Self::get_row_writer`].
     pub fn get_row_reader(&mut self) -> Result<TableRow, CasacoreError> {
         self.get_row_handle(true)
     }
 
+    /// Get an object for read-write access to individual rows of the table.
+    ///
+    /// The row writer can be used to iterate through the rows of the table
+    /// efficiently.
+    ///
+    /// See also [`Self::get_row_reader`].
     pub fn get_row_writer(&mut self) -> Result<TableRow, CasacoreError> {
         self.get_row_handle(false)
     }
 
-    pub fn read_row(&mut self, row: &mut TableRow, row_number: u64) -> Result<(), Error> {
+    /// Populate a [`TableRow`] accessor object with data from the specified
+    /// row.
+    pub fn read_row(&mut self, row: &mut TableRow, row_number: u64) -> Result<(), TableError> {
         if unsafe { glue::table_row_read(row.handle, row_number, &mut row.exc_info) } != 0 {
             return row.exc_info.as_err();
         }
@@ -1898,10 +2044,10 @@ impl Table {
         Ok(())
     }
 
-    /// Perform `func` on each row of the measurement set.
-    pub fn for_each_row<F>(&mut self, mut func: F) -> Result<(), Error>
+    /// Perform `func` on each row of the table.
+    pub fn for_each_row<F>(&mut self, mut func: F) -> Result<(), TableError>
     where
-        F: FnMut(&mut TableRow) -> Result<(), Error>,
+        F: FnMut(&mut TableRow) -> Result<(), TableError>,
     {
         let mut exc_info = unsafe { std::mem::zeroed::<glue::ExcInfo>() };
 
@@ -1910,10 +2056,7 @@ impl Table {
             return exc_info.as_err();
         }
 
-        let mut row = TableRow {
-            handle: handle,
-            exc_info: exc_info,
-        };
+        let mut row = TableRow { handle, exc_info };
 
         for row_number in 0..self.n_rows() {
             if unsafe { glue::table_row_read(row.handle, row_number as u64, &mut row.exc_info) }
@@ -1933,9 +2076,9 @@ impl Table {
         &mut self,
         row_range: std::ops::Range<u64>,
         mut func: F,
-    ) -> Result<(), Error>
+    ) -> Result<(), TableError>
     where
-        F: FnMut(&mut TableRow) -> Result<(), Error>,
+        F: FnMut(&mut TableRow) -> Result<(), TableError>,
     {
         let mut exc_info = unsafe { std::mem::zeroed::<glue::ExcInfo>() };
 
@@ -1963,9 +2106,9 @@ impl Table {
     }
 
     /// Perform `func` on each row indicated by `rows`.
-    pub fn for_each_specific_row<F>(&mut self, rows: &[u64], mut func: F) -> Result<(), Error>
+    pub fn for_each_specific_row<F>(&mut self, rows: &[u64], mut func: F) -> Result<(), TableError>
     where
-        F: FnMut(&mut TableRow) -> Result<(), Error>,
+        F: FnMut(&mut TableRow) -> Result<(), TableError>,
     {
         let mut exc_info = unsafe { std::mem::zeroed::<glue::ExcInfo>() };
 
@@ -1992,6 +2135,7 @@ impl Table {
         Ok(())
     }
 
+    /// Copy all rows from this table to another table.
     pub fn copy_rows_to(&mut self, dest: &mut Table) -> Result<(), CasacoreError> {
         if unsafe { glue::table_copy_rows(self.handle, dest.handle, &mut self.exc_info) != 0 } {
             self.exc_info.as_err()
@@ -2000,6 +2144,8 @@ impl Table {
         }
     }
 
+    /// Copy the "description" of this table to a new filesystem path, without
+    /// copying any of the actual data contents.
     pub fn deep_copy_no_rows(&mut self, dest_path: &str) -> Result<(), CasacoreError> {
         let cdest_path = glue::StringBridge::from_rust(dest_path);
 
@@ -2030,6 +2176,7 @@ impl Drop for Table {
     }
 }
 
+/// Information describing the properties of a particular column of a table.
 #[derive(PartialEq, Eq, Debug)]
 pub struct ColumnDescription {
     name: String,
@@ -2041,22 +2188,29 @@ pub struct ColumnDescription {
 }
 
 impl ColumnDescription {
+    /// Get the name of the column.
     pub fn name(&self) -> &str {
         &self.name
     }
 
+    /// Get the underlying CASA data type of the column.
     pub fn data_type(&self) -> glue::GlueDataType {
         self.data_type
     }
 
+    /// Get whether the column is scalar-valued, as opposed to vector-valued.
     pub fn is_scalar(&self) -> bool {
         self.is_scalar
     }
 
+    /// Get whether the column is vector-valued with a fixed array shape for
+    /// each cell.
     pub fn is_fixed_shape(&self) -> bool {
         self.is_fixed_shape
     }
 
+    /// If the column is vector-valued with a fixed shape for each cell, get the
+    /// required shape.
     pub fn shape(&self) -> Option<&[u64]> {
         self.shape.as_ref().map(|v| &v[..])
     }
@@ -2064,13 +2218,15 @@ impl ColumnDescription {
 
 // Table Row handles
 
+/// A type for examining individual rows of a CASA table.
 pub struct TableRow {
     handle: *mut glue::GlueTableRow,
     exc_info: glue::ExcInfo,
 }
 
 impl TableRow {
-    pub fn get_cell<T: CasaDataType>(&mut self, col_name: &str) -> Result<T, Error> {
+    /// Get the value of a specific cell in this row.
+    pub fn get_cell<T: CasaDataType>(&mut self, col_name: &str) -> Result<T, TableError> {
         let ccol_name = glue::StringBridge::from_rust(col_name);
         let mut data_type = glue::GlueDataType::TpOther;
         let mut n_dim = 0;
@@ -2150,7 +2306,9 @@ impl TableRow {
         Ok(result)
     }
 
-    /// Note: I am not sure if this function actually works. `Table.put_cell`
+    /// Write a new value for a specific cell in this row.
+    ///
+    /// Note: I am not sure if this function actually works! `Table.put_cell`
     /// does work. Investigation required.
     pub fn put_cell<T: CasaDataType>(
         &mut self,
@@ -2220,6 +2378,9 @@ impl TableRow {
         Ok(())
     }
 
+    /// Copy the data associated with this row accessor to another one, and then
+    /// write the data to the specifed row of that other accessor's associated
+    /// table.
     pub fn copy_and_put(
         &mut self,
         dest: &mut TableRow,
@@ -2236,6 +2397,8 @@ impl TableRow {
         Ok(())
     }
 
+    /// Write the data currently associated with this row accessor to the
+    /// specified row of its associated table.
     pub fn put(&mut self, row_number: u64) -> Result<(), CasacoreError> {
         let rv = unsafe { glue::table_row_write(self.handle, row_number, &mut self.exc_info) };
 
@@ -2257,13 +2420,18 @@ impl Drop for TableRow {
     }
 }
 
-/// FIXME: currently, to avoid potential double-frees, TableRecords are only created standalone, or
-/// as copies of TableRecords owned by something else.
+/// A dictionary-like data structured that can be stored in a CASA table.
 ///
-/// Ideally, there would be a lot of utility in having rewritable TableRecords, however this would
-/// require keeping track of whether a TableRecord is owned, and not freeing owned TableRecords.
+/// FIXME: currently, to avoid potential double-frees, TableRecords are only
+/// created standalone, or as copies of TableRecords owned by something else.
 ///
-/// Further discussion here: https://github.com/pkgw/rubbl/pull/181#issuecomment-968493738
+/// Ideally, there would be a lot of utility in having rewritable TableRecords,
+/// however this would require keeping track of whether a TableRecord is owned,
+/// and not freeing owned TableRecords.
+///
+/// Further discussion [here][x].
+///
+/// [x]: https://github.com/pkgw/rubbl/pull/181#issuecomment-968493738
 #[derive(Clone)]
 pub struct TableRecord {
     handle: *mut glue::GlueTableRecord,
@@ -2271,7 +2439,12 @@ pub struct TableRecord {
 }
 
 impl TableRecord {
-    pub fn new() -> Result<Self, Error> {
+    /// Create a new, empty [`TableRecord`].
+    ///
+    /// This function will return an error if the underlying C++ code raises an
+    /// exception. This *should* only happen if there is a memory allocation
+    /// error.
+    pub fn new() -> Result<Self, TableError> {
         let mut exc_info = unsafe { std::mem::zeroed::<glue::ExcInfo>() };
 
         let handle = unsafe { glue::tablerec_create(&mut exc_info) };
@@ -2282,7 +2455,7 @@ impl TableRecord {
         Ok(Self { handle, exc_info })
     }
 
-    pub fn copy_handle(other_handle: &glue::GlueTableRecord) -> Result<Self, CasacoreError> {
+    fn copy_handle(other_handle: &glue::GlueTableRecord) -> Result<Self, CasacoreError> {
         let mut exc_info = unsafe { std::mem::zeroed::<glue::ExcInfo>() };
 
         let handle = unsafe { glue::tablerec_copy(other_handle, &mut exc_info) };
@@ -2310,6 +2483,8 @@ impl TableRecord {
         Ok(result)
     }
 
+    /// Get the record contents as a vector of field names, datatypes, and
+    /// string representations.
     pub fn keyword_names_types_reprs(
         &mut self,
     ) -> Result<Vec<(String, GlueDataType, String)>, CasacoreError> {
@@ -2332,7 +2507,8 @@ impl TableRecord {
         Ok(result)
     }
 
-    pub fn get_field<T: CasaDataType>(&mut self, col_name: &str) -> Result<T, Error> {
+    /// Get the value of a particular field of this record.
+    pub fn get_field<T: CasaDataType>(&mut self, col_name: &str) -> Result<T, TableError> {
         let ccol_name = glue::StringBridge::from_rust(col_name);
         let mut data_type = glue::GlueDataType::TpOther;
         let mut n_dim = 0;
@@ -2428,8 +2604,7 @@ impl TableRecord {
         Ok(result)
     }
 
-    /// Note: I am not sure if this function actually works. `Table.put_cell`
-    /// does work. Investigation required.
+    /// Set the value of a particular field of this record.
     pub fn put_field<T: CasaDataType>(
         &mut self,
         field_name: &str,
@@ -2524,7 +2699,7 @@ impl Debug for TableRecord {
 impl CasaDataType for TableRecord {
     const DATA_TYPE: glue::GlueDataType = glue::GlueDataType::TpRecord;
 
-    fn casatables_alloc(_shape: &[u64]) -> Result<Self, Error> {
+    fn casatables_alloc(_shape: &[u64]) -> Result<Self, TableError> {
         TableRecord::new()
     }
 
@@ -2536,14 +2711,10 @@ impl CasaDataType for TableRecord {
         self.handle as _
     }
 
-    /// A hack that lets us properly special-case table records.
-    #[doc(hidden)]
     fn casatables_tablerec_pass_through(r: TableRecord) -> Self {
         r
     }
 
-    /// A hack that lets us properly special-case table records
-    #[doc(hidden)]
     fn casatables_tablerec_pass_through_out(s: &Self) -> TableRecord {
         s.to_owned()
     }
@@ -2563,15 +2734,6 @@ impl Drop for TableRecord {
         }
     }
 }
-
-// /// represents a MEAS_INFO record for a column whose measure type is determined
-// /// by a different column in the table.
-// pub struct ColMeasInfoRecord<C> {
-//     measure_type: String,
-//     measure_ref_col: String,
-//     ref_types: Vec<String>,
-//     ref_codes: Vec<C>,
-// }
 
 #[cfg(test)]
 mod tests {
@@ -2653,7 +2815,7 @@ mod tests {
         // NewNoReplace should fail if table exists.
         assert!(matches!(
             Table::new(table_path, table_desc, 123, TableCreateMode::NewNoReplace),
-            Err(Error { .. })
+            Err(TableError::Casacore { .. })
         ));
     }
 
@@ -3073,9 +3235,13 @@ mod tests {
         // First create a table description for our base table.
         // Use TDM_SCRATCH to avoid writing the .tabdsc to disk.
         let root_table_desc = TableDesc::new("", TableDescCreateMode::TDM_SCRATCH).unwrap();
-        let root_table = Table::new(&root_table_path, root_table_desc, 1, TableCreateMode::New).unwrap();
+        let root_table =
+            Table::new(&root_table_path, root_table_desc, 1, TableCreateMode::New).unwrap();
 
-        assert_eq!(root_table.file_name().unwrap(), root_table_path.to_str().unwrap());
+        assert_eq!(
+            root_table.file_name().unwrap(),
+            root_table_path.to_str().unwrap()
+        );
 
         let table_debug = format!("{:?}", root_table);
 

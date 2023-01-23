@@ -8,6 +8,10 @@ trigger:
     - rc
 
 stages:
+- stage: Prep
+  jobs:
+  - template: azure-prep.yml
+
 - stage: MainBuild
   jobs:
   - template: azure-build-and-test.yml

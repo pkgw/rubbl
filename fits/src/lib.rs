@@ -8,24 +8,109 @@
 
 #![deny(missing_docs)]
 
-use failure::Error;
-use failure_derive::Fail;
 use rubbl_core::io::EofReadExactExt;
 use std::io::prelude::*;
 use std::io::SeekFrom;
 use std::str;
-
-// Define this before any submodules are parsed.
-macro_rules! fitserr {
-    ($( $fmt_args:expr ),*) => {
-        Err($crate::FitsFormatError(format!($( $fmt_args ),*)).into())
-    }
-}
+use thiserror::Error;
 
 /// An error type for when a FITS file is malformed.
-#[derive(Debug, Fail)]
-#[fail(display = "{}", _0)]
-pub struct FitsFormatError(String);
+#[allow(missing_docs)]
+#[derive(Debug, Error)]
+pub enum FitsError {
+    #[error("FITS stream should be a multiple of 2880 bytes long; got {0}")]
+    Not2880Multiple(u64),
+
+    #[error("file does not appear to be in FITS format")]
+    InvalidFormat,
+
+    #[error("second FITS header must be BITPIX")]
+    SecondHeaderNotBitpix,
+
+    #[error("unsupported BITPIX value in FITS file: {0}")]
+    UnsupportedBitpix(isize),
+
+    #[error("third FITS header must be NAXIS")]
+    ThirdHeaderNotNaxis,
+
+    #[error("unsupported NAXIS value in FITS file: {0}")]
+    BadNaxisValue(isize),
+
+    #[error("illegal negative FITS GCOUNT value")]
+    NegativeGcountValue,
+
+    #[error("illegal extension HDU without EXTNAME header")]
+    ExtHduWithoutExtname,
+
+    #[error("illegal negative FITS group size")]
+    NegativeGroupSize,
+
+    #[error("truncated-looking FITS file")]
+    Truncated,
+
+    #[error("FITS data stream does not begin with \"SIMPLE = T\" marker")]
+    NotSimple,
+
+    #[error("illegal header keyword ASCII code {0}")]
+    BadHeaderAscii(u8),
+
+    #[error("malformed FITS header keyword")]
+    MalformedHeader,
+
+    #[error("{0}")]
+    FitsFormat(#[from] FitsFormatError),
+
+    #[error("{0}")]
+    IO(#[from] std::io::Error),
+}
+
+/// An error type associated with problems that might occur when reading a FITS
+/// file.
+#[allow(missing_docs)]
+#[derive(Debug, Error)]
+pub enum FitsFormatError {
+    #[error("expected opening equals and quote in fixed-format string record")]
+    UnexpectedStrSep,
+
+    #[error("illegal non-printable-ASCII value in fixed-format string record")]
+    IllegalAscii,
+
+    #[error("illegal ASCII value {0} after string in fixed-format string record")]
+    IllegalAsciiAfterString(u8),
+
+    #[error("illegal ASCII value {0} after single quote in fixed-format string record")]
+    IllegalAsciiAfterQuote(u8),
+
+    #[error("illegal unterminated fixed-format string record")]
+    Unterminated,
+
+    #[error("expected space or slash in byte 30 of fixed-format integer record")]
+    UnexpectedByte30,
+
+    #[error("empty record that should have been a fixed-format integer")]
+    EmptyRecordInt,
+
+    #[error("expected digit but got ASCII {0:?} in fixed-format integer")]
+    ExpectedDigit(u8),
+
+    #[error("malformed FITS NAXIS header")]
+    MalformedNaxis,
+
+    #[error("expected digit but got ASCII {0:?} in NAXIS header")]
+    ExpectedDigitNaxisHeader(u8),
+
+    #[error("expected space but got ASCII {0:?} in NAXIS header")]
+    ExpectedSpaceNaxisHeader(u8),
+
+    #[error("misnumbered NAXIS header (expected {expected}, got {got})")]
+    MisnumberedNaxis { expected: usize, got: usize },
+
+    #[error("illegal negative NAXIS{value} value {n}")]
+    NegativeNaxisValue { value: usize, n: isize },
+
+    #[error("{0}")]
+    Utf8(#[from] std::str::Utf8Error),
+}
 
 /// A chunk of FITS file data, as produced by our low-level decoder.
 #[derive(Clone, Debug)]
@@ -144,7 +229,7 @@ impl<R: Read> FitsDecoder<R> {
     /// Create a new decoder that gets data from the Read type passed as an argument.
     pub fn new(inner: R) -> Self {
         Self {
-            inner: inner,
+            inner,
             buf: [0; 2880],
             offset: 2880,
             state: DecoderState::Beginning,
@@ -161,12 +246,12 @@ impl<R: Read> FitsDecoder<R> {
     /// Get the next item in the FITS stream.
     ///
     /// Returns Ok(None) at an expected EOF.
-    pub fn next<'a>(&'a mut self) -> Result<Option<LowLevelFitsItem<'a>>, Error> {
+    pub fn next<'a>(&'a mut self) -> Result<Option<LowLevelFitsItem<'a>>, FitsError> {
         if self.offset == 2880 {
-            if !self.inner.eof_read_exact::<Error>(&mut self.buf)? {
+            if !self.inner.eof_read_exact::<FitsError>(&mut self.buf)? {
                 if self.state != DecoderState::NewHdu && self.state != DecoderState::SpecialRecords
                 {
-                    return fitserr!("truncated-looking FITS file");
+                    return Err(FitsError::Truncated);
                 }
 
                 return Ok(None);
@@ -204,7 +289,7 @@ impl<R: Read> FitsDecoder<R> {
 
         if self.state == DecoderState::Beginning {
             if &record[..FITS_MARKER.len()] != FITS_MARKER {
-                return fitserr!("FITS data stream does not begin with \"SIMPLE = T\" marker");
+                return Err(FitsError::NotSimple);
             }
 
             self.state = DecoderState::SizingHeaders;
@@ -240,14 +325,14 @@ impl<R: Read> FitsDecoder<R> {
                     -32 => Bitpix::F32,
                     -64 => Bitpix::F64,
                     other => {
-                        return fitserr!("unsupported BITPIX value in FITS file: {}", other);
+                        return Err(FitsError::UnsupportedBitpix(other));
                     }
                 };
             } else if &record[..NAXIS_MARKER.len()] == NAXIS_MARKER {
                 let naxis = parse_fixed_int(record)?;
 
                 if naxis < 0 || naxis > 999 {
-                    return fitserr!("unsupported NAXIS value in FITS file: {}", naxis);
+                    return Err(FitsError::BadNaxisValue(naxis));
                 }
 
                 self.naxis.clear();
@@ -273,7 +358,7 @@ impl<R: Read> FitsDecoder<R> {
                 let n = parse_fixed_int(record)?;
 
                 if n < 0 {
-                    return fitserr!("illegal negative FITS GCOUNT value");
+                    return Err(FitsError::NegativeGcountValue);
                 }
 
                 self.gcount = n as usize;
@@ -285,7 +370,7 @@ impl<R: Read> FitsDecoder<R> {
                 };
 
                 if group_size < 0 {
-                    return fitserr!("illegal negative FITS group size");
+                    return Err(FitsError::NegativeGroupSize);
                 }
 
                 self.offset = 2880;
@@ -318,7 +403,7 @@ impl<R: Read> FitsDecoder<R> {
                         break;
                     }
                     other => {
-                        return fitserr!("illegal header keyword ASCII code {}", other);
+                        return Err(FitsError::BadHeaderAscii(other));
                     }
                 }
 
@@ -327,7 +412,7 @@ impl<R: Read> FitsDecoder<R> {
 
             while i < 8 {
                 if record[i] != b' ' {
-                    return fitserr!("malformed FITS header keyword");
+                    return Err(FitsError::MalformedHeader);
                 }
 
                 i += 1;
@@ -353,6 +438,8 @@ impl<R: Read> FitsDecoder<R> {
 pub struct FitsParser<R: Read + Seek> {
     inner: R,
     hdus: Vec<ParsedHdu>,
+
+    #[allow(dead_code)]
     special_record_size: u64,
 }
 
@@ -391,8 +478,12 @@ pub enum HduKind {
 pub struct ParsedHdu {
     kind: HduKind,
     name: String,
+
+    #[allow(dead_code)]
     header_offset: u64,
+    #[allow(dead_code)]
     n_header_records: usize,
+
     bitpix: Bitpix,
     pcount: isize,
     gcount: usize,
@@ -401,14 +492,11 @@ pub struct ParsedHdu {
 
 impl<R: Read + Seek> FitsParser<R> {
     /// Parse the headers of a FITS file.
-    pub fn new(mut inner: R) -> Result<Self, Error> {
+    pub fn new(mut inner: R) -> Result<Self, FitsError> {
         let file_size = inner.seek(SeekFrom::End(0))?;
 
         if file_size % 2880 != 0 {
-            return fitserr!(
-                "FITS stream should be a multiple of 2880 bytes long; got {}",
-                file_size
-            );
+            return Err(FitsError::Not2880Multiple(file_size));
         }
 
         inner.seek(SeekFrom::Start(0))?;
@@ -439,7 +527,7 @@ impl<R: Read + Seek> FitsParser<R> {
 
             if hdus.len() == 0 {
                 if &buf[..FITS_MARKER.len()] != FITS_MARKER {
-                    return fitserr!("file does not appear to be in FITS format");
+                    return Err(FitsError::InvalidFormat);
                 }
             } else {
                 if &buf[..XTENSION_MARKER.len()] != XTENSION_MARKER {
@@ -463,7 +551,7 @@ impl<R: Read + Seek> FitsParser<R> {
                 let record = &buf[80..160];
 
                 if &record[..BITPIX_MARKER.len()] != BITPIX_MARKER {
-                    return fitserr!("second FITS header must be BITPIX");
+                    return Err(FitsError::SecondHeaderNotBitpix);
                 }
 
                 parse_fixed_int(record)?
@@ -477,7 +565,7 @@ impl<R: Read + Seek> FitsParser<R> {
                 -32 => Bitpix::F32,
                 -64 => Bitpix::F64,
                 other => {
-                    return fitserr!("unsupported BITPIX value in FITS file: {}", other);
+                    return Err(FitsError::UnsupportedBitpix(other));
                 }
             };
 
@@ -489,14 +577,14 @@ impl<R: Read + Seek> FitsParser<R> {
                 let record = &buf[160..240];
 
                 if &record[..NAXIS_MARKER.len()] != NAXIS_MARKER {
-                    return fitserr!("third FITS header must be NAXIS");
+                    return Err(FitsError::ThirdHeaderNotNaxis);
                 }
 
                 parse_fixed_int(record)?
             };
 
             if naxis_value < 0 || naxis_value > 999 {
-                return fitserr!("unsupported NAXIS value in FITS file: {}", naxis_value);
+                return Err(FitsError::BadNaxisValue(naxis_value));
             }
 
             naxis.reserve(naxis_value as usize);
@@ -529,7 +617,7 @@ impl<R: Read + Seek> FitsParser<R> {
                     let n = parse_fixed_int(record)?;
 
                     if n < 0 {
-                        return fitserr!("illegal negative FITS GCOUNT value");
+                        return Err(FitsError::NegativeGcountValue);
                     }
 
                     gcount = n as usize;
@@ -551,7 +639,7 @@ impl<R: Read + Seek> FitsParser<R> {
                 match extname {
                     Some(s) => s,
                     None => {
-                        return fitserr!("illegal extension HDU without EXTNAME header");
+                        return Err(FitsError::ExtHduWithoutExtname);
                     }
                 }
             };
@@ -563,7 +651,7 @@ impl<R: Read + Seek> FitsParser<R> {
             let group_size = pcount + naxis.iter().fold(1, |p, n| p * n) as isize;
 
             if group_size < 0 {
-                return fitserr!("illegal negative FITS group size");
+                return Err(FitsError::NegativeGroupSize);
             }
 
             let data_size = bitpix.n_bytes() * gcount * group_size as usize;
@@ -644,9 +732,9 @@ impl ParsedHdu {
     }
 }
 
-fn parse_fixed_int(record: &[u8]) -> Result<isize, Error> {
+fn parse_fixed_int(record: &[u8]) -> Result<isize, FitsFormatError> {
     if record[30] != b' ' && record[30] != b'/' {
-        return fitserr!("expected space or slash in byte 30 of fixed-format integer record");
+        return Err(FitsFormatError::UnexpectedByte30);
     }
 
     let mut i = 10;
@@ -660,7 +748,7 @@ fn parse_fixed_int(record: &[u8]) -> Result<isize, Error> {
     }
 
     if i == 30 {
-        return fitserr!("empty record that should have been a fixed-format integer");
+        return Err(FitsFormatError::EmptyRecordInt);
     }
 
     let mut negate = false;
@@ -673,7 +761,7 @@ fn parse_fixed_int(record: &[u8]) -> Result<isize, Error> {
     }
 
     if i == 30 {
-        return fitserr!("empty record that should have been a fixed-format integer");
+        return Err(FitsFormatError::EmptyRecordInt);
     }
 
     let mut value = 0;
@@ -711,10 +799,7 @@ fn parse_fixed_int(record: &[u8]) -> Result<isize, Error> {
                 value += 9;
             }
             other => {
-                return fitserr!(
-                    "expected digit but got ASCII {:?} in fixed-format integer",
-                    other
-                );
+                return Err(FitsFormatError::ExpectedDigit(other));
             }
         }
 
@@ -757,9 +842,9 @@ fn fixed_int_parsing() {
     assert!(parse_fixed_int(r).is_err());
 }
 
-fn parse_fixed_string(record: &[u8]) -> Result<String, Error> {
+fn parse_fixed_string(record: &[u8]) -> Result<String, FitsFormatError> {
     if &record[8..11] != b"= '" {
-        return fitserr!("expected opening equals and quote in fixed-format string record");
+        return Err(FitsFormatError::UnexpectedStrSep);
     }
 
     let mut buf = [0u8; 69];
@@ -782,7 +867,7 @@ fn parse_fixed_string(record: &[u8]) -> Result<String, Error> {
         let c = record[i + 11];
 
         if c < 0x20 || c > 0x7E {
-            return fitserr!("illegal non-printable-ASCII value in fixed-format string record");
+            return Err(FitsFormatError::IllegalAscii);
         }
 
         match state {
@@ -819,11 +904,7 @@ fn parse_fixed_string(record: &[u8]) -> Result<String, Error> {
                 }
 
                 other => {
-                    return fitserr!(
-                        "illegal ASCII value {} after single quote in \
-                         fixed-format string record",
-                        other
-                    );
+                    return Err(FitsFormatError::IllegalAsciiAfterQuote(other));
                 }
             },
 
@@ -835,11 +916,7 @@ fn parse_fixed_string(record: &[u8]) -> Result<String, Error> {
                 }
 
                 other => {
-                    return fitserr!(
-                        "illegal ASCII value {} after string in \
-                         fixed-format string record",
-                        other
-                    );
+                    return Err(FitsFormatError::IllegalAsciiAfterString(other));
                 }
             },
 
@@ -850,7 +927,7 @@ fn parse_fixed_string(record: &[u8]) -> Result<String, Error> {
     }
 
     if state == State::Chars {
-        return fitserr!("illegal unterminated fixed-format string record");
+        return Err(FitsFormatError::Unterminated);
     }
 
     Ok(if !any_chars {
@@ -894,13 +971,13 @@ fn fixed_string_parsing() {
 /// Returns Ok(true) if this record in question was the appropriate NAXISnnn
 /// header; Ok(false) if it was some other valid-looking header; Err(_) if it
 /// looks like it should have been a NAXIS header but something went wrong.
-fn accumulate_naxis_value(record: &[u8], naxis: &mut Vec<usize>) -> Result<bool, Error> {
+fn accumulate_naxis_value(record: &[u8], naxis: &mut Vec<usize>) -> Result<bool, FitsFormatError> {
     if &record[..5] != b"NAXIS" {
         return Ok(false); // Th
     }
 
     if &record[8..10] != b"= " {
-        return fitserr!("malformed FITS NAXIS header");
+        return Err(FitsFormatError::MalformedNaxis);
     }
 
     let mut value = 0;
@@ -943,7 +1020,7 @@ fn accumulate_naxis_value(record: &[u8], naxis: &mut Vec<usize>) -> Result<bool,
                 value += 9;
             }
             other => {
-                return fitserr!("expected digit but got ASCII {:?} in NAXIS header", other);
+                return Err(FitsFormatError::ExpectedDigitNaxisHeader(other));
             }
         }
 
@@ -952,27 +1029,23 @@ fn accumulate_naxis_value(record: &[u8], naxis: &mut Vec<usize>) -> Result<bool,
 
     while i < 8 {
         if record[i] != b' ' {
-            return fitserr!(
-                "expected space but got ASCII {:?} in NAXIS header",
-                record[i]
-            );
+            return Err(FitsFormatError::ExpectedSpaceNaxisHeader(record[i]));
         }
 
         i += 1;
     }
 
     if value != naxis.len() + 1 {
-        return fitserr!(
-            "misnumbered NAXIS header (expected {}, got {})",
-            naxis.len() + 1,
-            value
-        );
+        return Err(FitsFormatError::MisnumberedNaxis {
+            expected: naxis.len() + 1,
+            got: value,
+        });
     }
 
     let n = parse_fixed_int(record)?;
 
     if n < 0 {
-        return fitserr!("illegal negative NAXIS{} value {}", value, n);
+        return Err(FitsFormatError::NegativeNaxisValue { value, n });
     }
 
     naxis.push(n as usize);

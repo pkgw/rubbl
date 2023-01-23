@@ -254,8 +254,11 @@ extern "C" {
             const casacore::RecordDesc &desc = rec.description();
             casacore::Int field_num = rec.fieldNumber(bridge_string(col_name));
 
-            if (field_num < 0)
-                throw std::runtime_error("unrecognized column name");
+            if (field_num < 0) {
+                std::string s = "unrecognized column name: ";
+                s.append(bridge_string(col_name));
+                throw std::runtime_error(s);
+            }
 
             *data_type = rec.type(field_num);
 
@@ -289,8 +292,11 @@ extern "C" {
             casacore::Int field_num = rec.fieldNumber(bridge_string(field_name));
             casacore::IPosition shape;
 
-            if (field_num < 0)
-                throw std::runtime_error("unrecognized keyword name");
+            if (field_num < 0) {
+                std::string s = "unrecognized keyword name: ";
+                s.append(bridge_string(field_name));
+                throw std::runtime_error(s);
+            }
 
             if (!desc.isScalar(field_num)) {                
                 shape = rec.shape(field_num);
@@ -369,8 +375,11 @@ extern "C" {
         try {
             casacore::Int field_num = rec.fieldNumber(bridge_string(col_name));
 
-            if (field_num < 0)
-                throw std::runtime_error("unrecognized keyword name");
+            if (field_num < 0) {
+                std::string s = "unrecognized keyword name: ";
+                s.append(bridge_string(col_name));
+                throw std::runtime_error(s);
+            }
 
             if (rec.type(field_num) != casacore::TpString)
                 throw std::runtime_error("tablerec cell must be of TpString type");
@@ -398,8 +407,11 @@ extern "C" {
         try {
             casacore::Int field_num = rec.fieldNumber(bridge_string(col_name));
 
-            if (field_num < 0)
-                throw std::runtime_error("unrecognized column name");
+            if (field_num < 0) {
+                std::string s = "unrecognized column name: ";
+                s.append(bridge_string(col_name));
+                throw std::runtime_error(s);
+            }
 
             casacore::IPosition shape = rec.shape(field_num);
 
@@ -428,9 +440,11 @@ extern "C" {
         try {
             casacore::Int field_num = rec.fieldNumber(bridge_string(col_name));
 
-            if (field_num < 0)
-                throw std::runtime_error("unrecognized column name");
-
+            if (field_num < 0) {
+                std::string s = "unrecognized column name: ";
+                s.append(bridge_string(col_name));
+                throw std::runtime_error(s);
+            }
 
             if (rec.type(field_num) != casacore::TpRecord)
                 throw std::runtime_error("row cell must be of TpRecord type");

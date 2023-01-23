@@ -1,36 +1,36 @@
 //! Decode a FITS file in a very low-level way, and report how long it took.
 //! This should basically just be a test of the system's I/O throughput.
 
-use clap::{App, Arg};
-use failure::{Error, ResultExt};
+use anyhow::Context;
+use clap::{Arg, Command};
 use rubbl_core::io::AligningReader;
 use rubbl_fits::LowLevelFitsItem;
-use std::ffi::OsStr;
+use std::ffi::{OsStr, OsString};
 use std::fs;
 use std::process;
 use std::str;
 use std::time::Instant;
 
 fn main() {
-    let matches = App::new("fitsdump")
+    let matches = Command::new("fitsdump")
         .version("0.1.0")
         .about("Parse and dump a FITS data file in low-level fashion.")
         .arg(
-            Arg::with_name("PATH")
+            Arg::new("PATH")
                 .help("The path to the data file")
                 .required(true)
                 .index(1),
         )
         .get_matches();
 
-    let path = matches.value_of_os("PATH").unwrap();
+    let path = matches.get_one::<OsString>("PATH").unwrap();
 
     process::exit(match inner(path.as_ref()) {
         Ok(code) => code,
 
         Err(e) => {
             println!("fatal error while processing {}", path.to_string_lossy());
-            for cause in e.iter_chain() {
+            for cause in e.chain() {
                 println!("  caused by: {}", cause);
             }
             1
@@ -38,7 +38,7 @@ fn main() {
     });
 }
 
-fn inner(path: &OsStr) -> Result<i32, Error> {
+fn inner(path: &OsStr) -> Result<i32, anyhow::Error> {
     let file = fs::File::open(path).context("error opening file")?;
     let mut dec = rubbl_fits::FitsDecoder::new(AligningReader::new(file));
     let t0 = Instant::now();

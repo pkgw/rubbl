@@ -1,3 +1,17 @@
+# rubbl_core 0.4.0 (2023-01-23)
+
+- Start using the more modern `anyhow` and `thiserror` crates for error
+  handling, rather than `failure` (#220, @cjordan).
+- Clean up dependency specifications, and document them somewhat more clearly
+  (#220, @cjordan, @pkgw). In particular, this version of the core crate now
+  requires `ndarray 0.15.x`. We previously attempted to have a more open version
+  requirement, but due to the behavior of the Cargo dependency resolver, it
+  didn't actually buy us anything. See discussion in #220 for more details.
+- Relatedly, remove the dependency on the `approx` crate.
+- Update to the 4.x series of `clap`, when it's used (#198, @pkgw).
+
+
+
 # rubbl_core 0.3.0 (2021-10-07)
 
 - Add a dependency on the `approx` crate so that we provide implementations
