@@ -1,3 +1,12 @@
+# rubbl_miriad 0.3.0 (2023-01-23)
+
+- Start using the more modern `anyhow` and `thiserror` crates for error
+  handling, rather than `failure` (#220, @cjordan).
+- Clean up dependency specifications, and document them somewhat more clearly
+  (#220, @cjordan, @pkgw). 
+- Update to the 4.x series of clap, when it's used (#198, @pkgw).
+
+
 # rubbl_miriad 0.2.5 (2021-10-07)
 
 - build(deps): bump openat from 0.1.20 to 0.1.21

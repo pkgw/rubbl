@@ -1,3 +1,8 @@
+# rubbl_casatables_impl 0.3.31101 (2023-01-23)
+
+- Bump minimum version of the `cc` build dependency to 1.0.42 (#220, @cjordan)
+
+
 # rubbl_casatables_impl 0.3.31100 (2021-11-04)
 
 - Use a preprocessor `#define` to put the underlying C++ code in the namespace

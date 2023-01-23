@@ -1,3 +1,23 @@
+# rubbl 0.3.0 (2023-01-23)
+
+This release of Rubbl adds automated DOI deposition to Zenodo (#230, @pkgw)!
+This means that releases of the Rubbl suite are now formally published and
+citable. Use `rubbl show version-doi` to print out the DOI of the Rubbl CLI tool
+that you’re using.
+
+Other changes include:
+
+- Start using the more modern `anyhow` and `thiserror` crates for error handling,
+  rather than `failure` (#220, @cjordan).
+- Clean up dependency specifications, and document them somewhat more clearly
+  (#220, @cjordan, @pkgw).
+- Update to the 4.x series of clap, when it's used (#198, @pkgw).
+
+The DOI of this release is [10.5281/zenodo.7563020][vdoi].
+
+[vdoi]: https://doi.org/10.5281/zenodo.7563020
+
+
 # rubbl 0.2.2 (2020-12-15)
 
 - No code changes from notional 0.2.1, but 0.2.1 *also* wasn't successfully

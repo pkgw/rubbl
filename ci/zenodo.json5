@@ -1,5 +1,5 @@
 {
-  "conceptrecid": "new-for:0.3.0",
+  "conceptrecid": "7563019",
   "metadata": {
     "access_right": "open",
     "creators": [
@@ -27,12 +27,12 @@
     "language": "eng",
     "license": "MIT",
     "publication_date": "2023-01-23",
-    "title": "rubbl 0.2.2",
+    "title": "rubbl 0.3.0",
     "upload_type": "software",
-    "version": "0.2.2"
+    "version": "0.3.0"
   },
-  "conceptdoi": "xx.xxxx/dev-build.rubbl.concept",
-  "record_id": "dev.rubbl.v0.2.2",
-  "doi": "xx.xxxx/dev-build.rubbl.v0.2.2",
-  "bucket_link": ""
+  "conceptdoi": "10.5281/zenodo.7563019",
+  "record_id": "7563020",
+  "doi": "10.5281/zenodo.7563020",
+  "bucket_link": "https://zenodo.org/api/files/df8a9fb2-dfd6-46d0-8973-863bf6ae1f59"
 }

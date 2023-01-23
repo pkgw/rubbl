@@ -3,7 +3,7 @@
 
 [package]
 name = "rubbl_casatables_impl"
-version = "0.3.31100"
+version = "0.3.31101"
 authors = ["Peter Williams <peter@newton.cx>"]
 license = "LGPL-2.0+"
 edition = "2018"

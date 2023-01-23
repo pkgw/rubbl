@@ -1,3 +1,12 @@
+# rubbl_casatables 0.7.0 (2023-01-23)
+
+- Start using the more modern `anyhow` and `thiserror` crates for error
+  handling, rather than `failure` (#220, @cjordan).
+- Require and add docs for all public APIs (#184, @pkgw).
+- Clean up dependency specifications, and document them somewhat more clearly
+  (#220, @cjordan, @pkgw). 
+- Update to the 4.x series of clap, when it's used (#198, @pkgw).
+
 # rubbl_casatables 0.6.0 (2021-11-16)
 
 Lots more work on the `rubbl_casatables` crate, including the last piece of

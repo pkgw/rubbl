@@ -364,7 +364,7 @@ dependencies = [
 
 [[package]]
 name = "rubbl"
-version = "0.2.2"
+version = "0.3.0"
 dependencies = [
  "anyhow",
  "clap",
@@ -374,7 +374,7 @@ dependencies = [
 
 [[package]]
 name = "rubbl_casatables"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "anyhow",
  "cc",
@@ -388,7 +388,7 @@ dependencies = [
 
 [[package]]
 name = "rubbl_casatables_impl"
-version = "0.3.31100"
+version = "0.3.31101"
 dependencies = [
  "cc",
 ]
@@ -408,7 +408,7 @@ dependencies = [
 
 [[package]]
 name = "rubbl_fits"
-version = "0.2.4"
+version = "0.3.0"
 dependencies = [
  "anyhow",
  "clap",
@@ -419,7 +419,7 @@ dependencies = [
 
 [[package]]
 name = "rubbl_miriad"
-version = "0.2.5"
+version = "0.3.0"
 dependencies = [
  "anyhow",
  "byteorder",
@@ -433,7 +433,7 @@ dependencies = [
 
 [[package]]
 name = "rubbl_visdata"
-version = "0.2.1"
+version = "0.3.0"
 dependencies = [
  "anyhow",
  "rubbl_core",
