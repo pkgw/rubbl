@@ -1,8 +1,7 @@
-# See elsewhere for changelog
+# rc: minor bump
 
-This project’s release notes are curated from the Git history of its main
-branch. You can find them by looking at [the version of this file on the
-`release` branch][branch] or the [GitHub release history][gh-releases].
-
-[branch]: https://github.com/pkgw/rubbl/blob/release/visdata/CHANGELOG.md
-[gh-releases]: https://github.com/pkgw/rubbl/releases
+- Start using the more modern `anyhow` and `thiserror` crates for error
+  handling, rather than `failure` (#220, @cjordan).
+- Clean up dependency specifications, and document them somewhat more clearly
+  (#220, @cjordan, @pkgw).
+- Update to the 4.x series of clap, when it's used (#198, @pkgw).

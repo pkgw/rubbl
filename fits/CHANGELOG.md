@@ -1,8 +1,30 @@
-# See elsewhere for changelog
+# rc: minor bump
 
-This project’s release notes are curated from the Git history of its main
-branch. You can find them by looking at [the version of this file on the
-`release` branch][branch] or the [GitHub release history][gh-releases].
+- Start using the more modern `anyhow` and `thiserror` crates for error
+  handling, rather than `failure` (#220, @cjordan).
+- Clean up dependency specifications, and document them somewhat more clearly
+  (#220, @cjordan, @pkgw). 
+- Update to the 4.x series of clap, when it's used (#198, @pkgw).
 
-[branch]: https://github.com/pkgw/rubbl/blob/release/fits/CHANGELOG.md
-[gh-releases]: https://github.com/pkgw/rubbl/releases
+
+# rubbl_fits 0.2.4 (2021-04-01)
+
+- Remove a bunch of superfluous dependencies
+
+# rubbl_fits 0.2.3 (2021-04-01)
+
+- Dependency bump: byteorder 1.3.4 to 1.4.2
+
+# rubbl_fits 0.2.2 (2020-12-15)
+
+- No code changes from notional 0.2.1, but 0.2.1 *also* wasn't successfully
+  published to Cargo.
+
+# rubbl_fits 0.2.1 (2020-12-15)
+
+- No code changes from notional 0.2.0, but 0.2.0 wasn't successfully published
+  to Cargo.
+
+# rubbl_fits 0.2.0 (2020-12-15)
+
+- Bump to the 2018 edition
