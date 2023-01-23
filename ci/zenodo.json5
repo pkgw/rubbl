@@ -19,13 +19,13 @@
       },
       {
         affiliation: 'Curtin Institute of Radio Astronomy',
-        name: 'Jordan, Christopher H.',
-        orcid: '0000-0002-1220-2940',
+        name: 'Null, Dev',
+        orcid: '0000-0003-2159-0911',
       },
       {
         affiliation: 'Curtin Institute of Radio Astronomy',
-        name: 'Null, Dev',
-        orcid: '0000-0003-2159-0911',
+        name: 'Jordan, Christopher H.',
+        orcid: '0000-0002-1220-2940',
       },
     ],
     // "contributors" can also list people who helped create the deposition
