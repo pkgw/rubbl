@@ -4,21 +4,13 @@
 //! Access to MIRIAD-format data sets.
 
 use byteorder::{BigEndian, ByteOrder, ReadBytesExt, WriteBytesExt};
-use failure::Error;
-use failure_derive::Fail;
 use rubbl_core::io::{AligningReader, AligningWriter, EofReadExactExt};
 use rubbl_core::Complex;
 use std::collections::HashMap;
 use std::fs;
 use std::io;
 use std::io::prelude::*;
-
-// Define this before the submodules are parsed.
-macro_rules! mirerr {
-    ($( $fmt_args:expr ),*) => {
-        Err($crate::MiriadFormatError(format!($( $fmt_args ),*)).into())
-    }
-}
+use thiserror::Error;
 
 pub mod mask;
 pub mod visdata;
@@ -41,9 +33,17 @@ pub enum Type {
 }
 
 /// An error type for when a MIRIAD file is malformed.
-#[derive(Fail, Debug)]
-#[fail(display = "{}", _0)]
-pub struct MiriadFormatError(String);
+#[derive(Error, Debug)]
+pub enum MiriadFormatError {
+    #[error("{0}")]
+    Generic(String),
+
+    #[error(transparent)]
+    IO(#[from] std::io::Error),
+
+    #[error(transparent)]
+    Utf8(#[from] std::str::Utf8Error),
+}
 
 impl Type {
     pub fn try_from_i32(type_code: i32) -> Result<Self, MiriadFormatError> {
@@ -58,7 +58,9 @@ impl Type {
             5 => Ok(Type::Float64),
             7 => Ok(Type::Complex64),
             6 => Ok(Type::Text),
-            _ => mirerr!("illegal MIRIAD type code {}", type_code),
+            _ => Err(MiriadFormatError::Generic(format!(
+                "illegal MIRIAD type code {type_code}"
+            ))),
         }
     }
 
@@ -75,7 +77,9 @@ impl Type {
             "d" => Ok(Type::Float64),
             "c" => Ok(Type::Complex64),
             "a" => Ok(Type::Text),
-            _ => mirerr!("illegal MIRIAD type abbreviation {}", abbrev),
+            _ => Err(MiriadFormatError::Generic(format!(
+                "illegal MIRIAD type abbreviation {abbrev}"
+            ))),
         }
     }
 
@@ -144,9 +148,9 @@ pub trait MiriadMappedType: Sized {
     /// The particular MIRIAD `Type` to which this Rust type maps.
     const TYPE: Type;
 
-    fn vec_from_miriad_reader<R: Read>(stream: R) -> Result<Vec<Self>, Error>;
+    fn vec_from_miriad_reader<R: Read>(stream: R) -> Result<Vec<Self>, std::io::Error>;
 
-    fn vec_from_miriad_bytes(buf: &[u8]) -> Result<Vec<Self>, Error> {
+    fn vec_from_miriad_bytes(buf: &[u8]) -> Result<Vec<Self>, std::io::Error> {
         Self::vec_from_miriad_reader(std::io::Cursor::new(buf))
     }
 
@@ -164,7 +168,7 @@ pub trait MiriadMappedType: Sized {
 impl MiriadMappedType for u8 {
     const TYPE: Type = Type::Binary;
 
-    fn vec_from_miriad_reader<R: Read>(mut stream: R) -> Result<Vec<Self>, Error> {
+    fn vec_from_miriad_reader<R: Read>(mut stream: R) -> Result<Vec<Self>, std::io::Error> {
         let mut val = Vec::new();
         stream.read_to_end(&mut val)?;
         Ok(val)
@@ -192,7 +196,7 @@ impl MiriadMappedType for u8 {
 impl MiriadMappedType for i8 {
     const TYPE: Type = Type::Int8;
 
-    fn vec_from_miriad_reader<R: Read>(mut stream: R) -> Result<Vec<Self>, Error> {
+    fn vec_from_miriad_reader<R: Read>(mut stream: R) -> Result<Vec<Self>, std::io::Error> {
         let mut val = Vec::new();
         stream.read_to_end(&mut val)?;
         Ok(unsafe { std::mem::transmute::<Vec<u8>, Vec<i8>>(val) }) // yeehaw!
@@ -220,10 +224,10 @@ impl MiriadMappedType for i8 {
 impl MiriadMappedType for i16 {
     const TYPE: Type = Type::Int16;
 
-    fn vec_from_miriad_reader<R: Read>(mut stream: R) -> Result<Vec<Self>, Error> {
+    fn vec_from_miriad_reader<R: Read>(mut stream: R) -> Result<Vec<Self>, std::io::Error> {
         let mut val = Vec::new();
 
-        while let Some(n) = stream.eof_read_be_i16::<Error>()? {
+        while let Some(n) = stream.eof_read_be_i16::<std::io::Error>()? {
             val.push(n);
         }
 
@@ -260,10 +264,10 @@ impl MiriadMappedType for i16 {
 impl MiriadMappedType for i32 {
     const TYPE: Type = Type::Int32;
 
-    fn vec_from_miriad_reader<R: Read>(mut stream: R) -> Result<Vec<Self>, Error> {
+    fn vec_from_miriad_reader<R: Read>(mut stream: R) -> Result<Vec<Self>, std::io::Error> {
         let mut val = Vec::new();
 
-        while let Some(n) = stream.eof_read_be_i32::<Error>()? {
+        while let Some(n) = stream.eof_read_be_i32::<std::io::Error>()? {
             val.push(n);
         }
 
@@ -300,10 +304,10 @@ impl MiriadMappedType for i32 {
 impl MiriadMappedType for i64 {
     const TYPE: Type = Type::Int64;
 
-    fn vec_from_miriad_reader<R: Read>(mut stream: R) -> Result<Vec<Self>, Error> {
+    fn vec_from_miriad_reader<R: Read>(mut stream: R) -> Result<Vec<Self>, std::io::Error> {
         let mut val = Vec::new();
 
-        while let Some(n) = stream.eof_read_be_i64::<Error>()? {
+        while let Some(n) = stream.eof_read_be_i64::<std::io::Error>()? {
             val.push(n);
         }
 
@@ -340,10 +344,10 @@ impl MiriadMappedType for i64 {
 impl MiriadMappedType for Complex<f32> {
     const TYPE: Type = Type::Complex64;
 
-    fn vec_from_miriad_reader<R: Read>(mut stream: R) -> Result<Vec<Self>, Error> {
+    fn vec_from_miriad_reader<R: Read>(mut stream: R) -> Result<Vec<Self>, std::io::Error> {
         let mut val = Vec::new();
 
-        while let Some(x) = stream.eof_read_be_c64::<Error>()? {
+        while let Some(x) = stream.eof_read_be_c64::<std::io::Error>()? {
             val.push(x);
         }
 
@@ -385,7 +389,7 @@ impl MiriadMappedType for String {
     const TYPE: Type = Type::Text;
 
     /// As a special hack, this only ever returns a 1-element vector.
-    fn vec_from_miriad_reader<R: Read>(mut stream: R) -> Result<Vec<Self>, Error> {
+    fn vec_from_miriad_reader<R: Read>(mut stream: R) -> Result<Vec<Self>, std::io::Error> {
         let mut val = String::new();
         stream.read_to_string(&mut val)?;
         Ok(vec![val])
@@ -421,10 +425,10 @@ impl MiriadMappedType for String {
 impl MiriadMappedType for f32 {
     const TYPE: Type = Type::Float32;
 
-    fn vec_from_miriad_reader<R: Read>(mut stream: R) -> Result<Vec<Self>, Error> {
+    fn vec_from_miriad_reader<R: Read>(mut stream: R) -> Result<Vec<Self>, std::io::Error> {
         let mut val = Vec::new();
 
-        while let Some(x) = stream.eof_read_be_f32::<Error>()? {
+        while let Some(x) = stream.eof_read_be_f32::<std::io::Error>()? {
             val.push(x);
         }
 
@@ -461,10 +465,10 @@ impl MiriadMappedType for f32 {
 impl MiriadMappedType for f64 {
     const TYPE: Type = Type::Float64;
 
-    fn vec_from_miriad_reader<R: Read>(mut stream: R) -> Result<Vec<Self>, Error> {
+    fn vec_from_miriad_reader<R: Read>(mut stream: R) -> Result<Vec<Self>, std::io::Error> {
         let mut val = Vec::new();
 
-        while let Some(x) = stream.eof_read_be_f64::<Error>()? {
+        while let Some(x) = stream.eof_read_be_f64::<std::io::Error>()? {
             val.push(x);
         }
 
@@ -632,7 +636,7 @@ impl InternalItemInfo {
         }
     }
 
-    pub fn new_large(dir: &mut openat::Dir, name: &str) -> Result<Self, Error> {
+    pub fn new_large(dir: &mut openat::Dir, name: &str) -> Result<Self, MiriadFormatError> {
         let mut f = dir.open_file(name)?;
         let mut size_offset = 4;
         let mut type_buf = [0u8; 4];
@@ -670,7 +674,9 @@ impl InternalItemInfo {
         let data_size = f.metadata()?.len() - size_offset;
 
         if data_size % ty.size() as u64 != 0 {
-            return mirerr!("non-integral number of elements in {}", name);
+            return Err(MiriadFormatError::Generic(format!(
+                "non-integral number of elements in {name}"
+            )));
         }
 
         Ok(InternalItemInfo {
@@ -721,18 +727,18 @@ impl<'a> Item<'a> {
         self.info.n_vals()
     }
 
-    pub fn read_vector<T: MiriadMappedType>(&self) -> Result<Vec<T>, Error> {
+    pub fn read_vector<T: MiriadMappedType>(&self) -> Result<Vec<T>, MiriadFormatError> {
         // TODO: upcasting
         if T::TYPE != self.info.ty {
-            return mirerr!(
+            return Err(MiriadFormatError::Generic(format!(
                 "expected variable of type {}, but found {}",
                 T::TYPE,
                 self.info.ty
-            );
+            )));
         }
 
-        match self.info.storage {
-            ItemStorage::Small(ref data) => T::vec_from_miriad_bytes(data),
+        let v = match self.info.storage {
+            ItemStorage::Small(ref data) => T::vec_from_miriad_bytes(data)?,
             ItemStorage::Large(_) => {
                 let mut f = self.dset.dir.open_file(self.name)?;
 
@@ -742,32 +748,40 @@ impl<'a> Item<'a> {
                     f.read_exact(&mut align_buf[..align])?;
                 }
 
-                T::vec_from_miriad_reader(f)
+                T::vec_from_miriad_reader(f)?
             }
-        }
+        };
+
+        Ok(v)
     }
 
-    pub fn read_scalar<T: MiriadMappedType>(&self) -> Result<T, Error> {
+    pub fn read_scalar<T: MiriadMappedType>(&self) -> Result<T, MiriadFormatError> {
         let vec = self.read_vector()?;
 
         if vec.len() != 1 {
-            return mirerr!(
+            return Err(MiriadFormatError::Generic(format!(
                 "expected scalar value for {} but got {}-element vector",
                 self.name,
                 vec.len()
-            );
+            )));
         }
 
         Ok(vec.into_iter().next().unwrap())
     }
 
-    pub fn into_lines(self) -> Result<io::Lines<io::BufReader<fs::File>>, Error> {
+    pub fn into_lines(self) -> Result<io::Lines<io::BufReader<fs::File>>, MiriadFormatError> {
         if self.info.ty != Type::Text {
-            return mirerr!("cannot read lines of non-text item {}", self.name);
+            return Err(MiriadFormatError::Generic(format!(
+                "cannot read lines of non-text item {}",
+                self.name
+            )));
         }
 
         if let ItemStorage::Small(_) = self.info.storage {
-            return mirerr!("cannot read lines of small text item {}", self.name);
+            return Err(MiriadFormatError::Generic(format!(
+                "cannot read lines of small text item {}",
+                self.name
+            )));
         }
 
         // Text items don't need any alignment futzing so we don't have to
@@ -775,11 +789,14 @@ impl<'a> Item<'a> {
         Ok(io::BufReader::new(self.dset.dir.open_file(self.name)?).lines())
     }
 
-    pub fn into_byte_stream(self) -> Result<ReadStream, Error> {
+    pub fn into_byte_stream(self) -> Result<ReadStream, MiriadFormatError> {
         if let ItemStorage::Small(_) = self.info.storage {
             // We *could* do this, but for coding simplicity we only allow it
             // for large items.
-            return mirerr!("cannot turn small item {} into byte stream", self.name);
+            return Err(MiriadFormatError::Generic(format!(
+                "cannot turn small item {} into byte stream",
+                self.name
+            )));
         }
 
         let f = self.dset.dir.open_file(self.name)?;
@@ -802,7 +819,7 @@ pub struct DataSet {
 }
 
 impl DataSet {
-    pub fn open<P: openat::AsPath>(path: P) -> Result<Self, Error> {
+    pub fn open<P: openat::AsPath>(path: P) -> Result<Self, MiriadFormatError> {
         let mut ds = DataSet {
             dir: openat::Dir::open(path)?,
             items: HashMap::new(),
@@ -816,7 +833,7 @@ impl DataSet {
         let mut buf = [0u8; 16];
 
         loop {
-            if !header.eof_read_exact::<Error>(&mut buf)? {
+            if !header.eof_read_exact::<std::io::Error>(&mut buf)? {
                 break; // no more data
             }
 
@@ -858,7 +875,10 @@ impl DataSet {
 
                 if n_bytes % ty.size() != 0 {
                     // TODO: warn and press on
-                    return mirerr!("illegal array size {} for type {:?}", n_bytes, ty);
+                    return Err(MiriadFormatError::Generic(format!(
+                        "illegal array size {} for type {:?}",
+                        n_bytes, ty
+                    )));
                 }
 
                 let mut data = Vec::with_capacity(n_bytes);
@@ -881,7 +901,7 @@ impl DataSet {
         Ok(ds)
     }
 
-    fn scan_large_items(&mut self) -> Result<(), Error> {
+    fn scan_large_items(&mut self) -> Result<(), MiriadFormatError> {
         for maybe_item in self.dir.list_dir(".")? {
             let item = maybe_item?;
 
@@ -905,7 +925,7 @@ impl DataSet {
         Ok(())
     }
 
-    pub fn item_names<'a>(&'a mut self) -> Result<DataSetItemNamesIterator<'a>, Error> {
+    pub fn item_names<'a>(&'a mut self) -> Result<DataSetItemNamesIterator<'a>, MiriadFormatError> {
         if !self.large_items_scanned {
             self.scan_large_items()?;
             self.large_items_scanned = true;
@@ -914,7 +934,7 @@ impl DataSet {
         Ok(DataSetItemNamesIterator::new(self))
     }
 
-    pub fn items<'a>(&'a mut self) -> Result<DataSetItemsIterator<'a>, Error> {
+    pub fn items<'a>(&'a mut self) -> Result<DataSetItemsIterator<'a>, MiriadFormatError> {
         if !self.large_items_scanned {
             self.scan_large_items()?;
             self.large_items_scanned = true;
@@ -928,7 +948,10 @@ impl DataSet {
     /// I feel like there should be a better way to do this, but right now the
     /// reference to *item_name* needs to have a lifetime compatible with the
     /// reference to the dataset itself.
-    pub fn get<'a>(&'a mut self, item_name: &'a str) -> Result<Option<Item<'a>>, Error> {
+    pub fn get<'a>(
+        &'a mut self,
+        item_name: &'a str,
+    ) -> Result<Option<Item<'a>>, MiriadFormatError> {
         // The HashMap access approach I use here feels awkward to me but it's
         // the only way I can get the lifetimes to work out.
 
@@ -936,20 +959,16 @@ impl DataSet {
             // Assume it's an as-yet-unprobed large item on the filesystem.
             let iii = match InternalItemInfo::new_large(&mut self.dir, item_name) {
                 Ok(iii) => iii,
-                Err(e) => {
-                    match e.downcast::<io::Error>() {
-                        Ok(ioe) => {
-                            if ioe.kind() == io::ErrorKind::NotFound {
-                                // No such item. Don't bother to cache negative results.
-                                return Ok(None);
-                            }
-                            return Err(ioe.into());
+                Err(e) => match e {
+                    MiriadFormatError::IO(ioe) => {
+                        if ioe.kind() == io::ErrorKind::NotFound {
+                            // No such item. Don't bother to cache negative results.
+                            return Ok(None);
                         }
-                        Err(e) => {
-                            return Err(e);
-                        }
+                        return Err(ioe.into());
                     }
-                }
+                    _ => return Err(e),
+                },
             };
             self.items.insert(item_name.to_owned(), iii);
         }
@@ -961,27 +980,40 @@ impl DataSet {
         }))
     }
 
-    pub fn open_uv(&mut self) -> Result<visdata::Decoder, Error> {
+    pub fn open_uv(&mut self) -> Result<visdata::Decoder, MiriadFormatError> {
         visdata::Decoder::create(self)
     }
 
-    pub fn new_uv_like(&mut self, template: &visdata::Decoder) -> Result<visdata::Encoder, Error> {
+    pub fn new_uv_like(
+        &mut self,
+        template: &visdata::Decoder,
+    ) -> Result<visdata::Encoder, MiriadFormatError> {
         visdata::Encoder::new_like(self, template)
     }
 
-    pub fn create_large_item(&mut self, name: &str, ty: Type) -> Result<WriteStream, Error> {
+    pub fn create_large_item(
+        &mut self,
+        name: &str,
+        ty: Type,
+    ) -> Result<WriteStream, MiriadFormatError> {
         if name == "header" {
-            return mirerr!("cannot create an item named \"header\"");
+            return Err(MiriadFormatError::Generic(
+                "cannot create an item named \"header\"".to_string(),
+            ));
         }
 
         let name_bytes = name.as_bytes();
 
         if name_bytes.len() > 8 {
-            return mirerr!("cannot create an item with a name longer than 8 bytes");
+            return Err(MiriadFormatError::Generic(
+                "cannot create an item with a name longer than 8 bytes".to_string(),
+            ));
         }
 
         if !name_bytes.is_ascii() {
-            return mirerr!("cannot create an item with a non-ASCII name");
+            return Err(MiriadFormatError::Generic(
+                "cannot create an item with a non-ASCII name".to_string(),
+            ));
         }
 
         let mut stream = AligningWriter::new(io::BufWriter::new(self.dir.write_file(name, 0o666)?));
@@ -1008,7 +1040,7 @@ impl DataSet {
         &mut self,
         name: &str,
         values: &[T],
-    ) -> Result<(), Error> {
+    ) -> Result<(), MiriadFormatError> {
         // Need to do this to ensure that we don't get a small item that masks
         // a large item.
         if !self.large_items_scanned {
@@ -1031,13 +1063,14 @@ impl DataSet {
             T::encode_values_into_vec(values, data);
 
             if data.len() > 64 {
-                return mirerr!("value too large to be stored as a small MIRIAD header item");
+                return Err(MiriadFormatError::Generic(
+                    "value too large to be stored as a small MIRIAD header item".to_string(),
+                ));
             }
         } else {
-            return mirerr!(
-                "cannot set \"{}\" as a small item; would mask an existing large item",
-                name
-            );
+            return Err(MiriadFormatError::Generic(format!(
+                "cannot set \"{name}\" as a small item; would mask an existing large item"
+            )));
         }
 
         iii.ty = T::TYPE;
@@ -1049,13 +1082,13 @@ impl DataSet {
         &mut self,
         name: &str,
         value: T,
-    ) -> Result<(), Error> {
+    ) -> Result<(), MiriadFormatError> {
         self.set_small_item(name, &[value])
     }
 
     /// Flush any pending changes to the overall dataset. In particular, this
     /// means that the "header" file is rewritten.
-    pub fn flush(&mut self) -> Result<(), Error> {
+    pub fn flush(&mut self) -> Result<(), MiriadFormatError> {
         if !self.needs_flush {
             return Ok(());
         }

@@ -1,55 +1,96 @@
-// Copyright 2017-2021 Peter Williams and collaborators
+// Copyright 2017-2023 Peter Williams and collaborators
 // Licensed under the MIT License.
 
 //! Core types and concepts of the Rubbl framework.
 //!
 //! This crate provides low-level types that are expected to be used throughout
 //! the Rubbl framework.
+//!
+//! # Crate Duplication and Re-Exports
+//!
+//! This crate depends on several foundational crates that your upstream project
+//! may also explicitly depend on, such as [`ndarray`]. If your project depends
+//! on a version of one of these crates that is not compatible with the version
+//! required by this crate, Cargo will build duplicated versions of these crates
+//! that, while they have the same name, cannot be intermixed. See [this crate’s
+//! Crates.io README][1] for a more detailed discussion.
+//!
+//! [1]: https://crates.io/crates/rubbl_core/
+//!
+//! If you are in a situation where you can't avoid this duplication, this crate
+//! re-exports some of its dependencies, providing a way to reliably name the specific
+//! version that it’s referencing.
 
 #![deny(missing_docs)]
 
-// convenience re-exports
-pub use failure::{Error, Fail, ResultExt};
-pub use ndarray::Array;
-pub use num_complex::Complex;
+// convenience re-exports; these can help consumers make sure they're referencing the
+// same types if a crate gets duplicated. See also the README.
+#[cfg(feature = "anyhow")]
+pub use anyhow;
+pub use ndarray::{self, Array, CowArray};
+pub use num_complex::{self, Complex};
 
-// `approx` isn't (as of October 2021) used anywhere in Rubbl, but by including
-// it as a dependency, we can get implementations of its traits for the Complex
-// type that we export. Re-exporting the crate gives users an ability to name
-// these traits if so desired.
-//
-// We could make this optional with a Cargo feature, for downstream users that
-// don't need the functionality, but it's a very lightweight dependency, so
-// let's just keep things simple.
-pub use approx;
+pub mod io;
+#[cfg(feature = "notifications")]
+pub mod notify;
+pub mod num;
 
 /// A “contextualized try” macro.
 ///
-/// Attempts an operation that returns a Result and returns its Ok value if
-/// the operation is successful. If not, it returns an Err value of type
-/// `failure::Context` that includes explanatory text formatted using the
-/// `format!` macro and chains to the causative error. Example:
+/// This macro is syntactic sugar. The expression
 ///
-/// ```rust,ignore
-/// ctry!(write!(myfile, "hello"); "couldn\'t write to {}", myfile_path);
+/// ```rust
+/// # use rubbl_core::ctry;
+/// # use anyhow::*;
+/// # fn myfun() -> Result<(), Error> {
+/// #   let op: Result<(), Error> = Ok(());
+/// #   let value = "something";
+/// ctry!(op; "spec: {}", value)
+/// #  ;
+/// #  Ok(())
+/// # }
 /// ```
 ///
-/// Note that the operation to be attempted and the arguments to `format!` are
-/// separated by a semicolon within the `ctry!()` parentheses.
+/// is equivalent to:
+///
+/// ```rust
+/// # use anyhow::*;
+/// # fn myfun() -> Result<(), Error> {
+/// #   let op: Result<(), Error> = Ok(());
+/// #   let value = "something";
+/// {
+///     use anyhow::Context;
+///     op.with_context(|| format!("spec: {}", value))?
+/// }
+/// #   Ok(())
+/// # }
+/// ```
+///
+/// So, it attempts an operation that returns a [`Result`] (or [`Option`]) and
+/// evaluates to its [`Ok`] (or [`Some`]) value if the operation is successful.
+/// If not, it exits the current function with an [`Err`] value that has a
+/// formatted context string attached to it.
+///
+/// #### Example
+///
+/// ```rust
+/// # use anyhow::Error;
+/// # fn myfun() -> Result<(), Error> {
+/// use rubbl_core::ctry;
+/// use std::{fs::File, io::Write};
+///
+/// let path = "myfile.txt";
+/// let mut myfile = ctry!(File::open(path); "failed to open file `{}`", path);
+/// ctry!(write!(myfile, "hello"); "failed to write to file `{}`", path);
+/// # Ok(())
+/// # }
+/// ```
 #[macro_export]
 macro_rules! ctry {
     ($op:expr ; $( $chain_fmt_args:expr ),*) => {
         {
-            use $crate::ResultExt;
-            $op.with_context(|_| format!($( $chain_fmt_args ),*))?
+            use anyhow::Context;
+            $op.with_context(|| format!($( $chain_fmt_args ),*))?
         }
     }
 }
-
-pub mod io;
-pub mod notify;
-pub mod num;
-
-/// A convenience Result type whose error half is fixed to be
-/// `failure::Error`.
-pub type Result<T> = ::std::result::Result<T, failure::Error>;

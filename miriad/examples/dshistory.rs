@@ -3,21 +3,22 @@
 //! This can be done trivially since the history item is a standalone file, but
 //! this shows how the rubbl MIRIAD API is used.
 
-use clap::{App, Arg};
+use clap::{Arg, Command};
+use std::ffi::OsString;
 
 fn main() {
-    let matches = App::new("dsls")
+    let matches = Command::new("dsls")
         .version("0.1.0")
         .about("Describe the contents of a MIRIAD data set.")
         .arg(
-            Arg::with_name("PATH")
+            Arg::new("PATH")
                 .help("The path to the dataset directory")
                 .required(true)
                 .index(1),
         )
         .get_matches();
 
-    let path = matches.value_of_os("PATH").unwrap();
+    let path = matches.get_one::<OsString>("PATH").unwrap().as_os_str();
 
     let mut ds = match rubbl_miriad::DataSet::open(path) {
         Ok(ds) => ds,
