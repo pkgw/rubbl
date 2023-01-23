@@ -25,6 +25,7 @@
 
 // convenience re-exports; these can help consumers make sure they're referencing the
 // same types if a crate gets duplicated. See also the README.
+#[cfg(feature = "anyhow")]
 pub use anyhow;
 pub use ndarray::{self, Array, CowArray};
 pub use num_complex::{self, Complex};

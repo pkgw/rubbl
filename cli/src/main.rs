@@ -12,7 +12,10 @@ Heavily modeled on Cargo's implementation of the same sort of functionality.
 
 use anyhow::Result;
 use clap::{crate_version, Arg, ArgMatches, Command};
-use rubbl_core::notify::{ClapNotificationArgsExt, NotificationBackend};
+use rubbl_core::{
+    notify::{ClapNotificationArgsExt, NotificationBackend},
+    rn_warning,
+};
 use std::{
     collections::BTreeSet,
     env, fs,
@@ -36,6 +39,7 @@ fn main() {
             match matches.subcommand() {
                 Some(("help", m)) => do_help(m, nbe),
                 Some(("list", m)) => do_list(m, nbe),
+                Some(("show", m)) => do_show(m, nbe),
                 Some((external, m)) => do_external(external, m, nbe),
                 None => {
                     // No sub-command provided; can't use do_help() since it wants sub-matches.
@@ -49,6 +53,18 @@ fn main() {
 
 /// It seems that the best way to re-print the help in the "help" subcommand
 /// is to be able to make multiple Command objects.
+fn make_show_command() -> Command {
+    Command::new("show")
+        .about("Show various useful metadata")
+        .disable_help_subcommand(true)
+        .subcommand(
+            Command::new("concept-doi").about("Show the Zenodo concept DOI of the Rubbl CLI"),
+        )
+        .subcommand(
+            Command::new("version-doi").about("Show the DOI of this version of the Rubbl CLI"),
+        )
+}
+
 fn make_command() -> Command {
     Command::new("rubbl")
         .version(crate_version!())
@@ -61,6 +77,7 @@ fn make_command() -> Command {
                 .arg(Arg::new("command").help("The name of a sub-command to get help for")),
         )
         .subcommand(Command::new("list").about("List the available sub-commands"))
+        .subcommand(make_show_command())
         .help_template(
             r#"rubbl -- dispatcher for command-line access to Rubbl tools
 
@@ -78,6 +95,7 @@ SUBCOMMANDS:
 
     help    Get help on sub-command usage
     list    List the available sub-commands
+    show    Show various useful metadata
 "#,
         )
 }
@@ -87,6 +105,11 @@ fn do_help(matches: &ArgMatches, _nbe: &mut dyn NotificationBackend) -> Result<i
     match matches.get_one::<String>("command").map(|s| s.as_ref()) {
         None | Some("help") | Some("list") => {
             make_command().print_long_help()?;
+            Ok(0)
+        }
+
+        Some("show") => {
+            make_show_command().print_long_help()?;
             Ok(0)
         }
 
@@ -103,6 +126,45 @@ fn do_list(_matches: &ArgMatches, _nbe: &mut dyn NotificationBackend) -> Result<
 
     for command in list_commands() {
         println!("    {}", command);
+    }
+
+    Ok(0)
+}
+
+/// Print useful quantities
+fn do_show(matches: &ArgMatches, nbe: &mut dyn NotificationBackend) -> Result<i32> {
+    match matches.subcommand() {
+        Some(("concept-doi", _)) => {
+            // For releases, this will be rewritten to the real DOI:
+            let doi = "xx.xxxx/dev-build.rubbl.concept";
+
+            if doi.starts_with("xx.") {
+                rn_warning!(
+                    nbe,
+                    "you are running a development build; the printed value is not a real DOI"
+                );
+            }
+
+            println!("{}", doi);
+        }
+
+        Some(("version-doi", _)) => {
+            // For releases, this will be rewritten to the real DOI:
+            let doi = "xx.xxxx/dev-build.rubbl.version";
+
+            if doi.starts_with("xx.") {
+                rn_warning!(
+                    nbe,
+                    "you are running a development build; the printed value is not a real DOI"
+                );
+            }
+
+            println!("{}", doi);
+        }
+
+        Some(_) | None => {
+            make_show_command().print_long_help()?;
+        }
     }
 
     Ok(0)
@@ -168,6 +230,7 @@ fn list_commands() -> BTreeSet<String> {
 
     commands.insert("help".to_owned());
     commands.insert("list".to_owned());
+    commands.insert("show".to_owned());
 
     commands
 }

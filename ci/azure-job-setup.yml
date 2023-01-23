@@ -1,8 +1,17 @@
 # Generic setup in the deployment stage. We download all artifacts, install
 # Cranko, and recover the `release` commit. We assume that we are running on
 # Linux.
+#
+# Expected variables:
+#
+# - if setupBuild is true:
+#   - TOOLCHAIN: the rust toolchain type (e.g., "stable", "beta-x86_64-pc-windows-msvc")
+#   - TARGET: currently unused but might be used to package binaries
 
 parameters:
+- name: setupBuild
+  type: boolean
+  default: false
 - name: setupGit
   type: boolean
   default: false
@@ -13,6 +22,7 @@ steps:
 - checkout: self
 
 - bash: |
+    set -xeuo pipefail
     git switch -c release
     git pull --ff-only $(Pipeline.Workspace)/git-release/release.bundle
   displayName: Restore release commit
@@ -24,6 +34,19 @@ steps:
     curl --proto '=https' --tlsv1.2 -sSf https://pkgw.github.io/cranko/fetch-latest.sh | sh
     echo "##vso[task.prependpath]$d"
   displayName: Install latest Cranko
+
+- ${{ if parameters.setupBuild }}:
+  - bash: |
+      set -ex
+      rustup set profile minimal
+      rustup component remove --toolchain=$TOOLCHAIN rust-docs || echo "already removed"
+      rustup update --no-self-update $TOOLCHAIN
+      rustup default $TOOLCHAIN
+      # Log versions
+      rustup -V
+      rustc -Vv
+      cargo -V
+    displayName: Set up Rust
 
 - ${{ if parameters.setupGit }}:
   - bash: cranko github install-credential-helper
