@@ -2,7 +2,7 @@
 // and https://developers.zenodo.org/#representation
 
 {
-  conceptrecid: 'new-for:0.3.0',
+  conceptrecid: '7563019',
 
   metadata: {
     upload_type: 'software',
@@ -33,7 +33,7 @@
     // Subset of HTML allowed here:
     description: 'Rubbl is an exploratory set of basic libraries aimed at \
 allowing astrophysical software, especially astronomy data processing \
-software, to be written in the Rust. Learn more at \
+software, to be written in the Rust language. Learn more at \
 <a href="https://github.com/pkgw/rubbl/">the Rubbl repository</a>.',
 
     access_right: 'open',
