@@ -30,4 +30,4 @@ cc = { version = "1.0.79", features = ["parallel"] }
 anyhow = "1.0.71"
 clap = { version = "4.3.2", features = ["cargo"] }
 rubbl_core = { version ="0.0.0-dev.0", path = "../core", features = ["notifications"] }
-tempfile = "3.5.0"
+tempfile = "3.6.0"
