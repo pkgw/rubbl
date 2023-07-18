@@ -24,4 +24,4 @@ thiserror = "1.0.43"
 
 [dev-dependencies]
 anyhow = "1.0.71"
-clap = { version = "4.3.11", features = ["cargo"] }
+clap = { version = "4.3.15", features = ["cargo"] }
