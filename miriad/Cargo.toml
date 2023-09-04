@@ -24,7 +24,7 @@ byteorder = "1.4.0"
 openat = "0.1.7"
 rubbl_core = { path = "../core", version ="0.0.0-dev.0"}
 rubbl_visdata = { path = "../visdata", version ="0.0.0-dev.0"}
-thiserror = "1.0.47"
+thiserror = "1.0.48"
 
 [dev-dependencies]
 anyhow = "1.0.75"
