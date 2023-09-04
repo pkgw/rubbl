@@ -21,7 +21,7 @@ rubbl_core = "thiscommit:2020-12-15:EiT8sa0a"
 ndarray = "0.15.0"
 rubbl_casatables_impl = { version ="0.0.0-dev.0", path = "../casatables_impl" }
 rubbl_core = { version ="0.0.0-dev.0", path = "../core" }
-thiserror = "1.0.47"
+thiserror = "1.0.48"
 
 [build-dependencies]
 cc = { version = "1.0.83", features = ["parallel"] }
