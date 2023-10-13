@@ -15,6 +15,7 @@ fn main() {
         .rubbl_notify_args()
         .arg(
             Arg::new("IN-TABLE")
+                .value_parser(clap::value_parser!(PathBuf))
                 .help("The path of the input data set")
                 .required(true)
                 .index(1),
