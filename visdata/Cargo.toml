@@ -17,5 +17,5 @@ Preliminary work on generic data structures for radio interferometric visibility
 rubbl_core = "thiscommit:2020-12-15:Fiequ0wa"
 
 [dependencies]
-anyhow = "1.0.75"
+anyhow = "1.0.76"
 rubbl_core = { path = "../core", version ="0.0.0-dev.0"}
