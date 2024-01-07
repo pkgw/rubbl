@@ -28,6 +28,6 @@ cc = { version = "1.0.83", features = ["parallel"] }
 
 [dev-dependencies]
 anyhow = "1.0.79"
-clap = { version = "4.4.12", features = ["cargo"] }
+clap = { version = "4.4.13", features = ["cargo"] }
 rubbl_core = { version ="0.0.0-dev.0", path = "../core", features = ["notifications"] }
 tempfile = "3.9.0"
