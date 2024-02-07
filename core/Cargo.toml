@@ -21,6 +21,6 @@ anyhow = { version = "1.0.79", features = ["backtrace"], optional = true }
 byteorder = "1.5.0"
 clap = { version = "4.4.18", features = ["cargo"], optional = true }
 ndarray = "0.15.0"  # see README and src/lib.rs for discussion of constraints here; update when this changes
-num-complex = "0.4.4"  # ditto
+num-complex = "0.4.5"  # ditto
 termcolor = { version = "1.4.1", optional = true }
 thiserror = "1.0.56"
