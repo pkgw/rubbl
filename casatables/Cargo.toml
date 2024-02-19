@@ -27,7 +27,7 @@ thiserror = "1.0.57"
 cc = { version = "1.0.85", features = ["parallel"] }
 
 [dev-dependencies]
-anyhow = "1.0.79"
+anyhow = "1.0.80"
 clap = { version = "4.5.0", features = ["cargo"] }
 rubbl_core = { version ="0.0.0-dev.0", path = "../core", features = ["notifications"] }
 tempfile = "3.10.0"
