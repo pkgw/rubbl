@@ -27,6 +27,6 @@ rubbl_visdata = { path = "../visdata", version ="0.0.0-dev.0"}
 thiserror = "1.0.57"
 
 [dev-dependencies]
-anyhow = "1.0.79"
+anyhow = "1.0.80"
 clap = { version = "4.5.0", features = ["cargo"] }
 pbr = "1.1.1"
