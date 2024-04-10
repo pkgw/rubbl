@@ -17,7 +17,7 @@ Core types and traits for Rubbl, a Rust package for astrophysics.
 notifications = ["anyhow", "clap", "termcolor"]
 
 [dependencies]
-anyhow = { version = "1.0.81", features = ["backtrace"], optional = true }
+anyhow = { version = "1.0.82", features = ["backtrace"], optional = true }
 byteorder = "1.5.0"
 clap = { version = "4.5.4", features = ["cargo"], optional = true }
 ndarray = "0.15.0"  # see README and src/lib.rs for discussion of constraints here; update when this changes
