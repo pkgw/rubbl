@@ -19,7 +19,7 @@ notifications = ["anyhow", "clap", "termcolor"]
 [dependencies]
 anyhow = { version = "1.0.86", features = ["backtrace"], optional = true }
 byteorder = "1.5.0"
-clap = { version = "4.5.6", features = ["cargo"], optional = true }
+clap = { version = "4.5.7", features = ["cargo"], optional = true }
 ndarray = "0.15.0"  # see README and src/lib.rs for discussion of constraints here; update when this changes
 num-complex = "0.4.6"  # ditto
 termcolor = { version = "1.4.1", optional = true }
