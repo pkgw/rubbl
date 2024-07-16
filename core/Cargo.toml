@@ -23,4 +23,4 @@ clap = { version = "4.5.9", features = ["cargo"], optional = true }
 ndarray = "0.15.0"  # see README and src/lib.rs for discussion of constraints here; update when this changes
 num-complex = "0.4.6"  # ditto
 termcolor = { version = "1.4.1", optional = true }
-thiserror = "1.0.61"
+thiserror = "1.0.62"
