@@ -24,7 +24,7 @@ rubbl_core = { version ="0.0.0-dev.0", path = "../core" }
 thiserror = "1.0.63"
 
 [build-dependencies]
-cc = { version = "1.1.7", features = ["parallel"] }
+cc = { version = "1.1.8", features = ["parallel"] }
 
 [dev-dependencies]
 anyhow = "1.0.86"
