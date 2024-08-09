@@ -35,6 +35,7 @@
 #ifdef USE_STACKTRACE
 # include <casacore/casa/System/AipsrcValue.h>
 # include <execinfo.h>
+# include <mutex>
 # define AddStackTrace() addStackTrace()
 #else
 # define AddStackTrace()
@@ -96,11 +97,11 @@ AipsError::~AipsError() noexcept
   // stack trace from last exception
   static String lastStackTrace = "*no-stack-trace*";
   // protects the lastMessage and lastStackTrace statics
-  static Mutex  lastErrorMutex;
+  static std::mutex  lastErrorMutex;
 
   void AipsError::getLastInfo (String & message, String & stackTrace)
   {
-    ScopedMutexLock lock(lastErrorMutex);
+    std::lock_guard<std::mutex> lock(lastErrorMutex);
     message = getLastMessage();
     stackTrace = getLastStackTrace();
   }
@@ -110,7 +111,7 @@ AipsError::~AipsError() noexcept
     { return CasaErrorTools::replaceStackAddresses (lastStackTrace); }
   void AipsError::clearLastInfo ()
   {
-    ScopedMutexLock lock(lastErrorMutex);
+    std::lock_guard<std::mutex> lock(lastErrorMutex);
     lastMessage = "*none*";
     lastStackTrace = "*no-stack-trace*";
   }
@@ -121,7 +122,7 @@ AipsError::~AipsError() noexcept
     // for later retrieval via casapy
     stackTrace = CasaErrorTools::generateStackTrace();
     {
-      ScopedMutexLock lock(lastErrorMutex);
+      std::lock_guard<std::mutex> lock(lastErrorMutex);
       lastMessage = message;
       lastStackTrace = stackTrace;
     }
@@ -212,19 +213,19 @@ SystemCallError::SystemCallError (int error, const String &msg,
 {}
 SystemCallError::~SystemCallError() noexcept
 {}
+String strerror_overload(int err)
+{
+  return "errno " + String::toString(err);
+}
+String strerror_overload(char *err)
+{
+  return err;
+}
 String SystemCallError::errorMessage(int error)
 {
   // Use strerror_r for thread-safety.
   char buffer[128];
-  // There are two incompatible versions of versions of strerror_r()
-#if !__linux__ || (!_GNU_SOURCE && (_POSIX_C_SOURCE >= 200112L || _XOPEN_SOURCE >= 600))
-  if (strerror_r(error, buffer, sizeof buffer) == 0) {
-    return String(buffer);
-  }
-  return "errno " + String::toString(error);
-#else
-  return strerror_r(error, buffer, sizeof buffer);
-#endif
+  return strerror_overload(strerror_r(error, buffer, sizeof buffer));
 }
 
 

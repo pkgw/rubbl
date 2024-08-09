@@ -34,6 +34,8 @@
 #include <casacore/tables/Tables/ColDescSet.h>
 #include <casacore/casa/IO/AipsIO.h>
 #include <casacore/casa/iosfwd.h>
+#include <casacore/casa/Arrays/ArrayFwd.h>
+
 #include <map>
 
 namespace casacore { //# NAMESPACE CASACORE - BEGIN
@@ -42,7 +44,6 @@ namespace casacore { //# NAMESPACE CASACORE - BEGIN
 class TableRecord;
 class TableAttr;
 class TabPath;
-template<class T> class Vector;
 
 // <summary>
 // Define the structure of a Casacore table
@@ -63,7 +64,9 @@ template<class T> class Vector;
 // This description is required for the creation of a new table.  
 // Descriptions are subsequently associated with every table and
 // embedded in them.
-//
+// <br> The TableDesc class structure is shown in this
+// <a href="TableDesc.drawio.svg.html">UML diagram</a>.
+ //
 // A table description consists of the following items:
 // <ul>
 //  <li> Name, which cannot be blank if the description is saved in a file.

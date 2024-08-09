@@ -1,6 +1,14 @@
 #! /bin/bash
-# Copyright 2017 Peter Williams <peter@newton.cx> and collaborators
-# Licensed under the MIT License.
+#
+# Copy pristine casacore source files into our source tree.
+#
+# The only reason that we need to look at a casacore build directory, as
+# opposed to a source directory, is to get the version.h file.
+#
+# This script has no intelligence to handle things like renamed or deleted
+# files. If you're updating to a new casacore version and changes of that
+# nature have been made, you'll have to manually copy/move/delete casacore
+# source files into place within the rubbl tree.
 
 if [ "$1" = "" ] ; then
     echo >&2 "usage: $0 <path-to-casacore-build-directory>"
@@ -28,6 +36,9 @@ srcdir="$(grep CMAKE_HOME_DIRECTORY "$builddir/CMakeCache.txt" |sed -e 's/CMAKE_
     case "$path" in
         casacore/casa/config.h|update.sh)
             ;; # skip
+        casacore/casa/version.h)
+            cp "$builddir/$path" "$impldir/$path"
+            ;;
         *)
             cp "$srcdir/$path" "$impldir/$path"
             ;;

@@ -290,14 +290,10 @@ template <class Qtype> class Quantum : public QBase{
   // Construct quantum with unit copied from existing quantum
   Quantum(const Qtype &factor, const QBase &other);
   
-  // Destructor
-  ~Quantum();
-
   //# Operators
   // Assignment (deep copy)
   Quantum<Qtype> &operator=(const Quantum<Qtype> &other);
-  
-  
+
   // Unary operations
   // <group>
   const Quantum<Qtype> &operator+() const;

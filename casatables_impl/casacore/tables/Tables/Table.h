@@ -33,7 +33,10 @@
 #include <casacore/casa/aips.h>
 #include <casacore/tables/Tables/BaseTable.h>
 #include <casacore/tables/Tables/TableLock.h>
+#include <casacore/tables/Tables/RowNumbers.h>
 #include <casacore/tables/DataMan/TSMOption.h>
+#include <casacore/casa/Arrays/ArrayFwd.h>
+#include <casacore/casa/Containers/Record.h>
 #include <casacore/casa/Utilities/DataType.h>
 #include <casacore/casa/Utilities/Sort.h>
 
@@ -52,7 +55,6 @@ class Record;
 class TableExprNode;
 class DataManager;
 class IPosition;
-template<class T> class Vector;
 template<class T> class Block;
 template<class T> class CountedPtr;
 
@@ -86,6 +88,8 @@ template<class T> class CountedPtr;
 // via their constructors.
 // Furthermore the Table has a TableRecord object for holding keywords
 // which can be read or written using the appropriate functions.
+// <br> The Table class structure is shown in this
+// <a href="Table.drawio.svg.html">UML diagram</a>.
 //
 // To open an existing table, a simple Table constructor can be used.
 // The possible construct options are:
@@ -94,9 +98,6 @@ template<class T> class CountedPtr;
 //   <li> Update         update existing table
 //   <li> Delete         delete table
 // </ul>
-// The function <src>openTable</src> makes it possible to open a subtable
-// of a table in a convenient way, even if the table is only a reference
-// to another table (e.g., a selection).
 //
 // Creating a new table requires more work, because columns have
 // to be bound to storage managers or virtual column engines.
@@ -108,6 +109,9 @@ template<class T> class CountedPtr;
 // <code>Table::LocalEndian</code> (thus the endian format of the
 // machine being used).
 //
+// Note that TableUtil contains convenience function to open, create or delete a table.
+// They make it possible to use the :: notation to denote subtables.
+// <p>
 // It is possible to create a Table object as the virtual concatenation of
 // Tables having identical table descriptions. Subtables of those tables
 // can optionally be concatenated as well.
@@ -129,8 +133,8 @@ template<class T> class CountedPtr;
 // Table myTable ("theTable", Table::Update);
 // // Write the column containing the scalar RA.
 // ScalarColumn<double> raColumn(myTable, "RA");
-// uInt nrrow = myTable.nrow();
-// for (uInt i=0; i<nrrow; i++) {
+// rownr_t nrrow = myTable.nrow();
+// for (rownr_t i=0; i<nrrow; i++) {
 //    raColumn.put (i, i+10);    // Put value i+10 into row i
 // }
 // </srcblock>
@@ -274,38 +278,39 @@ public:
     // inspection interval of 5 seconds.
     // <br>The data will be stored in the given endian format.
     // <group>
-    explicit Table (SetupNewTable&, uInt nrrow = 0, Bool initialize = False,
+    explicit Table (SetupNewTable&, rownr_t nrrow = 0, Bool initialize = False,
 		    EndianFormat = Table::AipsrcEndian,
                     const TSMOption& = TSMOption());
     Table (SetupNewTable&, TableType,
-	   uInt nrrow = 0, Bool initialize = False,
+	   rownr_t nrrow = 0, Bool initialize = False,
 	   EndianFormat = Table::AipsrcEndian, const TSMOption& = TSMOption());
     Table (SetupNewTable&, TableType, const TableLock& lockOptions,
-	   uInt nrrow = 0, Bool initialize = False,
+	   rownr_t nrrow = 0, Bool initialize = False,
 	   EndianFormat = Table::AipsrcEndian, const TSMOption& = TSMOption());
     Table (SetupNewTable&, TableLock::LockOption,
-	   uInt nrrow = 0, Bool initialize = False,
+	   rownr_t nrrow = 0, Bool initialize = False,
 	   EndianFormat = Table::AipsrcEndian, const TSMOption& = TSMOption());
     Table (SetupNewTable&, const TableLock& lockOptions,
-	   uInt nrrow = 0, Bool initialize = False,
+	   rownr_t nrrow = 0, Bool initialize = False,
 	   EndianFormat = Table::AipsrcEndian, const TSMOption& = TSMOption());
 #ifdef HAVE_MPI
     explicit Table (MPI_Comm mpiComm, TableType, EndianFormat = Table::AipsrcEndian,
                     const TSMOption& = TSMOption());
-    explicit Table (MPI_Comm mpiComm, SetupNewTable&, uInt nrrow = 0, Bool initialize = False,
+    explicit Table (MPI_Comm mpiComm, SetupNewTable&, rownr_t nrrow = 0,
+                    Bool initialize = False,
 		    EndianFormat = Table::AipsrcEndian,
                     const TSMOption& = TSMOption());
     Table (MPI_Comm mpiComm, SetupNewTable&, TableType,
-	   uInt nrrow = 0, Bool initialize = False,
+	   rownr_t nrrow = 0, Bool initialize = False,
 	   EndianFormat = Table::AipsrcEndian, const TSMOption& = TSMOption());
     Table (MPI_Comm mpiComm, SetupNewTable&, TableType, const TableLock& lockOptions,
-	   uInt nrrow = 0, Bool initialize = False,
+	   rownr_t nrrow = 0, Bool initialize = False,
 	   EndianFormat = Table::AipsrcEndian, const TSMOption& = TSMOption());
     Table (MPI_Comm mpiComm, SetupNewTable&, TableLock::LockOption,
-	   uInt nrrow = 0, Bool initialize = False,
+	   rownr_t nrrow = 0, Bool initialize = False,
 	   EndianFormat = Table::AipsrcEndian, const TSMOption& = TSMOption());
     Table (MPI_Comm mpiComm, SetupNewTable&, const TableLock& lockOptions,
-	   uInt nrrow = 0, Bool initialize = False,
+	   rownr_t nrrow = 0, Bool initialize = False,
 	   EndianFormat = Table::AipsrcEndian, const TSMOption& = TSMOption());
 #endif
     // </group>
@@ -363,37 +368,6 @@ public:
     // Assignment (reference semantics).
     Table& operator= (const Table&);
 
-    // Try to open a table. The name of the table can contain subtable names
-    // using :: as separator. In this way it is possible to directly open a
-    // subtable of a RefTable or ConcatTable, which is not possible if the
-    // table name is specified with slashes.
-    // <br>The open process is as follows:
-    // <ul>
-    //  <li> It is tried to open the table with the given name.
-    //  <li> If unsuccessful, the name is split into its parts using ::
-    //       The first part is the main table which will be opened temporarily.
-    //       The other parts are the successive subtable names (usually one).
-    //       Each subtable is opened by looking it up in the keywords of the
-    //       table above. The final subtable is returned.
-    // </ul>
-    // <br>An exception is thrown if the table cannot be opened.
-    // <example>
-    // Open the ANTENNA subtable of an MS which might be a selection of
-    // a real MS.
-    // <srcblock>
-    // Table tab(Table::openTable ("sel.ms::ANTENNA");
-    // </srcblock>
-    // </example>
-    // <group>
-    static Table openTable (const String& tableName,
-                            TableOption = Table::Old,
-                            const TSMOption& = TSMOption());
-    static Table openTable (const String& tableName,
-                            const TableLock& lockOptions,
-                            TableOption = Table::Old,
-                            const TSMOption& = TSMOption());
-    // </group>
-
     // Get the names of the tables this table consists of.
     // For a plain table it returns its name,
     // for a RefTable the name of the parent, and
@@ -404,29 +378,6 @@ public:
 
     // Is the root table of this table the same as that of the other one?
     Bool isSameRoot (const Table& other) const;
-
-    // Can the table be deleted?
-    // If true, function deleteTable can safely be called.
-    // If not, message contains the reason why (e.g. 'table is not writable').
-    // It checks if the table is writable, is not open in this process
-    // and is not open in another process.
-    // <br>If <src>checkSubTables</src> is set, it also checks if
-    // a subtable is not open in another process.
-    // <group>
-    static Bool canDeleteTable (const String& tableName,
-				Bool checkSubTables=False);
-    static Bool canDeleteTable (String& message, const String& tableName,
-				Bool checkSubTables=False);
-    // </group>
-
-    // Delete the table.
-    // An exception is thrown if the table cannot be deleted because
-    // its is not writable or because it is still open in this or
-    // another process.
-    // <br>If <src>checkSubTables</src> is set, it is also checked if
-    // a subtable is used in another process.
-    static void deleteTable (const String& tableName,
-			     Bool checkSubTables=False);
 
     // Close all open subtables.
     void closeSubTables() const;
@@ -545,19 +496,6 @@ public:
     // Test if a table with the given name exists and is readable.
     // If not, an exception is thrown if <src>throwIf==True</src>.
     static Bool isReadable (const String& tableName, bool throwIf=False);
-
-    // Return the layout of a table (i.e. description and #rows).
-    // This function has the advantage that only the minimal amount of
-    // information required is read from the table, thus it is much
-    // faster than a normal table open.
-    // <br> The number of rows is returned. The description of the table
-    // is stored in desc (its contents will be overwritten).
-    // <br> An exception is thrown if the table does not exist.
-    static uInt getLayout (TableDesc& desc, const String& tableName);
-
-    // Get the table info of the table with the given name.
-    // An empty object is returned if the table is unknown.
-    static TableInfo tableInfo (const String& tableName);
 
     // Show the structure of the table.
     // It shows the columns (with types), the data managers, and the subtables.
@@ -755,7 +693,7 @@ public:
     // process updated the table, thus possible increased the number of rows.
     // If one wants to take that into account, he should acquire a
     // read-lock (using the lock function) before using nrow().
-    uInt nrow() const;
+    rownr_t nrow() const;
 
     // Test if it is possible to add a row to this table.
     // It is possible if all storage managers used for the table
@@ -766,7 +704,7 @@ public:
     // This will fail for tables not supporting addition of rows.
     // Optionally the rows can be initialized with the default
     // values as defined in the column descriptions.
-    void addRow (uInt nrrow = 1, Bool initialize = False);
+    void addRow (rownr_t nrrow = 1, Bool initialize = False);
 
     // Test if it is possible to remove a row from this table.
     // It is possible if all storage managers used for the table
@@ -782,7 +720,7 @@ public:
     // <srcblock>
     //    tab.removeRow (10);      // remove row 10
     //    tab.removeRow (20);      // remove row 20, which was 21
-    //    Vector<uInt> vec(2);
+    //    Vector<rownr_t> vec(2);
     //    vec(0) = 10;
     //    vec(1) = 20;
     //    tab.removeRow (vec);     // remove row 10 and 20
@@ -791,8 +729,8 @@ public:
     // row 21 into row 20.
     // </note>
     // <group>
-    void removeRow (uInt rownr);
-    void removeRow (const Vector<uInt>& rownrs);
+    void removeRow (rownr_t rownr);
+    void removeRow (const RowNumbers& rownrs);
     // </group>
 
     // Create a TableExprNode object for a column or for a keyword
@@ -817,7 +755,7 @@ public:
     // 'origin' Indicates which rownumber is the first.
     // C++ uses origin = 0 (default)
     // Glish and TaQL both use origin = 1
-    TableExprNode nodeRownr (uInt origin=0) const;
+    TableExprNode nodeRownr (rownr_t origin=0) const;
 
     // Create a TableExprNode object for the rand function.
     TableExprNode nodeRandom () const;
@@ -843,7 +781,7 @@ public:
     // when <src>maxRow</src> rows are selected.
     // <br>The TableExprNode argument can be empty (null) meaning that only
     // the <src>maxRow/offset</src> arguments are taken into account.
-    Table operator() (const TableExprNode&, uInt maxRow=0, uInt offset=0) const;
+    Table operator() (const TableExprNode&, rownr_t maxRow=0, rownr_t offset=0) const;
 
     // Select rows using a vector of row numbers.
     // This can, for instance, be used to select the same rows as
@@ -851,7 +789,7 @@ public:
     // <srcblock>
     //     Table result = thisTable (otherTable.rowNumbers());
     // </srcblock>
-    Table operator() (const Vector<uInt>& rownrs) const;
+    Table operator() (const RowNumbers& rownrs) const;
 
     // Select rows using a mask block.
     // The length of the block must match the number of rows in the table.
@@ -923,7 +861,7 @@ public:
     // containing the row numbers 0 .. #rows-1.
     // <br>Note that in general it is better to use the next
     // <src>rowNumbers(Table)</src> function.
-    Vector<uInt> rowNumbers() const;
+    RowNumbers rowNumbers() const;
 
     // Get a vector of row numbers in that table of rows in this table.
     // In case the table is a subset of that table, this tells which
@@ -946,15 +884,15 @@ public:
     // <srcblock>
     // Table tab("somename");
     // Table subset = tab(some_select_expression);
-    // Vector<uInt> rownrs = subset.rowNumbers(tab);
+    // RowNumbers rownrs = subset.rowNumbers(tab);
     // </srcblock>
     // Note that one cannot be sure that table "somename" is the root
     // (i.e. original) table. It may also be a subset of another table.
     // In the latter case doing
-    // <br> <src>    Vector<uInt> rownrs = subset.rowNumbers()</src>
+    // <br> <src>    RowNumbers rownrs = subset.rowNumbers()</src>
     // does not give the row numbers in <src>tab</src>, but in the root table
     // (which is probably not what you want).
-  Vector<uInt> rowNumbers (const Table& that, Bool tryFast=False) const;
+    RowNumbers rowNumbers (const Table& that, Bool tryFast=False) const;
 
     // Add a column to the table.
     // The data manager used for the column depend on the function used.
@@ -1064,6 +1002,39 @@ public:
     DataManager* findDataManager (const String& name,
                                   Bool byColumn=False) const;
 
+    // Some deprecated functions for backward compatibility, now in TableUtil.h.
+    // Use old way of indicating deprecate to avoid -Wc++14-extensions warnings.
+    // <group>
+     //# [[deprecated ("Now use TableUtil::openTable")]]
+    static Table openTable (const String& tableName,
+                            TableOption = Table::Old,
+                            const TSMOption& = TSMOption())
+      __attribute__ ((deprecated ("Now use TableUtil::openTable")));
+     //# [[deprecated ("Now use TableUtil::openTable")]]
+    static Table openTable (const String& tableName,
+                            const TableLock& lockOptions,
+                            TableOption = Table::Old,
+                            const TSMOption& = TSMOption())
+      __attribute__ ((deprecated ("Now use TableUtil::openTable")));
+     //# [[deprecated ("Now use TableUtil::canDeleteTable")]]
+    static Bool canDeleteTable (const String& tableName,
+                                Bool checkSubTables=False)
+      __attribute__ ((deprecated ("Now use TableUtil::canDeleteTable")));
+     //# [[deprecated ("Now use TableUtil::canDeleteTable")]]
+    static Bool canDeleteTable (String& message, const String& tableName,
+                                Bool checkSubTables=False)
+      __attribute__ ((deprecated ("Now use TableUtil::canDeleteTable")));
+     //# [[deprecated ("Now use TableUtil::deleteTable")]]
+    static void deleteTable (const String& tableName,
+                             Bool checkSubTables=False)
+      __attribute__ ((deprecated ("Now use TableUtil::deleteTable")));
+     //# [[deprecated ("Now use TableUtil::getLayout")]]
+    static rownr_t getLayout (TableDesc& desc, const String& tableName)
+      __attribute__ ((deprecated ("Now use TableUtil::getLayout")));
+     //# [[deprecated ("Now use TableUtil::tableInfo")]]
+    static TableInfo tableInfo (const String& tableName)
+      __attribute__ ((deprecated ("Now use TableUtil::tableInfo")));
+    // </group>
 
 protected:
     BaseTable*  baseTabPtr_p;                 //# ptr to table representation
@@ -1090,7 +1061,6 @@ protected:
     void open (const String& name, const String& type, int tableOption,
 	       const TableLock& lockOptions, const TSMOption& tsmOpt);
 
-
 private:
     // Construct a BaseTable object from the table file.
     static BaseTable* makeBaseTable (const String& name, const String& type,
@@ -1112,8 +1082,8 @@ private:
 
     // Try if v1 is a subset of v2 and fill rows with its indices in v2.
     // Return False if not a proper subset.
-    Bool fastRowNumbers (const Vector<uInt>& v1, const Vector<uInt>& v2,
-                         Vector<uInt>& rows) const;
+    Bool fastRowNumbers (const Vector<rownr_t>& v1, const Vector<rownr_t>& v2,
+                         Vector<rownr_t>& rows) const;
 
     // Show the info of the given columns.
     // Sort the columns if needed.
@@ -1198,7 +1168,7 @@ inline void Table::unmarkForDelete()
 inline Bool Table::isMarkedForDelete() const
     { return baseTabPtr_p->isMarkedForDelete(); }
 
-inline uInt Table::nrow() const
+inline rownr_t Table::nrow() const
     { return baseTabPtr_p->nrow(); }
 inline BaseTable* Table::baseTablePtr() const
     { return baseTabPtr_p; }
@@ -1207,8 +1177,6 @@ inline const TableDesc& Table::tableDesc() const
 inline const TableRecord& Table::keywordSet() const
     { return baseTabPtr_p->keywordSet(); }
 
-inline TableInfo Table::tableInfo (const String& tableName)
-    { return BaseTable::tableInfo (tableName); }
 inline const TableInfo& Table::tableInfo() const
     { return baseTabPtr_p->tableInfo(); }
 inline TableInfo& Table::tableInfo()
@@ -1232,11 +1200,11 @@ inline Bool Table::canRemoveColumn (const Vector<String>& columnNames) const
 inline Bool Table::canRenameColumn (const String& columnName) const
     { return baseTabPtr_p->canRenameColumn (columnName); }
 
-inline void Table::addRow (uInt nrrow, Bool initialize)
+inline void Table::addRow (rownr_t nrrow, Bool initialize)
     { baseTabPtr_p->addRow (nrrow, initialize); }
-inline void Table::removeRow (uInt rownr)
+inline void Table::removeRow (rownr_t rownr)
     { baseTabPtr_p->removeRow (rownr); }
-inline void Table::removeRow (const Vector<uInt>& rownrs)
+inline void Table::removeRow (const RowNumbers& rownrs)
     { baseTabPtr_p->removeRow (rownrs); }
 inline void Table::addColumn (const ColumnDesc& columnDesc, Bool addToParent)
     { baseTabPtr_p->addColumn (columnDesc, addToParent); }
