@@ -38,6 +38,7 @@
 #include <casacore/casa/Utilities/CountedPtr.h>
 #include <casacore/casa/BasicSL/String.h>
 #include <casacore/casa/IO/FileLocker.h>
+#include <casacore/casa/Arrays/ArrayFwd.h>
 
 #ifdef HAVE_MPI
 #include <mpi.h>
@@ -57,7 +58,6 @@ class TableExprNode;
 class BaseTableIterator;
 class DataManager;
 class IPosition;
-template<class T> class Vector;
 template<class T> class Block;
 template<class T> class PtrBlock;
 class AipsIO;
@@ -105,15 +105,15 @@ class BaseTable
 public:
 
     // Initialize the object.
-    BaseTable (const String& tableName, int tableOption, uInt nrrow);
+    BaseTable (const String& tableName, int tableOption, rownr_t nrrow);
 
 #ifdef HAVE_MPI
     // MPI version of the constructor
-    BaseTable (MPI_Comm mpiComm, const String& tableName, int tableOption, uInt nrrow);
+    BaseTable (MPI_Comm mpiComm, const String& tableName, int tableOption, rownr_t nrrow);
 #endif
 
     // Common code shared by the MPI constructor and non-MPI constructor
-    void BaseTableCommon (const String& tableName, int tableOption, uInt nrrow);
+    void BaseTableCommon (const String& tableName, int tableOption, rownr_t nrrow);
 
     virtual ~BaseTable();
 
@@ -270,7 +270,7 @@ public:
 
     // Get the table description.
     const TableDesc& tableDesc() const
-	{ return (tdescPtr_p == 0  ?  makeTableDesc() : *tdescPtr_p); }
+        { return (tdescPtr_p.null()  ?  makeEmptyTableDesc() : *tdescPtr_p); }
 
     // Get the actual table description.
     virtual TableDesc actualTableDesc() const = 0;
@@ -306,7 +306,7 @@ public:
     virtual void flushTableInfo();
 
     // Get number of rows.
-    uInt nrow() const
+    rownr_t nrow() const
 	{ return nrrow_p; }
 
     // Get a column object using its index.
@@ -320,7 +320,7 @@ public:
 
     // Add one or more rows and possibly initialize them.
     // This will fail for tables not supporting addition of rows.
-    virtual void addRow (uInt nrrow = 1, Bool initialize = True);
+    virtual void addRow (rownr_t nrrow = 1, Bool initialize = True);
 
     // Test if it is possible to remove a row from this table.
     virtual Bool canRemoveRow() const;
@@ -333,7 +333,7 @@ public:
     //    tab.removeRow (10);      // remove row 10
     //    tab.removeRow (20);      // remove row 20, which was 21
     //
-    //    Vector<uInt> vec(2);
+    //    Vector<rownr_t> vec(2);
     //    vec(0) = 10;
     //    vec(1) = 20;
     //    tab.removeRow (vec);     // remove row 10 and 20
@@ -342,7 +342,8 @@ public:
     // row 21 into row 20.
     // </note>
     // <group>
-    virtual void removeRow (uInt rownr);
+    virtual void removeRow (rownr_t rownr);
+    void removeRow (const Vector<rownr_t>& rownrs);
     void removeRow (const Vector<uInt>& rownrs);
     // </group>
 
@@ -353,13 +354,13 @@ public:
     // Select rows using the given expression (which can be null).
     // Skip first <src>offset</src> matching rows.
     // Return at most <src>maxRow</src> matching rows.
-    BaseTable* select (const TableExprNode&, uInt maxRow, uInt offset);
+    BaseTable* select (const TableExprNode&, rownr_t maxRow, rownr_t offset);
 
     // Select maxRow rows and skip first offset rows. maxRow=0 means all.
-    BaseTable* select (uInt maxRow, uInt offset);
+    BaseTable* select (rownr_t maxRow, rownr_t offset);
 
     // Select rows using a vector of row numbers.
-    BaseTable* select (const Vector<uInt>& rownrs);
+    BaseTable* select (const Vector<rownr_t>& rownrs);
 
     // Select rows using a mask block.
     // The length of the block must match the number of rows in the table.
@@ -389,13 +390,16 @@ public:
 
     // Sort a table on one or more columns of scalars.
     BaseTable* sort (const Block<String>& columnNames,
-		     const Block<CountedPtr<BaseCompare> >& compareObjects,
-		     const Block<Int>& sortOrder, int sortOption);
+                     const Block<CountedPtr<BaseCompare> >& compareObjects,
+                     const Block<Int>& sortOrder, int sortOption,
+                     std::shared_ptr<Vector<rownr_t>> sortIterBoundaries = nullptr,
+                     std::shared_ptr<Vector<size_t>> sortIterKeyIdxChange = nullptr);
 
     // Create an iterator.
     BaseTableIterator* makeIterator (const Block<String>& columnNames,
                                      const Block<CountedPtr<BaseCompare> >&,
-				     const Block<Int>& orders, int option);
+                                     const Block<Int>& orders, int option,
+                                     bool cacheIterationBoundaries = false);
 
     // Add one or more columns to the table.
     // The default implementation throws an "invalid operation" exception.
@@ -442,7 +446,7 @@ public:
     // Get a vector of row numbers.
     // By default it returns the row numbers 0..nrrow()-1.
     // It needs to be implemented for RefTable only.
-    virtual Vector<uInt> rowNumbers() const;
+    virtual Vector<rownr_t> rowNumbers() const;
 
     // Get pointer to root table (i.e. parent of a RefTable).
     // Default it is this table.
@@ -458,12 +462,12 @@ public:
 
     // By the default the table cannot return the storage of rownrs.
     // That can only be done by a RefTable, where it is implemented.
-    virtual Vector<uInt>* rowStorage();
+    virtual Vector<rownr_t>* rowStorage();
 
     // Adjust the row numbers to be the actual row numbers in the
     // root table. This is, for instance, used when a RefTable is sorted.
     // Optionally it also determines if the resulting rows are in order.
-    virtual Bool adjustRownrs (uInt nrrow, Vector<uInt>& rownrs,
+    virtual Bool adjustRownrs (rownr_t nrrow, Vector<rownr_t>& rownrs,
 			       Bool determineOrder) const;
 
     // Do the actual sort.
@@ -471,15 +475,17 @@ public:
     // Only in RefTable a smarter implementation is provided.
     virtual BaseTable* doSort (PtrBlock<BaseColumn*>&,
                                const Block<CountedPtr<BaseCompare> >&,
-			       const Block<Int>& sortOrder,
-			       int sortOption);
+                               const Block<Int>& sortOrder,
+                               int sortOption,
+                               std::shared_ptr<Vector<rownr_t>> sortIterBoundaries,
+                               std::shared_ptr<Vector<size_t>> sortIterKeyIdxChange);
 
     // Create a RefTable object.
-    RefTable* makeRefTable (Bool rowOrder, uInt initialNrrow);
+    RefTable* makeRefTable (Bool rowOrder, rownr_t initialNrrow);
 
     // Check if the row number is valid.
     // It throws an exception if out of range.
-    void checkRowNumber (uInt rownr) const
+    void checkRowNumber (rownr_t rownr) const
         { if (rownr >= nrrow_p + nrrowToAdd_p) checkRowNumberThrow (rownr); }
 
     // Get the table's trace-id.
@@ -489,9 +495,9 @@ public:
 
 protected:
     uInt           nrlink_p;            //# #references to this table
-    uInt           nrrow_p;             //# #rows in this table
-    uInt           nrrowToAdd_p;        //# #rows to be added
-    TableDesc*     tdescPtr_p;          //# Pointer to table description
+    rownr_t        nrrow_p;             //# #rows in this table
+    rownr_t        nrrowToAdd_p;        //# #rows to be added
+    CountedPtr<TableDesc> tdescPtr_p;   //# Pointer to table description
     String         name_p;              //# table name
     int            option_p;            //# Table constructor option
     Bool           noWrite_p;           //# False = do not write the table
@@ -570,7 +576,7 @@ private:
                          Bool cOrder) const;
 
     // Throw an exception for checkRowNumber.
-    void checkRowNumberThrow (uInt rownr) const;
+    void checkRowNumberThrow (rownr_t rownr) const;
 
     // Check if the tables combined in a logical operation have the
     // same root.
@@ -578,23 +584,24 @@ private:
 
     // Get the rownrs of the table in ascending order to be
     // used in the logical operation on the table.
-    uInt logicRows (uInt*& rownrs, Bool& allocated);
+    rownr_t logicRows (rownr_t*& rownrs, Bool& allocated);
 
     // Make an empty table description.
     // This is used if one asks for the description of a NullTable.
     // Creating an empty TableDesc in the NullTable takes too much time.
     // Furthermore it causes static initialization order problems.
-    const TableDesc& makeTableDesc() const;
+    const TableDesc& makeEmptyTableDesc() const;
 
     // Make the name absolute.
     // It first checks if the name contains valid characters (not only . and /).
     String makeAbsoluteName (const String& name) const;
 
 #ifdef HAVE_MPI
-    // MPI communicator for parallel I/O
-    // Set the default to MPI_COMM_WORLD to keep the compatibility for
-    // non-MPI apps to work with the MPI-enabled casacore build.
-    MPI_Comm itsMpiComm = MPI_COMM_WORLD;
+    // MPI communicator for parallel I/O.
+    // When using an MPI-disabled casacore, MPI applications have always been
+    // able to create Tables from each rank independently. Defaulting this
+    // communicator to MPI_COMM_SELF preserves that expectation.
+    MPI_Comm itsMpiComm = MPI_COMM_SELF;
 #endif
 };
 

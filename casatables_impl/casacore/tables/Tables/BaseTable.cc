@@ -42,6 +42,7 @@
 #include <casacore/tables/Tables/TableError.h>
 #include <casacore/casa/Arrays/Vector.h>
 #include <casacore/casa/Arrays/ArrayMath.h>
+#include <casacore/casa/Arrays/ArrayLogical.h>
 #include <casacore/casa/BasicSL/STLMath.h>
 #include <casacore/casa/BasicSL/STLIO.h>
 #include <casacore/casa/Containers/Block.h>
@@ -62,20 +63,20 @@ namespace casacore { //# NAMESPACE CASACORE - BEGIN
 
 // The constructor of the derived class should call unmarkForDelete
 // when the construction ended succesfully.
-BaseTable::BaseTable (const String& name, int option, uInt nrrow)
+BaseTable::BaseTable (const String& name, int option, rownr_t nrrow)
 {
     BaseTableCommon(name, option, nrrow);
 }
 
 #ifdef HAVE_MPI
-BaseTable::BaseTable (MPI_Comm mpiComm, const String& name, int option, uInt nrrow)
+BaseTable::BaseTable (MPI_Comm mpiComm, const String& name, int option, rownr_t nrrow)
     :itsMpiComm  (mpiComm)
 {
     BaseTableCommon(name, option, nrrow);
 }
 #endif
 
-void BaseTable::BaseTableCommon (const String& name, int option, uInt nrrow)
+void BaseTable::BaseTableCommon (const String& name, int option, rownr_t nrrow)
 {
     nrlink_p = 0;
     nrrow_p = nrrow;
@@ -106,7 +107,6 @@ void BaseTable::BaseTableCommon (const String& name, int option, uInt nrrow)
 
 BaseTable::~BaseTable()
 {
-    delete tdescPtr_p;
     //# Delete the table files (if there) if marked for delete.
     if (isMarkedForDelete()) {
 	if (madeDir_p) {
@@ -338,27 +338,39 @@ void BaseTable::flushTableInfo()
 
 void BaseTable::writeStart (AipsIO& ios, Bool bigEndian)
 {
-    //# Check option.
+    // Check option.
     if (!openedForWrite()) {
-	throw (TableInvOpt ("BaseTable::writeStart",
-			    "must be Table::New, NewNoReplace or Update"));
+        throw (TableInvOpt ("BaseTable::writeStart",
+                            "must be Table::New, NewNoReplace or Update"));
     }
-    //# Create table directory when needed.
+    // Create table directory when needed.
     Bool made = makeTableDir();
-    //# Create the file.
-    ios.open (Table::fileName(name_p), ByteIO::New);
-    //# Start the object as Table, so class Table can read it back.
-    //# Version 2 (of PlainTable) does not have its own TableRecord anymore.
-    ios.putstart ("Table", 2);
-    ios << nrrow_p;
-    //# Write endianity as a uInt, because older tables contain a uInt 0 here.
+    // Create the file. It is a temporary file that will be later renamed
+    // to the final name. This is so because, in case other process
+    // tries to create a Table object with this table, there is a small
+    // window in which the table.dat is truncated to lenght 0 (ByteIO::New) by
+    // this process while the constructor of Table in the other process
+    // will fail because table.dat is empty. Note that the constructor reads
+    // reads table.dat before doing any locking
+    ios.open (Table::fileName(name_p)+"_tmp", ByteIO::New);
+    // Start the object as Table, so class Table can read it back.
+    // Version 2 (of PlainTable) does not have its own TableRecord anymore.
+    // Use old version if nr of rows fit in an Int, otherwise use new version.
+    if (nrrow_p > rownr_t(std::numeric_limits<Int>::max())) {
+        ios.putstart ("Table", 3);
+        ios << nrrow_p;
+    } else {
+        ios.putstart ("Table", 2);
+        ios << uInt(nrrow_p);
+    }
+    // Write endianity as a uInt, because older tables contain a uInt 0 here.
     uInt endian = 0;
     if (!bigEndian) {
       endian = 1;
     }
     ios << endian;              // 0=bigendian; 1=littleendian
     if (made && !isMarkedForDelete()) {
-	scratchCallback (False, name_p);
+        scratchCallback (False, name_p);
     }
 }
 
@@ -366,6 +378,12 @@ void BaseTable::writeStart (AipsIO& ios, Bool bigEndian)
 void BaseTable::writeEnd (AipsIO& ios)
 {
     ios.putend ();
+    // Ensure that the buffers have been written before renaming
+    ios.close();
+    // Now rename the file to the final name (table.dat). Not that the 
+    // rename is function (used by RegularFile::move) is atomic 
+    // (https://pubs.opengroup.org/onlinepubs/9699919799/functions/rename.html)
+    RegularFile(Table::fileName(name_p)+"_tmp").move (Table::fileName(name_p), true);
 }
 
 
@@ -598,21 +616,21 @@ Bool BaseTable::canAddRow() const
 Bool BaseTable::canRemoveRow() const
     { return False; }
 
-void BaseTable::addRow (uInt, Bool)
+void BaseTable::addRow (rownr_t, Bool)
     { throw (TableInvOper ("Table: cannot add a row to table " + name_p)); }
 
-void BaseTable::removeRow (uInt)
+void BaseTable::removeRow (rownr_t)
     { throw (TableInvOper ("Table: cannot remove a row from table " + name_p)); }
 
-void BaseTable::removeRow (const Vector<uInt>& rownrs)
+void BaseTable::removeRow (const Vector<rownr_t>& rownrs)
 {
     //# Copy the rownrs and sort them.
     //# Loop through them from end to start. In that way we are sure
     //# that the deletion of a row does not affect later rows.
-    Vector<uInt> rownrsCopy;
+    Vector<rownr_t> rownrsCopy;
     rownrsCopy = rownrs;
     genSort (rownrsCopy);
-    for (Int i=rownrsCopy.nelements()-1; i>=0; i--) {
+    for (Int64 i=rownrsCopy.nelements()-1; i>=0; i--) {
 	removeRow (rownrsCopy(i));
     }
 }
@@ -652,13 +670,12 @@ void BaseTable::addColumns (const TableDesc& desc, const Record& dmInfo,
   }
 }
 
-
 //# Get a vector of row numbers.
-Vector<uInt> BaseTable::rowNumbers() const
+Vector<rownr_t> BaseTable::rowNumbers() const
 {
     AlwaysAssert (!isNull(), AipsError);
-    Vector<uInt> vec(nrow());
-    indgen (vec, (uInt)0);                  // store 0,1,... in it
+    Vector<rownr_t> vec(nrow());
+    indgen (vec, (rownr_t)0);                  // store 0,1,... in it
     return vec;
 }
 
@@ -671,24 +688,26 @@ Bool BaseTable::rowOrder() const
     { return True; }
 
 //# By the default the table cannot return the storage of rownrs.
-Vector<uInt>* BaseTable::rowStorage()
+Vector<rownr_t>* BaseTable::rowStorage()
 {
     throw (TableInvOper ("rowStorage() not possible; table " + name_p +
                          " is no RefTable"));
-    return 0;
 }
 
 
 //# Sort a table.
 BaseTable* BaseTable::sort (const Block<String>& names,
-			    const Block<CountedPtr<BaseCompare> >& cmpObj,
-                            const Block<Int>& order, int option)
+                            const Block<CountedPtr<BaseCompare> >& cmpObj,
+                            const Block<Int>& order, int option,
+                            std::shared_ptr<Vector<rownr_t>> sortIterBoundaries,
+                            std::shared_ptr<Vector<size_t>> sortIterKeyIdxChange)
+
 {
     AlwaysAssert (!isNull(), AipsError);
     //# Check if the vectors have equal length.
     uInt nrkey = names.nelements();
     if (nrkey != order.nelements()) {
-	throw (TableInvSort
+        throw (TableInvSort
                ("Length of column sort names and order vectors mismatch"
                 " for table " + name_p));
     }
@@ -696,50 +715,51 @@ BaseTable* BaseTable::sort (const Block<String>& names,
     //# Check if a sort key is indeed a column of scalars.
     PtrBlock<BaseColumn*> sortCol(nrkey);
     for (uInt i=0; i<nrkey; i++) {
-	sortCol[i] = getColumn (names[i]);         // get BaseColumn object
-	if (!sortCol[i]->columnDesc().isScalar()) {
-	    throw (TableInvSort ("Sort column " + names[i] + " in table " +
+        sortCol[i] = getColumn (names[i]);         // get BaseColumn object
+        if (!sortCol[i]->columnDesc().isScalar()) {
+            throw (TableInvSort ("Sort column " + names[i] + " in table " +
                                  name_p + " is not a scalar"));
-	}
+        }
     }
     // Return the result as a table.
-    return doSort (sortCol, cmpObj, order, option);
+    return doSort (sortCol, cmpObj, order, option,
+                   sortIterBoundaries, sortIterKeyIdxChange);
 }
 
 //# Do the actual sort.
 BaseTable* BaseTable::doSort (PtrBlock<BaseColumn*>& sortCol,
-			      const Block<CountedPtr<BaseCompare> >& cmpObj,
-                              const Block<Int>& order, int option)
+                              const Block<CountedPtr<BaseCompare> >& cmpObj,
+                              const Block<Int>& order, int option,
+                              std::shared_ptr<Vector<rownr_t>> sortIterBoundaries,
+                              std::shared_ptr<Vector<size_t>> sortIterKeyIdxChange)
 {
-    uInt i;
     uInt nrkey = sortCol.nelements();
     //# Create a sort object.
     //# Pass all keys (and their data) to it.
     Sort sortobj;
-    PtrBlock<const void*> dataSave(nrkey);          // to remember data blocks
+    Block<CountedPtr<ArrayBase> > data(nrkey);        // to remember data blocks
     Block<CountedPtr<BaseCompare> > cmp(cmpObj);
-    for (i=0; i<nrkey; i++) {
-	sortCol[i]->makeSortKey (sortobj, cmp[i], order[i], dataSave[i]);
+    for (uInt i=0; i<nrkey; i++) {
+        sortCol[i]->makeSortKey (sortobj, cmp[i], order[i], data[i]);
     }
     //# Create a reference table.
     //# This table will NOT be in row order.
-    uInt nrrow = nrow();
+    rownr_t nrrow = nrow();
     RefTable* resultTable = makeRefTable (False, nrrow);
     //# Now sort the table storing the row-numbers in the RefTable.
     //# Adjust rownrs in case source table is already a RefTable.
     //# Then delete possible allocated data blocks.
-    Vector<uInt>& rows = *(resultTable->rowStorage());
+    Vector<rownr_t>& rows = *(resultTable->rowStorage());
     //# Note that nrrow can change in case Sort::NoDuplicates was given.
     nrrow = sortobj.sort (rows, nrrow, option);
+    if(sortIterBoundaries && sortIterKeyIdxChange)
+        sortobj.unique(*sortIterBoundaries, *sortIterKeyIdxChange, rows);
     adjustRownrs (nrrow, rows, False);
     resultTable->setNrrow (nrrow);
-    for (i=0; i<nrkey; i++) {
-	sortCol[i]->freeSortKey (dataSave[i]);
-    }
     return resultTable;
 }
 
-RefTable* BaseTable::makeRefTable (Bool rowOrder, uInt initialNrrow)
+RefTable* BaseTable::makeRefTable (Bool rowOrder, rownr_t initialNrrow)
 {
     RefTable* rtp = new RefTable(this, rowOrder, initialNrrow);
     return rtp;
@@ -747,10 +767,10 @@ RefTable* BaseTable::makeRefTable (Bool rowOrder, uInt initialNrrow)
 
 
 //# No rownrs have to be adjusted and they are by default in ascending order.
-Bool BaseTable::adjustRownrs (uInt, Vector<uInt>&, Bool) const
+Bool BaseTable::adjustRownrs (rownr_t, Vector<rownr_t>&, Bool) const
     { return True; }
 
-BaseTable* BaseTable::select (uInt maxRow, uInt offset)
+BaseTable* BaseTable::select (rownr_t maxRow, rownr_t offset)
 {
     if (offset > nrow()) {
         offset = nrow();
@@ -761,14 +781,14 @@ BaseTable* BaseTable::select (uInt maxRow, uInt offset)
     if (offset == 0  &&  maxRow == nrow()) {
         return this;
     }
-    Vector<uInt> rownrs(maxRow);
-    indgen(rownrs, offset);
+    Vector<rownr_t> rownrs(maxRow);
+    indgen(rownrs, rownr_t(offset));
     return select(rownrs);
 }
 
 // Do the row selection.
 BaseTable* BaseTable::select (const TableExprNode& node,
-                              uInt maxRow, uInt offset)
+                              rownr_t maxRow, rownr_t offset)
 {
     // Check we don't deal with a null table.
     AlwaysAssert (!isNull(), AipsError);
@@ -788,7 +808,7 @@ BaseTable* BaseTable::select (const TableExprNode& node,
             return select (maxRow, offset);
         }
         // Select no rows.
-        return select(Vector<uInt>());
+        return select(Vector<rownr_t>());
     }
     // Now check if this table has been used for all columns.
     // Accept that the expression has no table, which can be the case for
@@ -804,9 +824,9 @@ BaseTable* BaseTable::select (const TableExprNode& node,
     //# Adjust the row numbers to reflect row numbers in the root table.
     SPtrHolder<RefTable> resultTable (makeRefTable (True, 0));
     Bool val;
-    uInt nrrow = nrow();
+    rownr_t nrrow = nrow();
     TableExprId id;
-    for (uInt i=0; i<nrrow; i++) {
+    for (rownr_t i=0; i<nrrow; i++) {
       id.setRownr (i);
       node.get (id, val);
       if (val) {
@@ -826,7 +846,7 @@ BaseTable* BaseTable::select (const TableExprNode& node,
     return resultTable.transfer();
 }
 
-BaseTable* BaseTable::select (const Vector<uInt>& rownrs)
+BaseTable* BaseTable::select (const Vector<rownr_t>& rownrs)
 {
     AlwaysAssert (!isNull(), AipsError);
     RefTable* rtp = new RefTable(this, rownrs);
@@ -836,14 +856,14 @@ BaseTable* BaseTable::select (const Vector<uInt>& rownrs)
 BaseTable* BaseTable::select (const Block<Bool>& mask)
 {
     AlwaysAssert (!isNull(), AipsError);
-    RefTable* rtp = new RefTable(this, Vector<Bool>(mask));
+    RefTable* rtp = new RefTable(this, Vector<Bool>(mask.begin(), mask.end()));
     return rtp;
 }
 
 BaseTable* BaseTable::project (const Block<String>& names)
 {
     AlwaysAssert (!isNull(), AipsError);
-    RefTable* rtp = new RefTable(this, Vector<String>(names));
+    RefTable* rtp = new RefTable(this, Vector<String>(names.begin(), names.end()));
     return rtp;
 }
 
@@ -866,10 +886,10 @@ BaseTable* BaseTable::tabAnd (BaseTable* that)
     //# Sorting means that the array is allocated on the heap, which has
     //# to be deleted afterwards.
     Bool allsw1, allsw2;
-    uInt* inx1;
-    uInt* inx2;
-    uInt nr1 = this->logicRows (inx1, allsw1);
-    uInt nr2 = that->logicRows (inx2, allsw2);
+    rownr_t* inx1;
+    rownr_t* inx2;
+    rownr_t nr1 = this->logicRows (inx1, allsw1);
+    rownr_t nr2 = that->logicRows (inx2, allsw2);
     RefTable* rtp = makeRefTable (True, 0);           // will be in row order
     rtp->refAnd (nr1, inx1, nr2, inx2);       // store rownrs in new RefTable
     if (allsw1) {
@@ -897,10 +917,10 @@ BaseTable* BaseTable::tabOr (BaseTable* that)
     //# Sorting means that the array is allocated on the heap, which has
     //# to be deleted afterwards.
     Bool allsw1, allsw2;
-    uInt* inx1;
-    uInt* inx2;
-    uInt nr1 = this->logicRows (inx1, allsw1);
-    uInt nr2 = that->logicRows (inx2, allsw2);
+    rownr_t* inx1;
+    rownr_t* inx2;
+    rownr_t nr1 = this->logicRows (inx1, allsw1);
+    rownr_t nr2 = that->logicRows (inx2, allsw2);
     RefTable* rtp = makeRefTable (True, 0);           // will be in row order
     rtp->refOr (nr1, inx1, nr2, inx2);       // store rownrs in new RefTable
     if (allsw1) {
@@ -931,10 +951,10 @@ BaseTable* BaseTable::tabSub (BaseTable* that)
     //# Sorting means that the array is allocated on the heap, which has
     //# to be deleted afterwards.
     Bool allsw1, allsw2;
-    uInt* inx1;
-    uInt* inx2;
-    uInt nr1 = this->logicRows (inx1, allsw1);
-    uInt nr2 = that->logicRows (inx2, allsw2);
+    rownr_t* inx1;
+    rownr_t* inx2;
+    rownr_t nr1 = this->logicRows (inx1, allsw1);
+    rownr_t nr2 = that->logicRows (inx2, allsw2);
     RefTable* rtp = makeRefTable (True, 0);           // will be in row order
     rtp->refSub (nr1, inx1, nr2, inx2);       // store rownrs in new RefTable
     if (allsw1) {
@@ -964,10 +984,10 @@ BaseTable* BaseTable::tabXor (BaseTable* that)
     //# Sorting means that the array is allocated on the heap, which has
     //# to be deleted afterwards.
     Bool allsw1, allsw2;
-    uInt* inx1;
-    uInt* inx2;
-    uInt nr1 = this->logicRows (inx1, allsw1);
-    uInt nr2 = that->logicRows (inx2, allsw2);
+    rownr_t* inx1;
+    rownr_t* inx2;
+    rownr_t nr1 = this->logicRows (inx1, allsw1);
+    rownr_t nr2 = that->logicRows (inx2, allsw2);
     RefTable* rtp = makeRefTable (True, 0);           // will be in row order
     rtp->refXor (nr1, inx1, nr2, inx2);       // store rownrs in new RefTable
     if (allsw1) {
@@ -992,8 +1012,8 @@ BaseTable* BaseTable::tabNot()
     //# Sorting means that the array is allocated on the heap, which has
     //# to be deleted.
     Bool allsw1;
-    uInt* inx1;
-    uInt nr1 = this->logicRows (inx1, allsw1);
+    rownr_t* inx1;
+    rownr_t nr1 = this->logicRows (inx1, allsw1);
     RefTable* rtp = makeRefTable (True, 0);           // will be in row order
     rtp->refNot (nr1, inx1, root()->nrow());    // store rownrs in new RefTable
     if (allsw1) {
@@ -1013,18 +1033,18 @@ void BaseTable::logicCheck (BaseTable* that)
 //# Get the rownrs from the reference table.
 //# Note that rowStorage() throws an exception if it is not a RefTable.
 //# Sort them if not in row order.
-uInt BaseTable::logicRows (uInt*& inx, Bool& allsw)
+rownr_t BaseTable::logicRows (rownr_t*& inx, Bool& allsw)
 {
     AlwaysAssert (!isNull(), AipsError);
     allsw = False;
     inx = RefTable::getStorage (*rowStorage());
-    uInt nr = nrow();
+    rownr_t nr = nrow();
     if (!rowOrder()) {
 	//# rows are not in order, so sort them.
 	//# They have to be copied, because the original should not be changed.
-	uInt* inxcp = new uInt[nr];
+	rownr_t* inxcp = new rownr_t[nr];
 	objcopy (inxcp, inx, nr);
-	GenSort<uInt>::sort (inxcp, nr);
+	GenSort<rownr_t>::sort (inxcp, nr);
 	inx = inxcp;
 	allsw = True;
     }
@@ -1035,7 +1055,8 @@ uInt BaseTable::logicRows (uInt*& inx, Bool& allsw)
 BaseTableIterator* BaseTable::makeIterator
 (const Block<String>& names,
  const Block<CountedPtr<BaseCompare> >& cmpObj,
- const Block<Int>& order, int option)
+ const Block<Int>& order, int option,
+ bool cacheIterationBoundaries)
 {
     AlwaysAssert (!isNull(), AipsError);
     if (names.nelements() != order.nelements()
@@ -1043,14 +1064,15 @@ BaseTableIterator* BaseTable::makeIterator
 	throw (TableInvOper ("TableIterator: Unequal block lengths"));
     }
     BaseTableIterator* bti = new BaseTableIterator (this, names,
-						    cmpObj, order, option);
+                                                   cmpObj, order, option,
+                                                   cacheIterationBoundaries);
     return bti;
 }
 
 
-const TableDesc& BaseTable::makeTableDesc() const
+const TableDesc& BaseTable::makeEmptyTableDesc() const
 {
-    if (tdescPtr_p == 0) {
+    if (tdescPtr_p.null()) {
         const_cast<BaseTable*>(this)->tdescPtr_p = new TableDesc();
     }
     return *tdescPtr_p;
@@ -1084,7 +1106,7 @@ Bool BaseTable::checkRemoveColumn (const Vector<String>& columnNames,
     return True;
 }
 
-void BaseTable::checkRowNumberThrow (uInt rownr) const
+void BaseTable::checkRowNumberThrow (rownr_t rownr) const
 {
     throw (TableError ("TableColumn: row number " + String::toString(rownr) +
 		       " exceeds #rows " +
