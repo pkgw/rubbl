@@ -1009,11 +1009,6 @@ pub enum TableCreateMode {
     NewNoReplace = 2,
 }
 
-/// An error type used when a scalar column was expected but a vector was found.
-#[derive(Error, Debug)]
-#[error("Expected a column with a scalar data type, but found a vector of {0}")]
-pub struct NotScalarColumnError(glue::GlueDataType);
-
 /// An error type used when the expected data type was not found.
 ///
 /// The first element of the tuple is the expected data type, and the second
@@ -1725,7 +1720,7 @@ impl Table {
         }
 
         if is_scalar == 0 || is_fixed_shape == 0 || n_dim != 0 {
-            return Err(TableError::NotScalarColumnError(data_type).into());
+            return Err(TableError::NotScalarColumnError(data_type));
         }
 
         if data_type != T::DATA_TYPE {
