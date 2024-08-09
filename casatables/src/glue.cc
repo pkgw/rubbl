@@ -1368,7 +1368,8 @@ extern "C" {
                                  void *data, ExcInfo &exc)
     {
         try {
-            const casacore::ColumnDesc &desc = casacore::TableColumn(table, bridge_string(col_name)).columnDesc();
+            const casacore::TableColumn col = casacore::TableColumn(table, bridge_string(col_name));
+            const casacore::ColumnDesc &desc = col.columnDesc();
             casacore::IPosition shape(1, table.nrow());
 
             switch (desc.dataType()) {
