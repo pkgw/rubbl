@@ -53,46 +53,14 @@ namespace casacore  { //#Begin namespace casa
 size_t Memory::allocatedMemoryInBytes()
 {
     size_t total = 0;
-
-#if defined(AIPS_DARWIN) || defined(AIPS_CRAY_PGI)
-// Use getrusage to get the RSS
-   struct rusage rus;
-   getrusage(0, &rus);
-   total = rus.ru_maxrss;
-#else
-
-   // Ger van Diepen   25-May-2004
-   // For IntelCC (with -cxxlib-gcc) mallinfo hangs if called before any
-   // malloc is done. So do a new to prevent that from happening.
-   // Ger van Diepen   6-Oct-2004
-   // Hang also occurs with gcc on Linux. So always do a new.
-   static char* ptr = 0;
-   if (ptr == 0) {
-     char* ptr = new char[4];
-     delete [] ptr;
-   }
-
-   struct mallinfo m = mallinfo();
-   total = m.hblkhd + m.usmblks + m.uordblks;
-
-#endif
+    // rubbl modification: avoid use of deprecated mallinfo(); nothing uses this API
    return total;
 }
 
 size_t Memory::assignedMemoryInBytes()
 {
     size_t total = 0;
-#if defined(AIPS_DARWIN) || defined(AIPS_CRAY_PGI)
-// Use getrusage to get the other memory segments
-   struct rusage rus;
-   getrusage(0, &rus);
-   total = rus.ru_idrss + rus.ru_isrss;
-#else
-
-    struct mallinfo m = mallinfo();
-    total = m.arena + m.hblkhd;
-#endif
-
+    // rubbl modification: avoid use of deprecated mallinfo(); nothing uses this API
     return total;
 }
 
