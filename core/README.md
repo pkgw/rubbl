@@ -14,7 +14,7 @@ also explicitly depend on:
 - [`anyhow`] 1.0 (optionally)
 - [`byteorder`] 1.4
 - [`clap`] 4.0 (optionally)
-- [`ndarray`] 0.15
+- [`ndarray`] 0.16
 - [`num-complex`] 0.4
 - [`termcolor`] 1.1 (optionally)
 - [`thiserror`] 1.0
