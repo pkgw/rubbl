@@ -8,6 +8,8 @@ fn main() {
         .cpp(true)
         .warnings(true)
         .flag_if_supported("-std=c++11")
+        // Silences a lot of warnings on macOS
+        .flag_if_supported("-Wno-deprecated-declarations")
         // This allows us to treat rubbl's modified casacore as a separate
         // namespace, so that both vanilla casacore and rubbl can be linked
         // at the same time.
