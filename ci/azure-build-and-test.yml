@@ -96,3 +96,17 @@ jobs:
     displayName: "Check rustfmt (cargo)"
   variables:
     TOOLCHAIN: stable
+
+
+# clippy check
+- job: clippy
+  pool:
+    vmImage: ubuntu-latest
+  steps:
+  - template: azure-job-setup.yml
+  - bash: rustup component add clippy
+    displayName: "Install clippy"
+  - bash: cargo clippy --all --all-targets --all-features -- --deny warnings
+    displayName: "Check clippy (cargo)"
+  variables:
+    TOOLCHAIN: stable
