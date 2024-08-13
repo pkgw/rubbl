@@ -56,10 +56,7 @@ impl glue::ExcInfo {
     fn as_error(&self) -> CasacoreError {
         let c_str = unsafe { std::ffi::CStr::from_ptr(self.message.as_ptr()) };
 
-        let msg = match c_str.to_str() {
-            Ok(s) => s,
-            Err(_) => "[un-translatable C++ exception]",
-        };
+        let msg = c_str.to_str().unwrap_or("[un-translatable C++ exception]");
 
         CasacoreError(msg.to_owned())
     }
@@ -86,38 +83,38 @@ impl glue::GlueDataType {
 
 impl fmt::Display for glue::GlueDataType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.pad(match self {
-            &glue::GlueDataType::TpBool => "bool",
-            &glue::GlueDataType::TpChar => "i8",
-            &glue::GlueDataType::TpUChar => "u8",
-            &glue::GlueDataType::TpShort => "i16",
-            &glue::GlueDataType::TpUShort => "u16",
-            &glue::GlueDataType::TpInt => "i32",
-            &glue::GlueDataType::TpUInt => "u32",
-            &glue::GlueDataType::TpFloat => "f32",
-            &glue::GlueDataType::TpDouble => "f64",
-            &glue::GlueDataType::TpComplex => "c32",
-            &glue::GlueDataType::TpDComplex => "c64",
-            &glue::GlueDataType::TpString => "string",
-            &glue::GlueDataType::TpTable => "table",
-            &glue::GlueDataType::TpArrayBool => "arr<bool>",
-            &glue::GlueDataType::TpArrayChar => "arr<i8>",
-            &glue::GlueDataType::TpArrayUChar => "arr<u8>",
-            &glue::GlueDataType::TpArrayShort => "arr<i16>",
-            &glue::GlueDataType::TpArrayUShort => "arr<u16>",
-            &glue::GlueDataType::TpArrayInt => "arr<i32>",
-            &glue::GlueDataType::TpArrayUInt => "arr<u32>",
-            &glue::GlueDataType::TpArrayFloat => "arr<f32>",
-            &glue::GlueDataType::TpArrayDouble => "arr<f64>",
-            &glue::GlueDataType::TpArrayComplex => "arr<c32>",
-            &glue::GlueDataType::TpArrayDComplex => "arr<c64>",
-            &glue::GlueDataType::TpArrayString => "arr<string>",
-            &glue::GlueDataType::TpRecord => "record",
-            &glue::GlueDataType::TpOther => "other",
-            &glue::GlueDataType::TpQuantity => "quantity",
-            &glue::GlueDataType::TpArrayQuantity => "arr<quantity>",
-            &glue::GlueDataType::TpInt64 => "i64",
-            &glue::GlueDataType::TpArrayInt64 => "arr<i64>",
+        f.pad(match *self {
+            glue::GlueDataType::TpBool => "bool",
+            glue::GlueDataType::TpChar => "i8",
+            glue::GlueDataType::TpUChar => "u8",
+            glue::GlueDataType::TpShort => "i16",
+            glue::GlueDataType::TpUShort => "u16",
+            glue::GlueDataType::TpInt => "i32",
+            glue::GlueDataType::TpUInt => "u32",
+            glue::GlueDataType::TpFloat => "f32",
+            glue::GlueDataType::TpDouble => "f64",
+            glue::GlueDataType::TpComplex => "c32",
+            glue::GlueDataType::TpDComplex => "c64",
+            glue::GlueDataType::TpString => "string",
+            glue::GlueDataType::TpTable => "table",
+            glue::GlueDataType::TpArrayBool => "arr<bool>",
+            glue::GlueDataType::TpArrayChar => "arr<i8>",
+            glue::GlueDataType::TpArrayUChar => "arr<u8>",
+            glue::GlueDataType::TpArrayShort => "arr<i16>",
+            glue::GlueDataType::TpArrayUShort => "arr<u16>",
+            glue::GlueDataType::TpArrayInt => "arr<i32>",
+            glue::GlueDataType::TpArrayUInt => "arr<u32>",
+            glue::GlueDataType::TpArrayFloat => "arr<f32>",
+            glue::GlueDataType::TpArrayDouble => "arr<f64>",
+            glue::GlueDataType::TpArrayComplex => "arr<c32>",
+            glue::GlueDataType::TpArrayDComplex => "arr<c64>",
+            glue::GlueDataType::TpArrayString => "arr<string>",
+            glue::GlueDataType::TpRecord => "record",
+            glue::GlueDataType::TpOther => "other",
+            glue::GlueDataType::TpQuantity => "quantity",
+            glue::GlueDataType::TpArrayQuantity => "arr<quantity>",
+            glue::GlueDataType::TpInt64 => "i64",
+            glue::GlueDataType::TpArrayInt64 => "arr<i64>",
         })
     }
 }
@@ -464,6 +461,7 @@ impl glue::StringBridge {
     // sure of that is if your C++ string points to data owned by a data
     // structure whose lifetime is long compared to the Rust code, which is far
     // from generically true.)
+    #[allow(clippy::wrong_self_convention)]
     fn to_rust(&self) -> String {
         let buf =
             unsafe { std::slice::from_raw_parts(self.data as *const u8, self.n_bytes as usize) };
@@ -485,7 +483,7 @@ unsafe extern "C" fn casatables_string_bridge_cb<F>(
     F: FnMut(String),
 {
     let f: &mut F = &mut *(ctxt as *mut F);
-    f((&*name).to_rust())
+    f((*name).to_rust())
 }
 
 unsafe extern "C" fn casatables_keyword_info_cb<F>(
@@ -496,7 +494,7 @@ unsafe extern "C" fn casatables_keyword_info_cb<F>(
     F: FnMut(String, glue::GlueDataType),
 {
     let f: &mut F = &mut *(ctxt as *mut F);
-    f((&*name).to_rust(), dtype)
+    f((*name).to_rust(), dtype)
 }
 
 unsafe extern "C" fn casatables_keyword_repr_cb<F>(
@@ -508,7 +506,7 @@ unsafe extern "C" fn casatables_keyword_repr_cb<F>(
     F: FnMut(String, glue::GlueDataType, String),
 {
     let f: &mut F = &mut *(ctxt as *mut F);
-    f((&*name).to_rust(), dtype, (&*repr).to_rust())
+    f((*name).to_rust(), dtype, (*repr).to_rust())
 }
 
 // The next part: wrappers that allow us to invoke the various callback-having
@@ -809,11 +807,7 @@ impl TableDesc {
         undefined: bool,
     ) -> Result<(), TableError> {
         let cname = glue::StringBridge::from_rust(col_name);
-        let comment = if let Some(comment_) = comment {
-            comment_
-        } else {
-            ""
-        };
+        let comment = comment.unwrap_or_default();
         let ccomment = glue::StringBridge::from_rust(comment);
         let rv = unsafe {
             glue::tabledesc_add_scalar_column(
@@ -848,11 +842,7 @@ impl TableDesc {
         undefined: bool,
     ) -> Result<(), TableError> {
         let cname = glue::StringBridge::from_rust(col_name);
-        let comment = if let Some(comment_) = comment {
-            comment_
-        } else {
-            ""
-        };
+        let comment = comment.unwrap_or_default();
         let ccomment = glue::StringBridge::from_rust(comment);
         let rv = unsafe {
             if let Some(dims_) = dims {
@@ -1172,10 +1162,7 @@ impl Table {
             return exc_info.as_err();
         }
 
-        Ok(Table {
-            handle: handle,
-            exc_info: exc_info,
-        })
+        Ok(Table { handle, exc_info })
     }
 
     /// Open an existing casacore table.
@@ -1277,7 +1264,7 @@ impl Table {
         let mut result: String = "".into();
         let rv = unsafe {
             invoke_table_get_file_name(self.handle, &mut exc_info, |file_name| {
-                result.extend(file_name.chars());
+                result.push_str(&file_name);
             }) as usize
         };
 
@@ -1350,11 +1337,7 @@ impl Table {
         undefined: bool,
     ) -> Result<(), CasacoreError> {
         let ccol_name = glue::StringBridge::from_rust(col_name);
-        let comment = if let Some(comment_) = comment {
-            comment_
-        } else {
-            ""
-        };
+        let comment = comment.unwrap_or_default();
         let ccomment = glue::StringBridge::from_rust(comment);
 
         let rv = unsafe {
@@ -1390,11 +1373,7 @@ impl Table {
         undefined: bool,
     ) -> Result<(), TableError> {
         let cname = glue::StringBridge::from_rust(col_name);
-        let comment = if let Some(comment_) = comment {
-            comment_
-        } else {
-            ""
-        };
+        let comment = comment.unwrap_or_default();
         let ccomment = glue::StringBridge::from_rust(comment);
         let rv = unsafe {
             if let Some(dims_) = dims {
@@ -1715,7 +1694,7 @@ impl Table {
             let mut v = Vec::new();
 
             for d in &dims[..n_dim as usize] {
-                v.push(*d as u64);
+                v.push(*d);
             }
 
             Some(v)
@@ -1842,8 +1821,7 @@ impl Table {
         }
 
         let result = if data_type != glue::GlueDataType::TpString {
-            let mut result =
-                T::casatables_alloc(&dims[..n_dim as usize]).map_err(|e| TableError::from(e))?;
+            let mut result = T::casatables_alloc(&dims[..n_dim as usize])?;
 
             let rv = unsafe {
                 glue::table_get_cell(
@@ -1940,7 +1918,7 @@ impl Table {
             }
 
             unsafe {
-                result.set_len(n_items as usize);
+                result.set_len(n_items);
             }
         } else {
             let rv = unsafe {
@@ -2102,9 +2080,7 @@ impl Table {
         let mut row = TableRow { handle, exc_info };
 
         for row_number in 0..self.n_rows() {
-            if unsafe { glue::table_row_read(row.handle, row_number as u64, &mut row.exc_info) }
-                != 0
-            {
+            if unsafe { glue::table_row_read(row.handle, row_number, &mut row.exc_info) } != 0 {
                 return row.exc_info.as_err();
             }
 
@@ -2130,15 +2106,10 @@ impl Table {
             return exc_info.as_err();
         }
 
-        let mut row = TableRow {
-            handle: handle,
-            exc_info: exc_info,
-        };
+        let mut row = TableRow { handle, exc_info };
 
         for row_number in row_range {
-            if unsafe { glue::table_row_read(row.handle, row_number as u64, &mut row.exc_info) }
-                != 0
-            {
+            if unsafe { glue::table_row_read(row.handle, row_number, &mut row.exc_info) } != 0 {
                 return row.exc_info.as_err();
             }
 
@@ -2160,15 +2131,10 @@ impl Table {
             return exc_info.as_err();
         }
 
-        let mut row = TableRow {
-            handle: handle,
-            exc_info: exc_info,
-        };
+        let mut row = TableRow { handle, exc_info };
 
         for &row_number in rows {
-            if unsafe { glue::table_row_read(row.handle, row_number as u64, &mut row.exc_info) }
-                != 0
-            {
+            if unsafe { glue::table_row_read(row.handle, row_number, &mut row.exc_info) } != 0 {
                 return row.exc_info.as_err();
             }
 
@@ -2814,7 +2780,7 @@ mod tests {
 
         let mut table_desc = TableDesc::new("TEST", TableDescCreateMode::TDM_SCRATCH).unwrap();
         table_desc
-            .add_scalar_column(GlueDataType::TpUInt, &col_name, None, false, false)
+            .add_scalar_column(GlueDataType::TpUInt, col_name, None, false, false)
             .unwrap();
 
         let mut table = Table::new(table_path, table_desc, 123, TableCreateMode::New).unwrap();
@@ -2822,7 +2788,7 @@ mod tests {
         assert_eq!(table.n_rows(), 123);
         assert_eq!(table.n_columns(), 1);
 
-        let column_info = table.get_col_desc(&col_name).unwrap();
+        let column_info = table.get_col_desc(col_name).unwrap();
         assert_eq!(column_info.data_type(), GlueDataType::TpUInt);
         assert_eq!(column_info.name(), col_name);
         assert!(column_info.is_scalar());
@@ -2837,7 +2803,7 @@ mod tests {
 
         let mut table_desc = TableDesc::new("TEST", TableDescCreateMode::TDM_SCRATCH).unwrap();
         table_desc
-            .add_scalar_column(GlueDataType::TpString, &col_name, None, false, false)
+            .add_scalar_column(GlueDataType::TpString, col_name, None, false, false)
             .unwrap();
 
         let mut table = Table::new(table_path, table_desc, 123, TableCreateMode::New).unwrap();
@@ -2845,7 +2811,7 @@ mod tests {
         assert_eq!(table.n_rows(), 123);
         assert_eq!(table.n_columns(), 1);
 
-        let column_info = table.get_col_desc(&col_name).unwrap();
+        let column_info = table.get_col_desc(col_name).unwrap();
         assert_eq!(column_info.data_type(), GlueDataType::TpString);
         assert_eq!(column_info.name(), col_name);
         assert!(column_info.is_scalar());
@@ -2859,6 +2825,7 @@ mod tests {
         // touch the file
         OpenOptions::new()
             .create(true)
+            .truncate(true)
             .write(true)
             .open(table_path.clone())
             .unwrap();
@@ -2867,7 +2834,7 @@ mod tests {
 
         let mut table_desc = TableDesc::new("TEST", TableDescCreateMode::TDM_SCRATCH).unwrap();
         table_desc
-            .add_scalar_column(GlueDataType::TpString, &col_name, None, false, false)
+            .add_scalar_column(GlueDataType::TpString, col_name, None, false, false)
             .unwrap();
 
         // NewNoReplace should fail if table exists.
@@ -2888,7 +2855,7 @@ mod tests {
         table_desc
             .add_array_column(
                 GlueDataType::TpString,
-                &col_name,
+                col_name,
                 None,
                 Some(&[1, 2, 3]),
                 false,
@@ -2901,7 +2868,7 @@ mod tests {
         assert_eq!(table.n_rows(), 123);
         assert_eq!(table.n_columns(), 1);
 
-        let column_info = table.get_col_desc(&col_name).unwrap();
+        let column_info = table.get_col_desc(col_name).unwrap();
         assert_eq!(column_info.data_type(), GlueDataType::TpString);
         assert_eq!(column_info.name(), col_name);
         assert!(!column_info.is_scalar());
@@ -2918,7 +2885,7 @@ mod tests {
 
         let mut table_desc = TableDesc::new("TEST", TableDescCreateMode::TDM_SCRATCH).unwrap();
         table_desc
-            .add_array_column(GlueDataType::TpString, &col_name, None, None, false, false)
+            .add_array_column(GlueDataType::TpString, col_name, None, None, false, false)
             .unwrap();
 
         let mut table = Table::new(table_path, table_desc, 123, TableCreateMode::New).unwrap();
@@ -2926,7 +2893,7 @@ mod tests {
         assert_eq!(table.n_rows(), 123);
         assert_eq!(table.n_columns(), 1);
 
-        let column_info = table.get_col_desc(&col_name).unwrap();
+        let column_info = table.get_col_desc(col_name).unwrap();
         assert_eq!(column_info.data_type(), GlueDataType::TpString);
         assert_eq!(column_info.name(), col_name);
         assert!(!column_info.is_scalar());

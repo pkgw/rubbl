@@ -30,10 +30,7 @@ pub struct AligningReader<R: Read> {
 impl<R: Read> AligningReader<R> {
     /// Create a new AligningReader that wraps the argument *inner*.
     pub fn new(inner: R) -> Self {
-        AligningReader {
-            inner: inner,
-            offset: 0,
-        }
+        AligningReader { inner, offset: 0 }
     }
 
     /// Consume this struct, returning the underlying inner reader.
@@ -110,10 +107,7 @@ pub struct AligningWriter<W: Write> {
 impl<W: Write> AligningWriter<W> {
     /// Create a new AligningWriter that wraps the argument *inner*.
     pub fn new(inner: W) -> Self {
-        AligningWriter {
-            inner: inner,
-            offset: 0,
-        }
+        AligningWriter { inner, offset: 0 }
     }
 
     /// Consume this struct, returning the underlying inner writer.
