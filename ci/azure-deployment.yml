@@ -16,14 +16,14 @@ jobs:
   # For merges to `master`, we don't have any continuous-depoloyment logic to run.
   - job: dummy_setup_only
     pool:
-      vmImage: ubuntu-20.04
+      vmImage: ubuntu-latest
     steps:
     - template: azure-job-setup.yml
 
 - ${{ if parameters.isRelease }}:
   - job: branch_and_tag
     pool:
-      vmImage: ubuntu-20.04
+      vmImage: ubuntu-latest
     variables:
     - group: Deployment Credentials
     steps:
@@ -40,7 +40,7 @@ jobs:
 
   - job: cargo_publish
     pool:
-      vmImage: ubuntu-20.04
+      vmImage: ubuntu-latest
     variables:
     - group: Deployment Credentials
     steps:
@@ -55,7 +55,7 @@ jobs:
   - job: github_releases
     dependsOn: branch_and_tag # otherwise, GitHub creates the tag itself
     pool:
-      vmImage: ubuntu-20.04
+      vmImage: ubuntu-latest
     variables:
     - group: Deployment Credentials
     steps:

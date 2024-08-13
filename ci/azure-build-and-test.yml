@@ -6,13 +6,13 @@ parameters:
   default:
 
   - name: linux_stable
-    vmImage: ubuntu-20.04
+    vmImage: ubuntu-22.04
     vars:
       TARGET: x86_64-unknown-linux-gnu
       TOOLCHAIN: stable
 
   - name: linux_beta
-    vmImage: ubuntu-20.04
+    vmImage: ubuntu-22.04
     vars:
       TARGET: x86_64-unknown-linux-gnu
       TOOLCHAIN: beta
