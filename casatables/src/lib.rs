@@ -56,10 +56,7 @@ impl glue::ExcInfo {
     fn as_error(&self) -> CasacoreError {
         let c_str = unsafe { std::ffi::CStr::from_ptr(self.message.as_ptr()) };
 
-        let msg = match c_str.to_str() {
-            Ok(s) => s,
-            Err(_) => "[un-translatable C++ exception]",
-        };
+        let msg = c_str.to_str().unwrap_or("[un-translatable C++ exception]");
 
         CasacoreError(msg.to_owned())
     }
@@ -485,7 +482,7 @@ unsafe extern "C" fn casatables_string_bridge_cb<F>(
     F: FnMut(String),
 {
     let f: &mut F = &mut *(ctxt as *mut F);
-    f((&*name).to_rust())
+    f((*name).to_rust())
 }
 
 unsafe extern "C" fn casatables_keyword_info_cb<F>(
@@ -496,7 +493,7 @@ unsafe extern "C" fn casatables_keyword_info_cb<F>(
     F: FnMut(String, glue::GlueDataType),
 {
     let f: &mut F = &mut *(ctxt as *mut F);
-    f((&*name).to_rust(), dtype)
+    f((*name).to_rust(), dtype)
 }
 
 unsafe extern "C" fn casatables_keyword_repr_cb<F>(
@@ -508,7 +505,7 @@ unsafe extern "C" fn casatables_keyword_repr_cb<F>(
     F: FnMut(String, glue::GlueDataType, String),
 {
     let f: &mut F = &mut *(ctxt as *mut F);
-    f((&*name).to_rust(), dtype, (&*repr).to_rust())
+    f((*name).to_rust(), dtype, (*repr).to_rust())
 }
 
 // The next part: wrappers that allow us to invoke the various callback-having
@@ -809,11 +806,7 @@ impl TableDesc {
         undefined: bool,
     ) -> Result<(), TableError> {
         let cname = glue::StringBridge::from_rust(col_name);
-        let comment = if let Some(comment_) = comment {
-            comment_
-        } else {
-            ""
-        };
+        let comment = comment.unwrap_or_default();
         let ccomment = glue::StringBridge::from_rust(comment);
         let rv = unsafe {
             glue::tabledesc_add_scalar_column(
@@ -848,11 +841,7 @@ impl TableDesc {
         undefined: bool,
     ) -> Result<(), TableError> {
         let cname = glue::StringBridge::from_rust(col_name);
-        let comment = if let Some(comment_) = comment {
-            comment_
-        } else {
-            ""
-        };
+        let comment = comment.unwrap_or_default();
         let ccomment = glue::StringBridge::from_rust(comment);
         let rv = unsafe {
             if let Some(dims_) = dims {
@@ -1274,7 +1263,7 @@ impl Table {
         let mut result: String = "".into();
         let rv = unsafe {
             invoke_table_get_file_name(self.handle, &mut exc_info, |file_name| {
-                result.extend(file_name.chars());
+                result.push_str(&file_name);
             }) as usize
         };
 
@@ -1347,11 +1336,7 @@ impl Table {
         undefined: bool,
     ) -> Result<(), CasacoreError> {
         let ccol_name = glue::StringBridge::from_rust(col_name);
-        let comment = if let Some(comment_) = comment {
-            comment_
-        } else {
-            ""
-        };
+        let comment = comment.unwrap_or_default();
         let ccomment = glue::StringBridge::from_rust(comment);
 
         let rv = unsafe {
@@ -1387,11 +1372,7 @@ impl Table {
         undefined: bool,
     ) -> Result<(), TableError> {
         let cname = glue::StringBridge::from_rust(col_name);
-        let comment = if let Some(comment_) = comment {
-            comment_
-        } else {
-            ""
-        };
+        let comment = comment.unwrap_or_default();
         let ccomment = glue::StringBridge::from_rust(comment);
         let rv = unsafe {
             if let Some(dims_) = dims {
@@ -1712,7 +1693,7 @@ impl Table {
             let mut v = Vec::new();
 
             for d in &dims[..n_dim as usize] {
-                v.push(*d as u64);
+                v.push(*d);
             }
 
             Some(v)
@@ -1840,7 +1821,7 @@ impl Table {
 
         let result = if data_type != glue::GlueDataType::TpString {
             let mut result =
-                T::casatables_alloc(&dims[..n_dim as usize]).map_err(|e| TableError::from(e))?;
+                T::casatables_alloc(&dims[..n_dim as usize])?;
 
             let rv = unsafe {
                 glue::table_get_cell(
@@ -1937,7 +1918,7 @@ impl Table {
             }
 
             unsafe {
-                result.set_len(n_items as usize);
+                result.set_len(n_items);
             }
         } else {
             let rv = unsafe {
@@ -2099,7 +2080,7 @@ impl Table {
         let mut row = TableRow { handle, exc_info };
 
         for row_number in 0..self.n_rows() {
-            if unsafe { glue::table_row_read(row.handle, row_number as u64, &mut row.exc_info) }
+            if unsafe { glue::table_row_read(row.handle, row_number, &mut row.exc_info) }
                 != 0
             {
                 return row.exc_info.as_err();
@@ -2130,7 +2111,7 @@ impl Table {
         let mut row = TableRow { handle, exc_info };
 
         for row_number in row_range {
-            if unsafe { glue::table_row_read(row.handle, row_number as u64, &mut row.exc_info) }
+            if unsafe { glue::table_row_read(row.handle, row_number, &mut row.exc_info) }
                 != 0
             {
                 return row.exc_info.as_err();
@@ -2157,7 +2138,7 @@ impl Table {
         let mut row = TableRow { handle, exc_info };
 
         for &row_number in rows {
-            if unsafe { glue::table_row_read(row.handle, row_number as u64, &mut row.exc_info) }
+            if unsafe { glue::table_row_read(row.handle, row_number, &mut row.exc_info) }
                 != 0
             {
                 return row.exc_info.as_err();
@@ -2805,7 +2786,7 @@ mod tests {
 
         let mut table_desc = TableDesc::new("TEST", TableDescCreateMode::TDM_SCRATCH).unwrap();
         table_desc
-            .add_scalar_column(GlueDataType::TpUInt, &col_name, None, false, false)
+            .add_scalar_column(GlueDataType::TpUInt, col_name, None, false, false)
             .unwrap();
 
         let mut table = Table::new(table_path, table_desc, 123, TableCreateMode::New).unwrap();
@@ -2813,7 +2794,7 @@ mod tests {
         assert_eq!(table.n_rows(), 123);
         assert_eq!(table.n_columns(), 1);
 
-        let column_info = table.get_col_desc(&col_name).unwrap();
+        let column_info = table.get_col_desc(col_name).unwrap();
         assert_eq!(column_info.data_type(), GlueDataType::TpUInt);
         assert_eq!(column_info.name(), col_name);
         assert!(column_info.is_scalar());
@@ -2828,7 +2809,7 @@ mod tests {
 
         let mut table_desc = TableDesc::new("TEST", TableDescCreateMode::TDM_SCRATCH).unwrap();
         table_desc
-            .add_scalar_column(GlueDataType::TpString, &col_name, None, false, false)
+            .add_scalar_column(GlueDataType::TpString, col_name, None, false, false)
             .unwrap();
 
         let mut table = Table::new(table_path, table_desc, 123, TableCreateMode::New).unwrap();
@@ -2836,7 +2817,7 @@ mod tests {
         assert_eq!(table.n_rows(), 123);
         assert_eq!(table.n_columns(), 1);
 
-        let column_info = table.get_col_desc(&col_name).unwrap();
+        let column_info = table.get_col_desc(col_name).unwrap();
         assert_eq!(column_info.data_type(), GlueDataType::TpString);
         assert_eq!(column_info.name(), col_name);
         assert!(column_info.is_scalar());
@@ -2858,7 +2839,7 @@ mod tests {
 
         let mut table_desc = TableDesc::new("TEST", TableDescCreateMode::TDM_SCRATCH).unwrap();
         table_desc
-            .add_scalar_column(GlueDataType::TpString, &col_name, None, false, false)
+            .add_scalar_column(GlueDataType::TpString, col_name, None, false, false)
             .unwrap();
 
         // NewNoReplace should fail if table exists.
@@ -2879,7 +2860,7 @@ mod tests {
         table_desc
             .add_array_column(
                 GlueDataType::TpString,
-                &col_name,
+                col_name,
                 None,
                 Some(&[1, 2, 3]),
                 false,
@@ -2892,7 +2873,7 @@ mod tests {
         assert_eq!(table.n_rows(), 123);
         assert_eq!(table.n_columns(), 1);
 
-        let column_info = table.get_col_desc(&col_name).unwrap();
+        let column_info = table.get_col_desc(col_name).unwrap();
         assert_eq!(column_info.data_type(), GlueDataType::TpString);
         assert_eq!(column_info.name(), col_name);
         assert!(!column_info.is_scalar());
@@ -2909,7 +2890,7 @@ mod tests {
 
         let mut table_desc = TableDesc::new("TEST", TableDescCreateMode::TDM_SCRATCH).unwrap();
         table_desc
-            .add_array_column(GlueDataType::TpString, &col_name, None, None, false, false)
+            .add_array_column(GlueDataType::TpString, col_name, None, None, false, false)
             .unwrap();
 
         let mut table = Table::new(table_path, table_desc, 123, TableCreateMode::New).unwrap();
@@ -2917,7 +2898,7 @@ mod tests {
         assert_eq!(table.n_rows(), 123);
         assert_eq!(table.n_columns(), 1);
 
-        let column_info = table.get_col_desc(&col_name).unwrap();
+        let column_info = table.get_col_desc(col_name).unwrap();
         assert_eq!(column_info.data_type(), GlueDataType::TpString);
         assert_eq!(column_info.name(), col_name);
         assert!(!column_info.is_scalar());

@@ -40,7 +40,7 @@ impl<R: io::Read> MaskDecoder<R> {
                 self.bits_left_in_current -= toread;
 
                 while toread > 0 {
-                    dest[ofs] = if cur & (1 << i) != 0 { true } else { false };
+                    dest[ofs] = cur & (1 << i) != 0;
 
                     ofs += 1;
                     i += 1;
@@ -57,7 +57,7 @@ impl<R: io::Read> MaskDecoder<R> {
             self.bits_left_in_current = 31;
         }
 
-        return Ok(());
+        Ok(())
     }
 }
 
@@ -120,7 +120,7 @@ impl<W: io::Write> MaskEncoder<W> {
 
         self.current_val = cur;
         self.bits_left_in_current = bits_left;
-        return Ok(());
+        Ok(())
     }
 
     pub fn close(&mut self) -> Result<(), io::Error> {

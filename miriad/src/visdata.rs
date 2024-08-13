@@ -237,7 +237,7 @@ impl Decoder {
         Ok(true)
     }
 
-    pub fn variables<'a>(&'a self) -> UvVariablesIterator<'a> {
+    pub fn variables(&self) -> UvVariablesIterator<'_> {
         UvVariablesIterator(self.vars.iter())
     }
 
@@ -579,7 +579,7 @@ impl Encoder {
         const SIZE: u8 = 0;
         const DATA: u8 = 1;
 
-        if var.data.len() == 0 {
+        if var.data.is_empty() {
             return Err(MiriadFormatError::Generic(format!(
                 "may not write zero-size array for variable \"{}\"",
                 var.name
@@ -628,7 +628,7 @@ impl Encoder {
             )))?;
         let var = &mut self.vars[*num as usize];
 
-        if values.len() == 0 {
+        if values.is_empty() {
             return Err(MiriadFormatError::Generic(format!(
                 "may not write zero-size array for variable \"{}\"",
                 name
@@ -695,7 +695,7 @@ impl Encoder {
         const EOR: &[u8] = &[0u8, 0u8, 2u8, 0u8];
         self.stream.align_to(8)?;
         self.flushed = false;
-        Ok(self.stream.write_all(EOR)?)
+        self.stream.write_all(EOR)
     }
 
     /// Returns the number of visdata bytes written thus far.

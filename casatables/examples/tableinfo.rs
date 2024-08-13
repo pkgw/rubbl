@@ -28,14 +28,14 @@ fn main() {
             let inpath = matches.get_one::<PathBuf>("IN-TABLE").unwrap();
 
             let mut t = ctry!(
-                Table::open(&inpath, TableOpenMode::Read);
+                Table::open(inpath, TableOpenMode::Read);
                 "failed to open input table \"{}\"", inpath.display()
             );
 
             println!("Table \"{}\":", inpath.display());
             println!("Number of rows: {}", t.n_rows());
             println!("Number of columns: {}", t.n_columns());
-            println!("");
+            println!();
 
             let col_names = ctry!(
                 t.column_names();
@@ -48,7 +48,7 @@ fn main() {
 
             for n in &col_names {
                 let desc = ctry!(
-                    t.get_col_desc(&n);
+                    t.get_col_desc(n);
                     "failed to query column \"{}\" in \"{}\"", n, inpath.display()
                 );
 
@@ -65,7 +65,7 @@ fn main() {
                 max_name_len = max(max_name_len, n.len());
                 max_type_len = max(max_type_len, type_text.len());
 
-                info.push((&n, type_text, multiplicity_text));
+                info.push((n, type_text, multiplicity_text));
             }
 
             for i in info {
@@ -80,7 +80,7 @@ fn main() {
                 "failed to get keyword info in \"{}\"", inpath.display()
             );
 
-            if table_kw_names.len() != 0 {
+            if !table_kw_names.is_empty() {
                 println!();
                 println!("Sub-tables (table-type \"keywords\"):");
 

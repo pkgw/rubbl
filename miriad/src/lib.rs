@@ -439,7 +439,7 @@ impl MiriadMappedType for f32 {
         vec.clear();
 
         for chunk in buf.chunks(4) {
-            vec.push(BigEndian::read_f32(&chunk));
+            vec.push(BigEndian::read_f32(chunk));
         }
     }
 
@@ -479,7 +479,7 @@ impl MiriadMappedType for f64 {
         vec.clear();
 
         for chunk in buf.chunks(8) {
-            vec.push(BigEndian::read_f64(&chunk));
+            vec.push(BigEndian::read_f64(chunk));
         }
     }
 
@@ -599,15 +599,15 @@ impl std::fmt::Display for AnyMiriadValue {
         }
 
         match self {
-            &AnyMiriadValue::Binary(ref vec) => do_vec(f, vec),
-            &AnyMiriadValue::Int8(ref vec) => do_vec(f, vec),
-            &AnyMiriadValue::Int16(ref vec) => do_vec(f, vec),
-            &AnyMiriadValue::Int32(ref vec) => do_vec(f, vec),
-            &AnyMiriadValue::Int64(ref vec) => do_vec(f, vec),
-            &AnyMiriadValue::Float32(ref vec) => do_vec(f, vec),
-            &AnyMiriadValue::Float64(ref vec) => do_vec(f, vec),
-            &AnyMiriadValue::Complex64(ref vec) => do_vec(f, vec),
-            &AnyMiriadValue::Text(ref s) => {
+            AnyMiriadValue::Binary(vec) => do_vec(f, vec),
+            AnyMiriadValue::Int8(vec) => do_vec(f, vec),
+            AnyMiriadValue::Int16(vec) => do_vec(f, vec),
+            AnyMiriadValue::Int32(vec) => do_vec(f, vec),
+            AnyMiriadValue::Int64(vec) => do_vec(f, vec),
+            AnyMiriadValue::Float32(vec) => do_vec(f, vec),
+            AnyMiriadValue::Float64(vec) => do_vec(f, vec),
+            AnyMiriadValue::Complex64(vec) => do_vec(f, vec),
+            AnyMiriadValue::Text(s) => {
                 f.write_str("\"")?;
                 f.write_str(s)?;
                 f.write_str("\"")
@@ -925,7 +925,7 @@ impl DataSet {
         Ok(())
     }
 
-    pub fn item_names<'a>(&'a mut self) -> Result<DataSetItemNamesIterator<'a>, MiriadFormatError> {
+    pub fn item_names(&mut self) -> Result<DataSetItemNamesIterator<'_>, MiriadFormatError> {
         if !self.large_items_scanned {
             self.scan_large_items()?;
             self.large_items_scanned = true;
@@ -934,7 +934,7 @@ impl DataSet {
         Ok(DataSetItemNamesIterator::new(self))
     }
 
-    pub fn items<'a>(&'a mut self) -> Result<DataSetItemsIterator<'a>, MiriadFormatError> {
+    pub fn items(&mut self) -> Result<DataSetItemsIterator<'_>, MiriadFormatError> {
         if !self.large_items_scanned {
             self.scan_large_items()?;
             self.large_items_scanned = true;
