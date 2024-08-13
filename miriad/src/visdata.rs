@@ -49,8 +49,8 @@ impl UvVariable {
     fn new(ty: Type, name: &str, number: u8) -> Self {
         UvVariable {
             name: name.to_owned(),
-            number: number,
-            ty: ty,
+            number,
+            ty,
             n_vals: -1,
             data: Vec::new(),
             just_updated: false,
@@ -139,9 +139,9 @@ impl Decoder {
 
         Ok(Decoder {
             eff_vislen: vislen as u64 - 4, // this is always too big
-            vars: vars,
-            vars_by_name: vars_by_name,
-            stream: stream,
+            vars,
+            vars_by_name,
+            stream,
         })
     }
 
@@ -511,12 +511,12 @@ impl Reader {
         };
 
         Ok(Reader {
-            obstype: obstype,
+            obstype,
             ncorr: ncorr as u64,
             nwcorr: nwcorr as u64,
-            decoder: decoder,
-            flags: flags,
-            wflags: wflags,
+            decoder,
+            flags,
+            wflags,
         })
     }
 }
@@ -554,9 +554,9 @@ impl Encoder {
 
         Ok(Encoder {
             eff_vislen: 0,
-            vars: vars,
-            vars_by_name: vars_by_name,
-            stream: stream,
+            vars,
+            vars_by_name,
+            stream,
             tot_nschan: 0,
             tot_nwchan: 0,
             ncorr: 0,

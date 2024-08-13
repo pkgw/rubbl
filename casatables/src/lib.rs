@@ -1172,10 +1172,7 @@ impl Table {
             return exc_info.as_err();
         }
 
-        Ok(Table {
-            handle: handle,
-            exc_info: exc_info,
-        })
+        Ok(Table { handle, exc_info })
     }
 
     /// Open an existing casacore table.
@@ -2130,10 +2127,7 @@ impl Table {
             return exc_info.as_err();
         }
 
-        let mut row = TableRow {
-            handle: handle,
-            exc_info: exc_info,
-        };
+        let mut row = TableRow { handle, exc_info };
 
         for row_number in row_range {
             if unsafe { glue::table_row_read(row.handle, row_number as u64, &mut row.exc_info) }
@@ -2160,10 +2154,7 @@ impl Table {
             return exc_info.as_err();
         }
 
-        let mut row = TableRow {
-            handle: handle,
-            exc_info: exc_info,
-        };
+        let mut row = TableRow { handle, exc_info };
 
         for &row_number in rows {
             if unsafe { glue::table_row_read(row.handle, row_number as u64, &mut row.exc_info) }

@@ -20,7 +20,7 @@ pub struct MaskDecoder<R: io::Read> {
 impl<R: io::Read> MaskDecoder<R> {
     pub fn new(stream: R) -> Self {
         MaskDecoder {
-            stream: stream,
+            stream,
             current_val: 0,
             bits_left_in_current: 0,
         }
@@ -72,7 +72,7 @@ pub struct MaskEncoder<W: io::Write> {
 impl<W: io::Write> MaskEncoder<W> {
     pub fn new(stream: W) -> Self {
         MaskEncoder {
-            stream: stream,
+            stream,
             current_val: 0,
             bits_left_in_current: 0,
             closed: false,

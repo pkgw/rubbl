@@ -631,7 +631,7 @@ struct InternalItemInfo {
 impl InternalItemInfo {
     pub fn new_small(ty: Type, data: Vec<u8>) -> Self {
         InternalItemInfo {
-            ty: ty,
+            ty,
             storage: ItemStorage::Small(data),
         }
     }
@@ -680,7 +680,7 @@ impl InternalItemInfo {
         }
 
         Ok(InternalItemInfo {
-            ty: ty,
+            ty,
             storage: ItemStorage::Large((data_size / ty.size() as u64) as usize),
         })
     }
@@ -1028,7 +1028,7 @@ impl DataSet {
         self.items.insert(
             name.to_owned(),
             InternalItemInfo {
-                ty: ty,
+                ty,
                 storage: ItemStorage::Large(0), // XXX size unknown
             },
         );
@@ -1179,7 +1179,7 @@ pub struct DataSetItemsIterator<'a> {
 impl<'a> DataSetItemsIterator<'a> {
     pub fn new(dset: &'a DataSet) -> Self {
         DataSetItemsIterator {
-            dset: dset,
+            dset,
             inner: dset.items.iter(),
         }
     }

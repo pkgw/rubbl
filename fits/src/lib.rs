@@ -246,7 +246,7 @@ impl<R: Read> FitsDecoder<R> {
     /// Get the next item in the FITS stream.
     ///
     /// Returns Ok(None) at an expected EOF.
-    pub fn next<'a>(&'a mut self) -> Result<Option<LowLevelFitsItem<'a>>, FitsError> {
+    pub fn next(&mut self) -> Result<Option<LowLevelFitsItem<'_>>, FitsError> {
         if self.offset == 2880 {
             if !self.inner.eof_read_exact::<FitsError>(&mut self.buf)? {
                 if self.state != DecoderState::NewHdu && self.state != DecoderState::SpecialRecords
@@ -667,14 +667,14 @@ impl<R: Read + Seek> FitsParser<R> {
             }
 
             hdus.push(ParsedHdu {
-                kind: kind,
+                kind,
                 name: extname,
                 header_offset: hdu_header_offset,
-                n_header_records: n_header_records,
-                bitpix: bitpix,
-                pcount: pcount,
-                gcount: gcount,
-                naxis: naxis,
+                n_header_records,
+                bitpix,
+                pcount,
+                gcount,
+                naxis,
             });
 
             // If there's more stuff in the file, skip up to the next HDU
@@ -690,9 +690,9 @@ impl<R: Read + Seek> FitsParser<R> {
         }
 
         Ok(Self {
-            inner: inner,
-            hdus: hdus,
-            special_record_size: special_record_size,
+            inner,
+            hdus,
+            special_record_size,
         })
     }
 
