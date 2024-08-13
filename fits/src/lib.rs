@@ -246,6 +246,7 @@ impl<R: Read> FitsDecoder<R> {
     /// Get the next item in the FITS stream.
     ///
     /// Returns Ok(None) at an expected EOF.
+    #[allow(clippy::should_implement_trait)]
     pub fn next(&mut self) -> Result<Option<LowLevelFitsItem<'_>>, FitsError> {
         if self.offset == 2880 {
             if !self.inner.eof_read_exact::<FitsError>(&mut self.buf)? {

@@ -99,9 +99,9 @@ impl Decoder {
         let vislen = ds.get("vislen").require_found()?.read_scalar::<i64>()?;
         let mut vars = Vec::new();
         let mut vars_by_name = HashMap::new();
-        let mut var_num = 0u8;
 
-        for maybe_line in ds.get("vartable").require_found()?.into_lines()? {
+        for (var_num, maybe_line) in (ds.get("vartable").require_found()?.into_lines()?).enumerate()
+        {
             let line = maybe_line?;
 
             if line.len() < 3 {
@@ -121,18 +121,16 @@ impl Decoder {
             let ty = Type::try_from_abbrev(pieces[0])?;
             let name = pieces[1];
 
-            vars.push(UvVariable::new(ty, name, var_num));
+            vars.push(UvVariable::new(ty, name, var_num as u8));
 
             // TODO: check for duplicates
-            vars_by_name.insert(name.to_owned(), var_num);
+            vars_by_name.insert(name.to_owned(), var_num as u8);
 
             if var_num == 255 {
                 return Err(MiriadFormatError::Generic(
                     "too many UV variables".to_string(),
                 ));
             }
-
-            var_num += 1;
         }
 
         let stream = ds.get("visdata").require_found()?.into_byte_stream()?;
@@ -156,6 +154,7 @@ impl Decoder {
     }
 
     /// Returns Ok(false) on EOF, Ok(true) if there are more data.
+    #[allow(clippy::should_implement_trait)]
     pub fn next(&mut self) -> Result<bool, MiriadFormatError> {
         let mut keep_going = true;
         let mut header_buf = [0u8; 4];

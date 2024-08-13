@@ -229,8 +229,7 @@ impl UvInflator {
 
         // Probably a better way to do this all, but I'm distracted.
 
-        let mut mir_to_hera = Vec::with_capacity(NANTS);
-        mir_to_hera.resize(NANTS, 0);
+        let mut mir_to_hera = vec![0; NANTS];
 
         for hera in 0..NANTS {
             mir_to_hera[hera_to_mir[hera]] = hera;
@@ -470,11 +469,11 @@ impl UvInflator {
                 flags.resize(self.flag_buf.len(), false);
 
                 e.insert(Record {
-                        update_time: new_time,
-                        coord: Vec::new(),
-                        corr: Vec::new(),
-                        flags,
-                    });
+                    update_time: new_time,
+                    coord: Vec::new(),
+                    corr: Vec::new(),
+                    flags,
+                });
             }
 
             let rec = self.records.get_mut(&bl).unwrap();

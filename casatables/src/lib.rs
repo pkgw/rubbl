@@ -83,38 +83,38 @@ impl glue::GlueDataType {
 
 impl fmt::Display for glue::GlueDataType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.pad(match self {
-            &glue::GlueDataType::TpBool => "bool",
-            &glue::GlueDataType::TpChar => "i8",
-            &glue::GlueDataType::TpUChar => "u8",
-            &glue::GlueDataType::TpShort => "i16",
-            &glue::GlueDataType::TpUShort => "u16",
-            &glue::GlueDataType::TpInt => "i32",
-            &glue::GlueDataType::TpUInt => "u32",
-            &glue::GlueDataType::TpFloat => "f32",
-            &glue::GlueDataType::TpDouble => "f64",
-            &glue::GlueDataType::TpComplex => "c32",
-            &glue::GlueDataType::TpDComplex => "c64",
-            &glue::GlueDataType::TpString => "string",
-            &glue::GlueDataType::TpTable => "table",
-            &glue::GlueDataType::TpArrayBool => "arr<bool>",
-            &glue::GlueDataType::TpArrayChar => "arr<i8>",
-            &glue::GlueDataType::TpArrayUChar => "arr<u8>",
-            &glue::GlueDataType::TpArrayShort => "arr<i16>",
-            &glue::GlueDataType::TpArrayUShort => "arr<u16>",
-            &glue::GlueDataType::TpArrayInt => "arr<i32>",
-            &glue::GlueDataType::TpArrayUInt => "arr<u32>",
-            &glue::GlueDataType::TpArrayFloat => "arr<f32>",
-            &glue::GlueDataType::TpArrayDouble => "arr<f64>",
-            &glue::GlueDataType::TpArrayComplex => "arr<c32>",
-            &glue::GlueDataType::TpArrayDComplex => "arr<c64>",
-            &glue::GlueDataType::TpArrayString => "arr<string>",
-            &glue::GlueDataType::TpRecord => "record",
-            &glue::GlueDataType::TpOther => "other",
-            &glue::GlueDataType::TpQuantity => "quantity",
-            &glue::GlueDataType::TpArrayQuantity => "arr<quantity>",
-            &glue::GlueDataType::TpInt64 => "i64",
-            &glue::GlueDataType::TpArrayInt64 => "arr<i64>",
+        f.pad(match *self {
+            glue::GlueDataType::TpBool => "bool",
+            glue::GlueDataType::TpChar => "i8",
+            glue::GlueDataType::TpUChar => "u8",
+            glue::GlueDataType::TpShort => "i16",
+            glue::GlueDataType::TpUShort => "u16",
+            glue::GlueDataType::TpInt => "i32",
+            glue::GlueDataType::TpUInt => "u32",
+            glue::GlueDataType::TpFloat => "f32",
+            glue::GlueDataType::TpDouble => "f64",
+            glue::GlueDataType::TpComplex => "c32",
+            glue::GlueDataType::TpDComplex => "c64",
+            glue::GlueDataType::TpString => "string",
+            glue::GlueDataType::TpTable => "table",
+            glue::GlueDataType::TpArrayBool => "arr<bool>",
+            glue::GlueDataType::TpArrayChar => "arr<i8>",
+            glue::GlueDataType::TpArrayUChar => "arr<u8>",
+            glue::GlueDataType::TpArrayShort => "arr<i16>",
+            glue::GlueDataType::TpArrayUShort => "arr<u16>",
+            glue::GlueDataType::TpArrayInt => "arr<i32>",
+            glue::GlueDataType::TpArrayUInt => "arr<u32>",
+            glue::GlueDataType::TpArrayFloat => "arr<f32>",
+            glue::GlueDataType::TpArrayDouble => "arr<f64>",
+            glue::GlueDataType::TpArrayComplex => "arr<c32>",
+            glue::GlueDataType::TpArrayDComplex => "arr<c64>",
+            glue::GlueDataType::TpArrayString => "arr<string>",
+            glue::GlueDataType::TpRecord => "record",
+            glue::GlueDataType::TpOther => "other",
+            glue::GlueDataType::TpQuantity => "quantity",
+            glue::GlueDataType::TpArrayQuantity => "arr<quantity>",
+            glue::GlueDataType::TpInt64 => "i64",
+            glue::GlueDataType::TpArrayInt64 => "arr<i64>",
         })
     }
 }
@@ -461,6 +461,7 @@ impl glue::StringBridge {
     // sure of that is if your C++ string points to data owned by a data
     // structure whose lifetime is long compared to the Rust code, which is far
     // from generically true.)
+    #[allow(clippy::wrong_self_convention)]
     fn to_rust(&self) -> String {
         let buf =
             unsafe { std::slice::from_raw_parts(self.data as *const u8, self.n_bytes as usize) };
@@ -1820,8 +1821,7 @@ impl Table {
         }
 
         let result = if data_type != glue::GlueDataType::TpString {
-            let mut result =
-                T::casatables_alloc(&dims[..n_dim as usize])?;
+            let mut result = T::casatables_alloc(&dims[..n_dim as usize])?;
 
             let rv = unsafe {
                 glue::table_get_cell(
@@ -2080,9 +2080,7 @@ impl Table {
         let mut row = TableRow { handle, exc_info };
 
         for row_number in 0..self.n_rows() {
-            if unsafe { glue::table_row_read(row.handle, row_number, &mut row.exc_info) }
-                != 0
-            {
+            if unsafe { glue::table_row_read(row.handle, row_number, &mut row.exc_info) } != 0 {
                 return row.exc_info.as_err();
             }
 
@@ -2111,9 +2109,7 @@ impl Table {
         let mut row = TableRow { handle, exc_info };
 
         for row_number in row_range {
-            if unsafe { glue::table_row_read(row.handle, row_number, &mut row.exc_info) }
-                != 0
-            {
+            if unsafe { glue::table_row_read(row.handle, row_number, &mut row.exc_info) } != 0 {
                 return row.exc_info.as_err();
             }
 
@@ -2138,9 +2134,7 @@ impl Table {
         let mut row = TableRow { handle, exc_info };
 
         for &row_number in rows {
-            if unsafe { glue::table_row_read(row.handle, row_number, &mut row.exc_info) }
-                != 0
-            {
+            if unsafe { glue::table_row_read(row.handle, row_number, &mut row.exc_info) } != 0 {
                 return row.exc_info.as_err();
             }
 
@@ -2831,6 +2825,7 @@ mod tests {
         // touch the file
         OpenOptions::new()
             .create(true)
+            .truncate(true)
             .write(true)
             .open(table_path.clone())
             .unwrap();
