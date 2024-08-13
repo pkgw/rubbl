@@ -22,75 +22,76 @@
 
 #include <string.h>
 
-extern "C" {
-    void
-    handle_exception(ExcInfo &exc)
-    {
-        try {
-            throw;
-        } catch (const std::exception &e) {
-            strncpy(exc.message, e.what(), sizeof(exc.message) - 1);
-            exc.message[sizeof(exc.message) - 1] = '\0';
-        } catch (...) {
-            strcpy(exc.message, "unidentifiable C++ exception occurred");
-        }
+
+static void
+handle_exception(ExcInfo &exc)
+{
+    try {
+        throw;
+    } catch (const std::exception &e) {
+        strncpy(exc.message, e.what(), sizeof(exc.message) - 1);
+        exc.message[sizeof(exc.message) - 1] = '\0';
+    } catch (...) {
+        strcpy(exc.message, "unidentifiable C++ exception occurred");
     }
+}
 
-    // StringBridge
+static casacore::String
+bridge_string(const StringBridge &input)
+{
+    casacore::String result((const char *) input.data, input.n_bytes);
+    return result;
+}
 
-    casacore::String
-    bridge_string(const StringBridge &input)
-    {
-        casacore::String result((const char *) input.data, input.n_bytes);
-        return result;
-    }
+// To pass strings from C++ to Rust, we *always* have to copy the data. The
+// only time that could safely avoid copying would be if we were absolutely
+// sure that the string buffer pointed into a data structure whose lifetime
+// was longer than that of the calling Rust code ... but even then, we would
+// need to have Rust-side code to check that the C++ string data are valid
+// UTF-8, so that there's always a potential need to allocate anyway. The
+// only efficient way that I can come up with that will work 100% reliably
+// is to pass a Rust callback into the C++ code, so that the Rust code can
+// do its memory allocation inside a stack frame where we are *sure* that
+// the C++ pointer is still valid. So, that's what this function enforces.
+static void
+unbridge_string(const casacore::String &input, StringBridgeCallback callback, void *ctxt)
+{
+    StringBridge bridge;
+    bridge.data = input.data();
+    bridge.n_bytes = input.length();
+    callback(&bridge, ctxt);
+}
 
-    // To pass strings from C++ to Rust, we *always* have to copy the data. The
-    // only time that could safely avoid copying would be if we were absolutely
-    // sure that the string buffer pointed into a data structure whose lifetime
-    // was longer than that of the calling Rust code ... but even then, we would
-    // need to have Rust-side code to check that the C++ string data are valid
-    // UTF-8, so that there's always a potential need to allocate anyway. The
-    // only efficient way that I can come up with that will work 100% reliably
-    // is to pass a Rust callback into the C++ code, so that the Rust code can
-    // do its memory allocation inside a stack frame where we are *sure* that
-    // the C++ pointer is still valid. So, that's what this function enforces.
-    void
-    unbridge_string(const casacore::String &input, StringBridgeCallback callback, void *ctxt)
-    {
-        StringBridge bridge;
-        bridge.data = input.data();
-        bridge.n_bytes = input.length();
+static casacore::Array<casacore::String>
+bridge_string_array(const StringBridge *source, const casacore::IPosition &shape)
+{
+    casacore::Array<casacore::String> array(shape);
+    unsigned int n = 0;
+    casacore::Array<casacore::String>::iterator end = array.end();
+
+    for (casacore::Array<casacore::String>::iterator i = array.begin(); i != end; i++, n++)
+        *i = bridge_string(source[n]);
+
+    return array;
+}
+
+static void
+unbridge_string_array(const casacore::Array<casacore::String> &input,
+                        StringBridgeCallback callback, void *ctxt)
+{
+    StringBridge bridge;
+    casacore::Array<casacore::String>::const_iterator end = input.end();
+
+    for (casacore::Array<casacore::String>::const_iterator i = input.begin(); i != end; i++) {
+        bridge.data = (*i).data();
+        bridge.n_bytes = (*i).length();
         callback(&bridge, ctxt);
     }
+}
 
-    casacore::Array<casacore::String>
-    bridge_string_array(const StringBridge *source, const casacore::IPosition &shape)
-    {
-        casacore::Array<casacore::String> array(shape);
-        unsigned int n = 0;
-        casacore::Array<casacore::String>::iterator end = array.end();
+// The API helpers that we export to the Rust layer
 
-        for (casacore::Array<casacore::String>::iterator i = array.begin(); i != end; i++, n++)
-            *i = bridge_string(source[n]);
-
-        return array;
-    }
-
-    void
-    unbridge_string_array(const casacore::Array<casacore::String> &input,
-                          StringBridgeCallback callback, void *ctxt)
-    {
-        StringBridge bridge;
-        casacore::Array<casacore::String>::const_iterator end = input.end();
-
-        for (casacore::Array<casacore::String>::const_iterator i = input.begin(); i != end; i++) {
-            bridge.data = (*i).data();
-            bridge.n_bytes = (*i).length();
-            callback(&bridge, ctxt);
-        }
-    }
-
+extern "C" {
     // Data Types
 
     int
