@@ -29,10 +29,11 @@
 
 #![deny(missing_docs)]
 
-use ndarray::Dimension;
+use ndarray::{ArrayBase, Dimension};
 use rubbl_core::num::{DimFromShapeSlice, DimensionMismatchError};
 use std::{
     fmt::{self, Debug},
+    mem::MaybeUninit as StdMaybeUninit,
     path::Path,
 };
 use thiserror::Error;
@@ -122,6 +123,10 @@ impl fmt::Display for glue::GlueDataType {
 }
 
 /// A type that can be translated into a CASA table data type.
+///
+/// You should never need to implement this trait yourself, because this crate
+/// provides definitions for all types supported by the underlying CASA table
+/// libraries.
 pub trait CasaDataType: Clone + PartialEq + Sized {
     /// The CASA data type identifier associated with this Rust type.
     const DATA_TYPE: glue::GlueDataType;
@@ -170,24 +175,39 @@ pub trait CasaDataType: Clone + PartialEq + Sized {
         unreachable!();
     }
 
-    /// Defaut behavior: fill the dest with a zero shape, i.e. report that we're a scalar.
+    /// Default behavior: fill the dest with a zero shape, i.e. report that we're a scalar.
     #[doc(hidden)]
     fn casatables_put_shape(&self, shape_dest: &mut Vec<u64>) {
         shape_dest.truncate(0);
     }
 
     #[doc(hidden)]
-    fn casatables_alloc(shape: &[u64]) -> Result<Self, TableError>;
+    // The corresponding type for a "MaybeUninit" version of this datatype.
+    type MaybeUninit: UninitedCasaData;
+
+    #[doc(hidden)]
+    // Allocate an uninitialized buffer for this datatype.
+    fn casatables_alloc(shape: &[u64]) -> Result<Self::MaybeUninit, TableError>;
+
+    #[doc(hidden)]
+    // Indicate that we can now assume that this value is fully initialized.
+    unsafe fn casatables_assume_init(buf: Self::MaybeUninit) -> Self;
 
     #[doc(hidden)]
     fn casatables_as_buf(&self) -> *const () {
         self as *const Self as _
     }
+}
 
+#[doc(hidden)]
+// This trait needs to be public because it is referenced in CasaDataType, but
+// it is not something that crate consumers should ever need to use or even know
+// about.
+pub trait UninitedCasaData {
     #[doc(hidden)]
-    fn casatables_as_mut_buf(&mut self) -> *mut () {
-        self as *mut Self as _
-    }
+    // Get a mut-ptr reference to this buffer suitable for passing into the CASA
+    // APIs.
+    fn casatables_uninit_as_mut_ptr(&mut self) -> *mut ();
 }
 
 /// A type that maps to one of CASA's scalar data types.
@@ -202,8 +222,20 @@ macro_rules! impl_scalar_data_type {
         impl CasaDataType for $rust_type {
             const DATA_TYPE: glue::GlueDataType = glue::GlueDataType::$casa_scalar_type;
 
-            fn casatables_alloc(_shape: &[u64]) -> Result<Self, TableError> {
-                Ok($default)
+            type MaybeUninit = StdMaybeUninit<Self>;
+
+            fn casatables_alloc(_shape: &[u64]) -> Result<Self::MaybeUninit, TableError> {
+                Ok(StdMaybeUninit::new($default))
+            }
+
+            unsafe fn casatables_assume_init(buf: Self::MaybeUninit) -> Self {
+                buf.assume_init()
+            }
+        }
+
+        impl UninitedCasaData for StdMaybeUninit<$rust_type> {
+            fn casatables_uninit_as_mut_ptr(&mut self) -> *mut () {
+                self.as_mut_ptr() as _
             }
         }
 
@@ -237,16 +269,27 @@ impl CasaDataType for String {
         s.to_owned()
     }
 
-    fn casatables_alloc(_shape: &[u64]) -> Result<Self, TableError> {
-        Ok("".to_owned())
+    // Strings must be special-cased in the API functions and cannot be handled
+    // as buffers that can be converted to pointers. When it comes to this
+    // associated type, this is exactly what the "never" type is for.
+    type MaybeUninit = never::Never;
+
+    fn casatables_alloc(_shape: &[u64]) -> Result<Self::MaybeUninit, TableError> {
+        unreachable!()
+    }
+
+    unsafe fn casatables_assume_init(_buf: Self::MaybeUninit) -> Self {
+        unreachable!()
     }
 
     fn casatables_as_buf(&self) -> *const () {
         panic!("disallowed for string values")
     }
+}
 
-    fn casatables_as_mut_buf(&mut self) -> *mut () {
-        panic!("disallowed for string values")
+impl UninitedCasaData for never::Never {
+    fn casatables_uninit_as_mut_ptr(&mut self) -> *mut () {
+        unreachable!()
     }
 }
 
@@ -263,7 +306,9 @@ macro_rules! impl_vec_data_type {
         impl CasaDataType for Vec<$rust_type> {
             const DATA_TYPE: glue::GlueDataType = glue::GlueDataType::$casa_type;
 
-            fn casatables_alloc(shape: &[u64]) -> Result<Self, TableError> {
+            type MaybeUninit = Vec<StdMaybeUninit<$rust_type>>;
+
+            fn casatables_alloc(shape: &[u64]) -> Result<Self::MaybeUninit, TableError> {
                 if shape.len() != 1 {
                     Err(DimensionMismatchError {
                         expected: 1,
@@ -279,6 +324,11 @@ macro_rules! impl_vec_data_type {
                 }
             }
 
+            unsafe fn casatables_assume_init(buf: Self::MaybeUninit) -> Self {
+                // This appears to be the recommended way to do this ...
+                std::mem::transmute::<_, Vec<$rust_type>>(buf)
+            }
+
             fn casatables_put_shape(&self, shape_dest: &mut Vec<u64>) {
                 shape_dest.truncate(0);
                 shape_dest.push(self.len() as u64);
@@ -287,8 +337,10 @@ macro_rules! impl_vec_data_type {
             fn casatables_as_buf(&self) -> *const () {
                 self.as_ptr() as _
             }
+        }
 
-            fn casatables_as_mut_buf(&mut self) -> *mut () {
+        impl UninitedCasaData for Vec<StdMaybeUninit<$rust_type>> {
+            fn casatables_uninit_as_mut_ptr(&mut self) -> *mut () {
                 self.as_mut_ptr() as _
             }
         }
@@ -311,20 +363,16 @@ impl_vec_data_type! { Complex<f64>, TpArrayDComplex }
 impl CasaDataType for Vec<String> {
     const DATA_TYPE: glue::GlueDataType = glue::GlueDataType::TpArrayString;
 
-    fn casatables_alloc(shape: &[u64]) -> Result<Self, TableError> {
-        if shape.len() != 1 {
-            Err(DimensionMismatchError {
-                expected: 1,
-                actual: shape.len(),
-            }
-            .into())
-        } else {
-            let mut rv = Vec::with_capacity(shape[0] as usize);
-            unsafe {
-                rv.set_len(shape[0] as usize);
-            }
-            Ok(rv)
-        }
+    // As with scalar strings, we must never use the alloc/assume_init API for
+    // this datatype, so:
+    type MaybeUninit = never::Never;
+
+    fn casatables_alloc(_shape: &[u64]) -> Result<Self::MaybeUninit, TableError> {
+        unreachable!()
+    }
+
+    unsafe fn casatables_assume_init(_buf: Self::MaybeUninit) -> Self {
+        unreachable!()
     }
 
     fn casatables_put_shape(&self, shape_dest: &mut Vec<u64>) {
@@ -345,22 +393,20 @@ impl CasaDataType for Vec<String> {
     fn casatables_as_buf(&self) -> *const () {
         self.as_ptr() as _
     }
-
-    fn casatables_as_mut_buf(&mut self) -> *mut () {
-        self.as_mut_ptr() as _
-    }
 }
 
 // Blanket implementation of n-dimensional array mappings.
 impl<I: CasaScalarData + Copy, D: Dimension + DimFromShapeSlice<u64>> CasaDataType for Array<I, D> {
     const DATA_TYPE: glue::GlueDataType = I::VECTOR_TYPE;
 
-    fn casatables_alloc(shape: &[u64]) -> Result<Self, TableError> {
-        // TODO: this method is deprecated and we are certainly in the danger
-        // zone by producing uninitialized memory here. Need to figure out a
-        // better approach. We may need to take a closure argument that we can
-        // call between uninit() and assume_init(), or something.
-        Ok(unsafe { Self::uninitialized(D::from_shape_slice(shape)?) })
+    type MaybeUninit = Array<StdMaybeUninit<I>, D>;
+
+    fn casatables_alloc(shape: &[u64]) -> Result<Self::MaybeUninit, TableError> {
+        Ok(Self::uninit(D::from_shape_slice(shape)?))
+    }
+
+    unsafe fn casatables_assume_init(buf: Self::MaybeUninit) -> Self {
+        buf.assume_init()
     }
 
     fn casatables_put_shape(&self, shape_dest: &mut Vec<u64>) {
@@ -373,8 +419,10 @@ impl<I: CasaScalarData + Copy, D: Dimension + DimFromShapeSlice<u64>> CasaDataTy
     fn casatables_as_buf(&self) -> *const () {
         self.as_ptr() as _
     }
+}
 
-    fn casatables_as_mut_buf(&mut self) -> *mut () {
+impl<I: ndarray::RawDataMut, D: Dimension> UninitedCasaData for ArrayBase<I, D> {
+    fn casatables_uninit_as_mut_ptr(&mut self) -> *mut () {
         self.as_mut_ptr() as _
     }
 }
@@ -1802,7 +1850,7 @@ impl Table {
                     self.handle,
                     &ccol_name,
                     row,
-                    result.casatables_as_mut_buf() as _,
+                    result.casatables_uninit_as_mut_ptr() as _,
                     &mut self.exc_info,
                 )
             };
@@ -1811,7 +1859,7 @@ impl Table {
                 return self.exc_info.as_err();
             }
 
-            result
+            unsafe { T::casatables_assume_init(result) }
         } else {
             let mut value = None;
 
@@ -2286,7 +2334,7 @@ impl TableRow {
                 glue::table_row_get_cell(
                     self.handle,
                     &ccol_name,
-                    result.casatables_as_mut_buf() as _,
+                    result.casatables_uninit_as_mut_ptr() as _,
                     &mut self.exc_info,
                 )
             };
@@ -2295,7 +2343,7 @@ impl TableRow {
                 return self.exc_info.as_err();
             }
 
-            result
+            unsafe { T::casatables_assume_init(result) }
         };
 
         Ok(result)
@@ -2584,7 +2632,7 @@ impl TableRecord {
                 glue::tablerec_get_field(
                     self.handle,
                     &ccol_name,
-                    result.casatables_as_mut_buf() as _,
+                    result.casatables_uninit_as_mut_ptr() as _,
                     &mut self.exc_info,
                 )
             };
@@ -2593,7 +2641,7 @@ impl TableRecord {
                 return self.exc_info.as_err();
             }
 
-            result
+            unsafe { T::casatables_assume_init(result) }
         };
 
         Ok(result)
@@ -2694,15 +2742,24 @@ impl Debug for TableRecord {
 impl CasaDataType for TableRecord {
     const DATA_TYPE: glue::GlueDataType = glue::GlueDataType::TpRecord;
 
-    fn casatables_alloc(_shape: &[u64]) -> Result<Self, TableError> {
+    // Quasi-hack: In this framework, the "maybe uninit" form of the data is
+    // never truly uninitialized; it's still a valid, allocated record structure
+    // pointer. It just hasn't been populated yet. So it's OK for this to be a
+    // passthrough type. In a certain sense it would be a bit more appropriate
+    // to special-case this type in all of the generic functions as appropriate,
+    // but we still are passing through a pointer, so we can reuse the generic
+    // machinery.
+    type MaybeUninit = Self;
+
+    fn casatables_alloc(_shape: &[u64]) -> Result<Self::MaybeUninit, TableError> {
         TableRecord::new()
     }
 
-    fn casatables_as_buf(&self) -> *const () {
-        self.handle as _
+    unsafe fn casatables_assume_init(buf: Self::MaybeUninit) -> Self {
+        buf
     }
 
-    fn casatables_as_mut_buf(&mut self) -> *mut () {
+    fn casatables_as_buf(&self) -> *const () {
         self.handle as _
     }
 
@@ -2712,6 +2769,12 @@ impl CasaDataType for TableRecord {
 
     fn casatables_tablerec_pass_through_out(s: &Self) -> TableRecord {
         s.to_owned()
+    }
+}
+
+impl UninitedCasaData for TableRecord {
+    fn casatables_uninit_as_mut_ptr(&mut self) -> *mut () {
+        self.handle as _
     }
 }
 
