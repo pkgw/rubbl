@@ -3,7 +3,7 @@
 
 [package]
 name = "rubbl_casatables_impl"
-version = "0.3.31101"
+version = "0.4.35000"
 authors = ["Peter Williams <peter@newton.cx>"]
 license = "LGPL-2.0+"
 edition = "2018"
@@ -15,4 +15,4 @@ A bundle of C++ code that can read the CASA table format for Rubbl.
 links = "casa"
 
 [build-dependencies]
-cc = { version = "1.0.42", features = ["parallel"] }
+cc = { version = "1.1.10", features = ["parallel"] }

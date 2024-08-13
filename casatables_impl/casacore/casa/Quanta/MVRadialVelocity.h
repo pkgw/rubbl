@@ -39,7 +39,6 @@
 namespace casacore { //# NAMESPACE CASACORE - BEGIN
 
 //# Forward Declarations
-template <class T> class Vector;
 template <class T> class Quantum;
 
 // <summary> Internal value for MRadialVelocity </summary>
@@ -143,7 +142,6 @@ public:
   
   // Tell me your type
   // <group>
-  virtual uInt type() const;
   static void assure(const MeasValue &in);
   // </group>
   

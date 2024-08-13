@@ -29,10 +29,11 @@
 
 #![deny(missing_docs)]
 
-use ndarray::Dimension;
+use ndarray::{ArrayBase, Dimension};
 use rubbl_core::num::{DimFromShapeSlice, DimensionMismatchError};
 use std::{
     fmt::{self, Debug},
+    mem::MaybeUninit as StdMaybeUninit,
     path::Path,
 };
 use thiserror::Error;
@@ -55,10 +56,7 @@ impl glue::ExcInfo {
     fn as_error(&self) -> CasacoreError {
         let c_str = unsafe { std::ffi::CStr::from_ptr(self.message.as_ptr()) };
 
-        let msg = match c_str.to_str() {
-            Ok(s) => s,
-            Err(_) => "[un-translatable C++ exception]",
-        };
+        let msg = c_str.to_str().unwrap_or("[un-translatable C++ exception]");
 
         CasacoreError(msg.to_owned())
     }
@@ -85,43 +83,47 @@ impl glue::GlueDataType {
 
 impl fmt::Display for glue::GlueDataType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.pad(match self {
-            &glue::GlueDataType::TpBool => "bool",
-            &glue::GlueDataType::TpChar => "i8",
-            &glue::GlueDataType::TpUChar => "u8",
-            &glue::GlueDataType::TpShort => "i16",
-            &glue::GlueDataType::TpUShort => "u16",
-            &glue::GlueDataType::TpInt => "i32",
-            &glue::GlueDataType::TpUInt => "u32",
-            &glue::GlueDataType::TpFloat => "f32",
-            &glue::GlueDataType::TpDouble => "f64",
-            &glue::GlueDataType::TpComplex => "c32",
-            &glue::GlueDataType::TpDComplex => "c64",
-            &glue::GlueDataType::TpString => "string",
-            &glue::GlueDataType::TpTable => "table",
-            &glue::GlueDataType::TpArrayBool => "arr<bool>",
-            &glue::GlueDataType::TpArrayChar => "arr<i8>",
-            &glue::GlueDataType::TpArrayUChar => "arr<u8>",
-            &glue::GlueDataType::TpArrayShort => "arr<i16>",
-            &glue::GlueDataType::TpArrayUShort => "arr<u16>",
-            &glue::GlueDataType::TpArrayInt => "arr<i32>",
-            &glue::GlueDataType::TpArrayUInt => "arr<u32>",
-            &glue::GlueDataType::TpArrayFloat => "arr<f32>",
-            &glue::GlueDataType::TpArrayDouble => "arr<f64>",
-            &glue::GlueDataType::TpArrayComplex => "arr<c32>",
-            &glue::GlueDataType::TpArrayDComplex => "arr<c64>",
-            &glue::GlueDataType::TpArrayString => "arr<string>",
-            &glue::GlueDataType::TpRecord => "record",
-            &glue::GlueDataType::TpOther => "other",
-            &glue::GlueDataType::TpQuantity => "quantity",
-            &glue::GlueDataType::TpArrayQuantity => "arr<quantity>",
-            &glue::GlueDataType::TpInt64 => "i64",
-            &glue::GlueDataType::TpArrayInt64 => "arr<i64>",
+        f.pad(match *self {
+            glue::GlueDataType::TpBool => "bool",
+            glue::GlueDataType::TpChar => "i8",
+            glue::GlueDataType::TpUChar => "u8",
+            glue::GlueDataType::TpShort => "i16",
+            glue::GlueDataType::TpUShort => "u16",
+            glue::GlueDataType::TpInt => "i32",
+            glue::GlueDataType::TpUInt => "u32",
+            glue::GlueDataType::TpFloat => "f32",
+            glue::GlueDataType::TpDouble => "f64",
+            glue::GlueDataType::TpComplex => "c32",
+            glue::GlueDataType::TpDComplex => "c64",
+            glue::GlueDataType::TpString => "string",
+            glue::GlueDataType::TpTable => "table",
+            glue::GlueDataType::TpArrayBool => "arr<bool>",
+            glue::GlueDataType::TpArrayChar => "arr<i8>",
+            glue::GlueDataType::TpArrayUChar => "arr<u8>",
+            glue::GlueDataType::TpArrayShort => "arr<i16>",
+            glue::GlueDataType::TpArrayUShort => "arr<u16>",
+            glue::GlueDataType::TpArrayInt => "arr<i32>",
+            glue::GlueDataType::TpArrayUInt => "arr<u32>",
+            glue::GlueDataType::TpArrayFloat => "arr<f32>",
+            glue::GlueDataType::TpArrayDouble => "arr<f64>",
+            glue::GlueDataType::TpArrayComplex => "arr<c32>",
+            glue::GlueDataType::TpArrayDComplex => "arr<c64>",
+            glue::GlueDataType::TpArrayString => "arr<string>",
+            glue::GlueDataType::TpRecord => "record",
+            glue::GlueDataType::TpOther => "other",
+            glue::GlueDataType::TpQuantity => "quantity",
+            glue::GlueDataType::TpArrayQuantity => "arr<quantity>",
+            glue::GlueDataType::TpInt64 => "i64",
+            glue::GlueDataType::TpArrayInt64 => "arr<i64>",
         })
     }
 }
 
 /// A type that can be translated into a CASA table data type.
+///
+/// You should never need to implement this trait yourself, because this crate
+/// provides definitions for all types supported by the underlying CASA table
+/// libraries.
 pub trait CasaDataType: Clone + PartialEq + Sized {
     /// The CASA data type identifier associated with this Rust type.
     const DATA_TYPE: glue::GlueDataType;
@@ -170,24 +172,39 @@ pub trait CasaDataType: Clone + PartialEq + Sized {
         unreachable!();
     }
 
-    /// Defaut behavior: fill the dest with a zero shape, i.e. report that we're a scalar.
+    /// Default behavior: fill the dest with a zero shape, i.e. report that we're a scalar.
     #[doc(hidden)]
     fn casatables_put_shape(&self, shape_dest: &mut Vec<u64>) {
         shape_dest.truncate(0);
     }
 
     #[doc(hidden)]
-    fn casatables_alloc(shape: &[u64]) -> Result<Self, TableError>;
+    // The corresponding type for a "MaybeUninit" version of this datatype.
+    type MaybeUninit: UninitedCasaData;
+
+    #[doc(hidden)]
+    // Allocate an uninitialized buffer for this datatype.
+    fn casatables_alloc(shape: &[u64]) -> Result<Self::MaybeUninit, TableError>;
+
+    #[doc(hidden)]
+    // Indicate that we can now assume that this value is fully initialized.
+    unsafe fn casatables_assume_init(buf: Self::MaybeUninit) -> Self;
 
     #[doc(hidden)]
     fn casatables_as_buf(&self) -> *const () {
         self as *const Self as _
     }
+}
 
+#[doc(hidden)]
+// This trait needs to be public because it is referenced in CasaDataType, but
+// it is not something that crate consumers should ever need to use or even know
+// about.
+pub trait UninitedCasaData {
     #[doc(hidden)]
-    fn casatables_as_mut_buf(&mut self) -> *mut () {
-        self as *mut Self as _
-    }
+    // Get a mut-ptr reference to this buffer suitable for passing into the CASA
+    // APIs.
+    fn casatables_uninit_as_mut_ptr(&mut self) -> *mut ();
 }
 
 /// A type that maps to one of CASA's scalar data types.
@@ -202,8 +219,20 @@ macro_rules! impl_scalar_data_type {
         impl CasaDataType for $rust_type {
             const DATA_TYPE: glue::GlueDataType = glue::GlueDataType::$casa_scalar_type;
 
-            fn casatables_alloc(_shape: &[u64]) -> Result<Self, TableError> {
-                Ok($default)
+            type MaybeUninit = StdMaybeUninit<Self>;
+
+            fn casatables_alloc(_shape: &[u64]) -> Result<Self::MaybeUninit, TableError> {
+                Ok(StdMaybeUninit::new($default))
+            }
+
+            unsafe fn casatables_assume_init(buf: Self::MaybeUninit) -> Self {
+                buf.assume_init()
+            }
+        }
+
+        impl UninitedCasaData for StdMaybeUninit<$rust_type> {
+            fn casatables_uninit_as_mut_ptr(&mut self) -> *mut () {
+                self.as_mut_ptr() as _
             }
         }
 
@@ -237,16 +266,27 @@ impl CasaDataType for String {
         s.to_owned()
     }
 
-    fn casatables_alloc(_shape: &[u64]) -> Result<Self, TableError> {
-        Ok("".to_owned())
+    // Strings must be special-cased in the API functions and cannot be handled
+    // as buffers that can be converted to pointers. When it comes to this
+    // associated type, this is exactly what the "never" type is for.
+    type MaybeUninit = never::Never;
+
+    fn casatables_alloc(_shape: &[u64]) -> Result<Self::MaybeUninit, TableError> {
+        unreachable!()
+    }
+
+    unsafe fn casatables_assume_init(_buf: Self::MaybeUninit) -> Self {
+        unreachable!()
     }
 
     fn casatables_as_buf(&self) -> *const () {
         panic!("disallowed for string values")
     }
+}
 
-    fn casatables_as_mut_buf(&mut self) -> *mut () {
-        panic!("disallowed for string values")
+impl UninitedCasaData for never::Never {
+    fn casatables_uninit_as_mut_ptr(&mut self) -> *mut () {
+        unreachable!()
     }
 }
 
@@ -263,7 +303,9 @@ macro_rules! impl_vec_data_type {
         impl CasaDataType for Vec<$rust_type> {
             const DATA_TYPE: glue::GlueDataType = glue::GlueDataType::$casa_type;
 
-            fn casatables_alloc(shape: &[u64]) -> Result<Self, TableError> {
+            type MaybeUninit = Vec<StdMaybeUninit<$rust_type>>;
+
+            fn casatables_alloc(shape: &[u64]) -> Result<Self::MaybeUninit, TableError> {
                 if shape.len() != 1 {
                     Err(DimensionMismatchError {
                         expected: 1,
@@ -279,6 +321,11 @@ macro_rules! impl_vec_data_type {
                 }
             }
 
+            unsafe fn casatables_assume_init(buf: Self::MaybeUninit) -> Self {
+                // This appears to be the recommended way to do this ...
+                std::mem::transmute::<_, Vec<$rust_type>>(buf)
+            }
+
             fn casatables_put_shape(&self, shape_dest: &mut Vec<u64>) {
                 shape_dest.truncate(0);
                 shape_dest.push(self.len() as u64);
@@ -287,8 +334,10 @@ macro_rules! impl_vec_data_type {
             fn casatables_as_buf(&self) -> *const () {
                 self.as_ptr() as _
             }
+        }
 
-            fn casatables_as_mut_buf(&mut self) -> *mut () {
+        impl UninitedCasaData for Vec<StdMaybeUninit<$rust_type>> {
+            fn casatables_uninit_as_mut_ptr(&mut self) -> *mut () {
                 self.as_mut_ptr() as _
             }
         }
@@ -311,20 +360,16 @@ impl_vec_data_type! { Complex<f64>, TpArrayDComplex }
 impl CasaDataType for Vec<String> {
     const DATA_TYPE: glue::GlueDataType = glue::GlueDataType::TpArrayString;
 
-    fn casatables_alloc(shape: &[u64]) -> Result<Self, TableError> {
-        if shape.len() != 1 {
-            Err(DimensionMismatchError {
-                expected: 1,
-                actual: shape.len(),
-            }
-            .into())
-        } else {
-            let mut rv = Vec::with_capacity(shape[0] as usize);
-            unsafe {
-                rv.set_len(shape[0] as usize);
-            }
-            Ok(rv)
-        }
+    // As with scalar strings, we must never use the alloc/assume_init API for
+    // this datatype, so:
+    type MaybeUninit = never::Never;
+
+    fn casatables_alloc(_shape: &[u64]) -> Result<Self::MaybeUninit, TableError> {
+        unreachable!()
+    }
+
+    unsafe fn casatables_assume_init(_buf: Self::MaybeUninit) -> Self {
+        unreachable!()
     }
 
     fn casatables_put_shape(&self, shape_dest: &mut Vec<u64>) {
@@ -345,22 +390,20 @@ impl CasaDataType for Vec<String> {
     fn casatables_as_buf(&self) -> *const () {
         self.as_ptr() as _
     }
-
-    fn casatables_as_mut_buf(&mut self) -> *mut () {
-        self.as_mut_ptr() as _
-    }
 }
 
 // Blanket implementation of n-dimensional array mappings.
 impl<I: CasaScalarData + Copy, D: Dimension + DimFromShapeSlice<u64>> CasaDataType for Array<I, D> {
     const DATA_TYPE: glue::GlueDataType = I::VECTOR_TYPE;
 
-    fn casatables_alloc(shape: &[u64]) -> Result<Self, TableError> {
-        // TODO: this method is deprecated and we are certainly in the danger
-        // zone by producing uninitialized memory here. Need to figure out a
-        // better approach. We may need to take a closure argument that we can
-        // call between uninit() and assume_init(), or something.
-        Ok(unsafe { Self::uninitialized(D::from_shape_slice(shape)?) })
+    type MaybeUninit = Array<StdMaybeUninit<I>, D>;
+
+    fn casatables_alloc(shape: &[u64]) -> Result<Self::MaybeUninit, TableError> {
+        Ok(Self::uninit(D::from_shape_slice(shape)?))
+    }
+
+    unsafe fn casatables_assume_init(buf: Self::MaybeUninit) -> Self {
+        buf.assume_init()
     }
 
     fn casatables_put_shape(&self, shape_dest: &mut Vec<u64>) {
@@ -373,8 +416,10 @@ impl<I: CasaScalarData + Copy, D: Dimension + DimFromShapeSlice<u64>> CasaDataTy
     fn casatables_as_buf(&self) -> *const () {
         self.as_ptr() as _
     }
+}
 
-    fn casatables_as_mut_buf(&mut self) -> *mut () {
+impl<I: ndarray::RawDataMut, D: Dimension> UninitedCasaData for ArrayBase<I, D> {
+    fn casatables_uninit_as_mut_ptr(&mut self) -> *mut () {
         self.as_mut_ptr() as _
     }
 }
@@ -416,6 +461,7 @@ impl glue::StringBridge {
     // sure of that is if your C++ string points to data owned by a data
     // structure whose lifetime is long compared to the Rust code, which is far
     // from generically true.)
+    #[allow(clippy::wrong_self_convention)]
     fn to_rust(&self) -> String {
         let buf =
             unsafe { std::slice::from_raw_parts(self.data as *const u8, self.n_bytes as usize) };
@@ -437,7 +483,7 @@ unsafe extern "C" fn casatables_string_bridge_cb<F>(
     F: FnMut(String),
 {
     let f: &mut F = &mut *(ctxt as *mut F);
-    f((&*name).to_rust())
+    f((*name).to_rust())
 }
 
 unsafe extern "C" fn casatables_keyword_info_cb<F>(
@@ -448,7 +494,7 @@ unsafe extern "C" fn casatables_keyword_info_cb<F>(
     F: FnMut(String, glue::GlueDataType),
 {
     let f: &mut F = &mut *(ctxt as *mut F);
-    f((&*name).to_rust(), dtype)
+    f((*name).to_rust(), dtype)
 }
 
 unsafe extern "C" fn casatables_keyword_repr_cb<F>(
@@ -460,7 +506,7 @@ unsafe extern "C" fn casatables_keyword_repr_cb<F>(
     F: FnMut(String, glue::GlueDataType, String),
 {
     let f: &mut F = &mut *(ctxt as *mut F);
-    f((&*name).to_rust(), dtype, (&*repr).to_rust())
+    f((*name).to_rust(), dtype, (*repr).to_rust())
 }
 
 // The next part: wrappers that allow us to invoke the various callback-having
@@ -761,11 +807,7 @@ impl TableDesc {
         undefined: bool,
     ) -> Result<(), TableError> {
         let cname = glue::StringBridge::from_rust(col_name);
-        let comment = if let Some(comment_) = comment {
-            comment_
-        } else {
-            ""
-        };
+        let comment = comment.unwrap_or_default();
         let ccomment = glue::StringBridge::from_rust(comment);
         let rv = unsafe {
             glue::tabledesc_add_scalar_column(
@@ -800,11 +842,7 @@ impl TableDesc {
         undefined: bool,
     ) -> Result<(), TableError> {
         let cname = glue::StringBridge::from_rust(col_name);
-        let comment = if let Some(comment_) = comment {
-            comment_
-        } else {
-            ""
-        };
+        let comment = comment.unwrap_or_default();
         let ccomment = glue::StringBridge::from_rust(comment);
         let rv = unsafe {
             if let Some(dims_) = dims {
@@ -1009,11 +1047,6 @@ pub enum TableCreateMode {
     NewNoReplace = 2,
 }
 
-/// An error type used when a scalar column was expected but a vector was found.
-#[derive(Error, Debug)]
-#[error("Expected a column with a scalar data type, but found a vector of {0}")]
-pub struct NotScalarColumnError(glue::GlueDataType);
-
 /// An error type used when the expected data type was not found.
 ///
 /// The first element of the tuple is the expected data type, and the second
@@ -1129,10 +1162,7 @@ impl Table {
             return exc_info.as_err();
         }
 
-        Ok(Table {
-            handle: handle,
-            exc_info: exc_info,
-        })
+        Ok(Table { handle, exc_info })
     }
 
     /// Open an existing casacore table.
@@ -1234,7 +1264,7 @@ impl Table {
         let mut result: String = "".into();
         let rv = unsafe {
             invoke_table_get_file_name(self.handle, &mut exc_info, |file_name| {
-                result.extend(file_name.chars());
+                result.push_str(&file_name);
             }) as usize
         };
 
@@ -1307,11 +1337,7 @@ impl Table {
         undefined: bool,
     ) -> Result<(), CasacoreError> {
         let ccol_name = glue::StringBridge::from_rust(col_name);
-        let comment = if let Some(comment_) = comment {
-            comment_
-        } else {
-            ""
-        };
+        let comment = comment.unwrap_or_default();
         let ccomment = glue::StringBridge::from_rust(comment);
 
         let rv = unsafe {
@@ -1347,11 +1373,7 @@ impl Table {
         undefined: bool,
     ) -> Result<(), TableError> {
         let cname = glue::StringBridge::from_rust(col_name);
-        let comment = if let Some(comment_) = comment {
-            comment_
-        } else {
-            ""
-        };
+        let comment = comment.unwrap_or_default();
         let ccomment = glue::StringBridge::from_rust(comment);
         let rv = unsafe {
             if let Some(dims_) = dims {
@@ -1672,7 +1694,7 @@ impl Table {
             let mut v = Vec::new();
 
             for d in &dims[..n_dim as usize] {
-                v.push(*d as u64);
+                v.push(*d);
             }
 
             Some(v)
@@ -1725,7 +1747,7 @@ impl Table {
         }
 
         if is_scalar == 0 || is_fixed_shape == 0 || n_dim != 0 {
-            return Err(TableError::NotScalarColumnError(data_type).into());
+            return Err(TableError::NotScalarColumnError(data_type));
         }
 
         if data_type != T::DATA_TYPE {
@@ -1799,15 +1821,14 @@ impl Table {
         }
 
         let result = if data_type != glue::GlueDataType::TpString {
-            let mut result =
-                T::casatables_alloc(&dims[..n_dim as usize]).map_err(|e| TableError::from(e))?;
+            let mut result = T::casatables_alloc(&dims[..n_dim as usize])?;
 
             let rv = unsafe {
                 glue::table_get_cell(
                     self.handle,
                     &ccol_name,
                     row,
-                    result.casatables_as_mut_buf() as _,
+                    result.casatables_uninit_as_mut_ptr() as _,
                     &mut self.exc_info,
                 )
             };
@@ -1816,7 +1837,7 @@ impl Table {
                 return self.exc_info.as_err();
             }
 
-            result
+            unsafe { T::casatables_assume_init(result) }
         } else {
             let mut value = None;
 
@@ -1897,7 +1918,7 @@ impl Table {
             }
 
             unsafe {
-                result.set_len(n_items as usize);
+                result.set_len(n_items);
             }
         } else {
             let rv = unsafe {
@@ -2059,9 +2080,7 @@ impl Table {
         let mut row = TableRow { handle, exc_info };
 
         for row_number in 0..self.n_rows() {
-            if unsafe { glue::table_row_read(row.handle, row_number as u64, &mut row.exc_info) }
-                != 0
-            {
+            if unsafe { glue::table_row_read(row.handle, row_number, &mut row.exc_info) } != 0 {
                 return row.exc_info.as_err();
             }
 
@@ -2087,15 +2106,10 @@ impl Table {
             return exc_info.as_err();
         }
 
-        let mut row = TableRow {
-            handle: handle,
-            exc_info: exc_info,
-        };
+        let mut row = TableRow { handle, exc_info };
 
         for row_number in row_range {
-            if unsafe { glue::table_row_read(row.handle, row_number as u64, &mut row.exc_info) }
-                != 0
-            {
+            if unsafe { glue::table_row_read(row.handle, row_number, &mut row.exc_info) } != 0 {
                 return row.exc_info.as_err();
             }
 
@@ -2117,15 +2131,10 @@ impl Table {
             return exc_info.as_err();
         }
 
-        let mut row = TableRow {
-            handle: handle,
-            exc_info: exc_info,
-        };
+        let mut row = TableRow { handle, exc_info };
 
         for &row_number in rows {
-            if unsafe { glue::table_row_read(row.handle, row_number as u64, &mut row.exc_info) }
-                != 0
-            {
+            if unsafe { glue::table_row_read(row.handle, row_number, &mut row.exc_info) } != 0 {
                 return row.exc_info.as_err();
             }
 
@@ -2291,7 +2300,7 @@ impl TableRow {
                 glue::table_row_get_cell(
                     self.handle,
                     &ccol_name,
-                    result.casatables_as_mut_buf() as _,
+                    result.casatables_uninit_as_mut_ptr() as _,
                     &mut self.exc_info,
                 )
             };
@@ -2300,7 +2309,7 @@ impl TableRow {
                 return self.exc_info.as_err();
             }
 
-            result
+            unsafe { T::casatables_assume_init(result) }
         };
 
         Ok(result)
@@ -2589,7 +2598,7 @@ impl TableRecord {
                 glue::tablerec_get_field(
                     self.handle,
                     &ccol_name,
-                    result.casatables_as_mut_buf() as _,
+                    result.casatables_uninit_as_mut_ptr() as _,
                     &mut self.exc_info,
                 )
             };
@@ -2598,7 +2607,7 @@ impl TableRecord {
                 return self.exc_info.as_err();
             }
 
-            result
+            unsafe { T::casatables_assume_init(result) }
         };
 
         Ok(result)
@@ -2699,15 +2708,24 @@ impl Debug for TableRecord {
 impl CasaDataType for TableRecord {
     const DATA_TYPE: glue::GlueDataType = glue::GlueDataType::TpRecord;
 
-    fn casatables_alloc(_shape: &[u64]) -> Result<Self, TableError> {
+    // Quasi-hack: In this framework, the "maybe uninit" form of the data is
+    // never truly uninitialized; it's still a valid, allocated record structure
+    // pointer. It just hasn't been populated yet. So it's OK for this to be a
+    // passthrough type. In a certain sense it would be a bit more appropriate
+    // to special-case this type in all of the generic functions as appropriate,
+    // but we still are passing through a pointer, so we can reuse the generic
+    // machinery.
+    type MaybeUninit = Self;
+
+    fn casatables_alloc(_shape: &[u64]) -> Result<Self::MaybeUninit, TableError> {
         TableRecord::new()
     }
 
-    fn casatables_as_buf(&self) -> *const () {
-        self.handle as _
+    unsafe fn casatables_assume_init(buf: Self::MaybeUninit) -> Self {
+        buf
     }
 
-    fn casatables_as_mut_buf(&mut self) -> *mut () {
+    fn casatables_as_buf(&self) -> *const () {
         self.handle as _
     }
 
@@ -2717,6 +2735,12 @@ impl CasaDataType for TableRecord {
 
     fn casatables_tablerec_pass_through_out(s: &Self) -> TableRecord {
         s.to_owned()
+    }
+}
+
+impl UninitedCasaData for TableRecord {
+    fn casatables_uninit_as_mut_ptr(&mut self) -> *mut () {
+        self.handle as _
     }
 }
 
@@ -2756,7 +2780,7 @@ mod tests {
 
         let mut table_desc = TableDesc::new("TEST", TableDescCreateMode::TDM_SCRATCH).unwrap();
         table_desc
-            .add_scalar_column(GlueDataType::TpUInt, &col_name, None, false, false)
+            .add_scalar_column(GlueDataType::TpUInt, col_name, None, false, false)
             .unwrap();
 
         let mut table = Table::new(table_path, table_desc, 123, TableCreateMode::New).unwrap();
@@ -2764,7 +2788,7 @@ mod tests {
         assert_eq!(table.n_rows(), 123);
         assert_eq!(table.n_columns(), 1);
 
-        let column_info = table.get_col_desc(&col_name).unwrap();
+        let column_info = table.get_col_desc(col_name).unwrap();
         assert_eq!(column_info.data_type(), GlueDataType::TpUInt);
         assert_eq!(column_info.name(), col_name);
         assert!(column_info.is_scalar());
@@ -2779,7 +2803,7 @@ mod tests {
 
         let mut table_desc = TableDesc::new("TEST", TableDescCreateMode::TDM_SCRATCH).unwrap();
         table_desc
-            .add_scalar_column(GlueDataType::TpString, &col_name, None, false, false)
+            .add_scalar_column(GlueDataType::TpString, col_name, None, false, false)
             .unwrap();
 
         let mut table = Table::new(table_path, table_desc, 123, TableCreateMode::New).unwrap();
@@ -2787,7 +2811,7 @@ mod tests {
         assert_eq!(table.n_rows(), 123);
         assert_eq!(table.n_columns(), 1);
 
-        let column_info = table.get_col_desc(&col_name).unwrap();
+        let column_info = table.get_col_desc(col_name).unwrap();
         assert_eq!(column_info.data_type(), GlueDataType::TpString);
         assert_eq!(column_info.name(), col_name);
         assert!(column_info.is_scalar());
@@ -2801,6 +2825,7 @@ mod tests {
         // touch the file
         OpenOptions::new()
             .create(true)
+            .truncate(true)
             .write(true)
             .open(table_path.clone())
             .unwrap();
@@ -2809,7 +2834,7 @@ mod tests {
 
         let mut table_desc = TableDesc::new("TEST", TableDescCreateMode::TDM_SCRATCH).unwrap();
         table_desc
-            .add_scalar_column(GlueDataType::TpString, &col_name, None, false, false)
+            .add_scalar_column(GlueDataType::TpString, col_name, None, false, false)
             .unwrap();
 
         // NewNoReplace should fail if table exists.
@@ -2830,7 +2855,7 @@ mod tests {
         table_desc
             .add_array_column(
                 GlueDataType::TpString,
-                &col_name,
+                col_name,
                 None,
                 Some(&[1, 2, 3]),
                 false,
@@ -2843,7 +2868,7 @@ mod tests {
         assert_eq!(table.n_rows(), 123);
         assert_eq!(table.n_columns(), 1);
 
-        let column_info = table.get_col_desc(&col_name).unwrap();
+        let column_info = table.get_col_desc(col_name).unwrap();
         assert_eq!(column_info.data_type(), GlueDataType::TpString);
         assert_eq!(column_info.name(), col_name);
         assert!(!column_info.is_scalar());
@@ -2860,7 +2885,7 @@ mod tests {
 
         let mut table_desc = TableDesc::new("TEST", TableDescCreateMode::TDM_SCRATCH).unwrap();
         table_desc
-            .add_array_column(GlueDataType::TpString, &col_name, None, None, false, false)
+            .add_array_column(GlueDataType::TpString, col_name, None, None, false, false)
             .unwrap();
 
         let mut table = Table::new(table_path, table_desc, 123, TableCreateMode::New).unwrap();
@@ -2868,7 +2893,7 @@ mod tests {
         assert_eq!(table.n_rows(), 123);
         assert_eq!(table.n_columns(), 1);
 
-        let column_info = table.get_col_desc(&col_name).unwrap();
+        let column_info = table.get_col_desc(col_name).unwrap();
         assert_eq!(column_info.data_type(), GlueDataType::TpString);
         assert_eq!(column_info.name(), col_name);
         assert!(!column_info.is_scalar());

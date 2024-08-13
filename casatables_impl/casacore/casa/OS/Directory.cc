@@ -60,6 +60,7 @@
 #include <casacore/casa/Arrays/Slice.h>
 #include <casacore/casa/Arrays/ArrayMath.h>
 #include <casacore/casa/Exceptions/Error.h>
+#include <casacore/casa/Utilities/Assert.h>
 
 #include <casacore/casa/stdexcept.h>
 #include <unistd.h>                 // needed for rmdir, unlink
@@ -301,7 +302,11 @@ void Directory::copy (const Path& target, Bool overwrite,
     String command("cp -r '");
     command += itsFile.path().expandedName() + "' '" +
                targetName.expandedName() + "'";
-    AlwaysAssert (system(command.chars()) == 0, AipsError);
+    int result = system(command.chars());
+    if(result != 0) {
+      throw AipsError("Executing cp command returned an error. Command was: "
+		      + command);
+    }
     // Give write permission to user if needed.
     if (setUserWritePermission) {
 #if defined(__hpux__) || defined(AIPS_IRIX)
@@ -310,7 +315,10 @@ void Directory::copy (const Path& target, Bool overwrite,
 	command = "chmod -Rf u+w '";
 #endif
 	command += targetName.expandedName() + "'";
-	AlwaysAssert (system(command.chars()) == 0, AipsError);
+	int result = system(command.chars());
+	if(result != 0)
+	  throw AipsError("Executing chmod command returned an error. Command was: "
+			  + command);	  
     }
 #endif
 }

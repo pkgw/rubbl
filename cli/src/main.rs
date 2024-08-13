@@ -150,7 +150,7 @@ fn do_show(matches: &ArgMatches, nbe: &mut dyn NotificationBackend) -> Result<i3
 
         Some(("version-doi", _)) => {
             // For releases, this will be rewritten to the real DOI:
-            let doi = "10.5281/zenodo.7563020";
+            let doi = "10.5281/zenodo.13315460";
 
             if doi.starts_with("xx.") {
                 rn_warning!(

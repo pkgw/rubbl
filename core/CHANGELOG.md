@@ -1,3 +1,13 @@
+# rubbl_core 0.5.0 (2024-08-13)
+
+- Update to require [ndarray] 0.16 (#393, @pkgw). If your code uses ndarray
+  directly, you should make sure to update the version requirement in your
+  `Cargo.toml` files correspondingly.
+- Various internal cleanups.
+
+[ndarray]: https://github.com/rust-ndarray/ndarray
+
+
 # rubbl_core 0.4.0 (2023-01-23)
 
 - Start using the more modern `anyhow` and `thiserror` crates for error

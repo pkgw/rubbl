@@ -1,3 +1,13 @@
+# rubbl_casatables_impl 0.4.35000 (2024-08-13)
+
+- Update to casacore 3.5.0! Among other benefits, this should allow this crate
+  to be used on a broader range of platforms. (#345, #389, @d3v-null, @pkgw)
+- Address various compile warnings, either by fixing them (if possible) or
+  silencing them (for CASA code that we can't control). (#390, #394, @d3v-null,
+  @pkgw)
+
+
+
 # rubbl_casatables_impl 0.3.31101 (2023-01-23)
 
 - Bump minimum version of the `cc` build dependency to 1.0.42 (#220, @cjordan)

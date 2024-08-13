@@ -19,20 +19,20 @@
         "orcid": "0000-0002-1220-2940"
       }
     ],
-    "description": "Rubbl is an exploratory set of basic libraries aimed at allowing astrophysical software, especially astronomy data processing software, to be written in the Rust. Learn more at <a href=\"https://github.com/pkgw/rubbl/\">the Rubbl repository</a>.",
+    "description": "Rubbl is an exploratory set of basic libraries aimed at allowing astrophysical software, especially astronomy data processing software, to be written in the Rust language. Learn more at <a href=\"https://github.com/pkgw/rubbl/\">the Rubbl repository</a>.",
     "keywords": [
       "astronomy",
       "rust"
     ],
     "language": "eng",
     "license": "MIT",
-    "publication_date": "2023-01-23",
-    "title": "rubbl 0.3.0",
+    "publication_date": "2024-08-13",
+    "title": "rubbl 0.3.1",
     "upload_type": "software",
-    "version": "0.3.0"
+    "version": "0.3.1"
   },
   "conceptdoi": "10.5281/zenodo.7563019",
-  "record_id": "7563020",
-  "doi": "10.5281/zenodo.7563020",
-  "bucket_link": "https://zenodo.org/api/files/df8a9fb2-dfd6-46d0-8973-863bf6ae1f59"
+  "record_id": "13315460",
+  "doi": "10.5281/zenodo.13315460",
+  "bucket_link": "https://zenodo.org/api/files/736ca491-8169-42e7-a34d-0d9f1e26087d"
 }

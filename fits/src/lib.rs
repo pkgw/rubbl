@@ -246,7 +246,8 @@ impl<R: Read> FitsDecoder<R> {
     /// Get the next item in the FITS stream.
     ///
     /// Returns Ok(None) at an expected EOF.
-    pub fn next<'a>(&'a mut self) -> Result<Option<LowLevelFitsItem<'a>>, FitsError> {
+    #[allow(clippy::should_implement_trait)]
+    pub fn next(&mut self) -> Result<Option<LowLevelFitsItem<'_>>, FitsError> {
         if self.offset == 2880 {
             if !self.inner.eof_read_exact::<FitsError>(&mut self.buf)? {
                 if self.state != DecoderState::NewHdu && self.state != DecoderState::SpecialRecords
@@ -331,7 +332,7 @@ impl<R: Read> FitsDecoder<R> {
             } else if &record[..NAXIS_MARKER.len()] == NAXIS_MARKER {
                 let naxis = parse_fixed_int(record)?;
 
-                if naxis < 0 || naxis > 999 {
+                if !(0..=999).contains(&naxis) {
                     return Err(FitsError::BadNaxisValue(naxis));
                 }
 
@@ -364,9 +365,9 @@ impl<R: Read> FitsDecoder<R> {
                 self.gcount = n as usize;
             } else if record == END_MARKER {
                 let group_size = if self.hdu_num == 0 && self.primary_seen_groups {
-                    self.pcount + self.naxis.iter().skip(1).fold(1, |p, n| p * n) as isize
+                    self.pcount + self.naxis.iter().skip(1).product::<usize>() as isize
                 } else {
-                    self.pcount + self.naxis.iter().fold(1, |p, n| p * n) as isize
+                    self.pcount + self.naxis.iter().product::<usize>() as isize
                 };
 
                 if group_size < 0 {
@@ -525,7 +526,7 @@ impl<R: Read + Seek> FitsParser<R> {
 
             let mut kind = HduKind::PrimaryArray;
 
-            if hdus.len() == 0 {
+            if hdus.is_empty() {
                 if &buf[..FITS_MARKER.len()] != FITS_MARKER {
                     return Err(FitsError::InvalidFormat);
                 }
@@ -583,7 +584,7 @@ impl<R: Read + Seek> FitsParser<R> {
                 parse_fixed_int(record)?
             };
 
-            if naxis_value < 0 || naxis_value > 999 {
+            if !(0..=999).contains(&naxis_value) {
                 return Err(FitsError::BadNaxisValue(naxis_value));
             }
 
@@ -592,7 +593,7 @@ impl<R: Read + Seek> FitsParser<R> {
             // From here on out we have to read dynamically.
 
             let mut buf_offset = 240;
-            let mut seen_groups = hdus.len() > 0; // non-primary HDUs all have PCOUNT and GCOUNT.
+            let mut seen_groups = !hdus.is_empty(); // non-primary HDUs all have PCOUNT and GCOUNT.
             let mut pcount = 0;
             let mut gcount = 1;
             let mut n_header_records = 3; // SIMPLE/XTENSION; BITPIX; NAXIS
@@ -633,7 +634,7 @@ impl<R: Read + Seek> FitsParser<R> {
 
             // OK, we're at the END record.
 
-            let extname = if hdus.len() == 0 {
+            let extname = if hdus.is_empty() {
                 "".to_owned()
             } else {
                 match extname {
@@ -644,11 +645,11 @@ impl<R: Read + Seek> FitsParser<R> {
                 }
             };
 
-            if seen_groups && hdus.len() == 0 {
+            if seen_groups && hdus.is_empty() {
                 naxis.remove(0); // dummy 0 value when primary HDU is random-groups
             }
 
-            let group_size = pcount + naxis.iter().fold(1, |p, n| p * n) as isize;
+            let group_size = pcount + naxis.iter().product::<usize>() as isize;
 
             if group_size < 0 {
                 return Err(FitsError::NegativeGroupSize);
@@ -656,7 +657,7 @@ impl<R: Read + Seek> FitsParser<R> {
 
             let data_size = bitpix.n_bytes() * gcount * group_size as usize;
 
-            if hdus.len() == 0 {
+            if hdus.is_empty() {
                 kind = if data_size == 0 {
                     HduKind::PrimaryNoData
                 } else if seen_groups {
@@ -667,14 +668,14 @@ impl<R: Read + Seek> FitsParser<R> {
             }
 
             hdus.push(ParsedHdu {
-                kind: kind,
+                kind,
                 name: extname,
                 header_offset: hdu_header_offset,
-                n_header_records: n_header_records,
-                bitpix: bitpix,
-                pcount: pcount,
-                gcount: gcount,
-                naxis: naxis,
+                n_header_records,
+                bitpix,
+                pcount,
+                gcount,
+                naxis,
             });
 
             // If there's more stuff in the file, skip up to the next HDU
@@ -690,9 +691,9 @@ impl<R: Read + Seek> FitsParser<R> {
         }
 
         Ok(Self {
-            inner: inner,
-            hdus: hdus,
-            special_record_size: special_record_size,
+            inner,
+            hdus,
+            special_record_size,
         })
     }
 
@@ -866,7 +867,7 @@ fn parse_fixed_string(record: &[u8]) -> Result<String, FitsFormatError> {
     for i in 0..69 {
         let c = record[i + 11];
 
-        if c < 0x20 || c > 0x7E {
+        if !(0x20..=0x7E).contains(&c) {
             return Err(FitsFormatError::IllegalAscii);
         }
 

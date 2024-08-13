@@ -49,8 +49,8 @@ impl UvVariable {
     fn new(ty: Type, name: &str, number: u8) -> Self {
         UvVariable {
             name: name.to_owned(),
-            number: number,
-            ty: ty,
+            number,
+            ty,
             n_vals: -1,
             data: Vec::new(),
             just_updated: false,
@@ -99,9 +99,9 @@ impl Decoder {
         let vislen = ds.get("vislen").require_found()?.read_scalar::<i64>()?;
         let mut vars = Vec::new();
         let mut vars_by_name = HashMap::new();
-        let mut var_num = 0u8;
 
-        for maybe_line in ds.get("vartable").require_found()?.into_lines()? {
+        for (var_num, maybe_line) in (ds.get("vartable").require_found()?.into_lines()?).enumerate()
+        {
             let line = maybe_line?;
 
             if line.len() < 3 {
@@ -121,27 +121,25 @@ impl Decoder {
             let ty = Type::try_from_abbrev(pieces[0])?;
             let name = pieces[1];
 
-            vars.push(UvVariable::new(ty, name, var_num));
+            vars.push(UvVariable::new(ty, name, var_num as u8));
 
             // TODO: check for duplicates
-            vars_by_name.insert(name.to_owned(), var_num);
+            vars_by_name.insert(name.to_owned(), var_num as u8);
 
             if var_num == 255 {
                 return Err(MiriadFormatError::Generic(
                     "too many UV variables".to_string(),
                 ));
             }
-
-            var_num += 1;
         }
 
         let stream = ds.get("visdata").require_found()?.into_byte_stream()?;
 
         Ok(Decoder {
             eff_vislen: vislen as u64 - 4, // this is always too big
-            vars: vars,
-            vars_by_name: vars_by_name,
-            stream: stream,
+            vars,
+            vars_by_name,
+            stream,
         })
     }
 
@@ -156,6 +154,7 @@ impl Decoder {
     }
 
     /// Returns Ok(false) on EOF, Ok(true) if there are more data.
+    #[allow(clippy::should_implement_trait)]
     pub fn next(&mut self) -> Result<bool, MiriadFormatError> {
         let mut keep_going = true;
         let mut header_buf = [0u8; 4];
@@ -237,7 +236,7 @@ impl Decoder {
         Ok(true)
     }
 
-    pub fn variables<'a>(&'a self) -> UvVariablesIterator<'a> {
+    pub fn variables(&self) -> UvVariablesIterator<'_> {
         UvVariablesIterator(self.vars.iter())
     }
 
@@ -511,12 +510,12 @@ impl Reader {
         };
 
         Ok(Reader {
-            obstype: obstype,
+            obstype,
             ncorr: ncorr as u64,
             nwcorr: nwcorr as u64,
-            decoder: decoder,
-            flags: flags,
-            wflags: wflags,
+            decoder,
+            flags,
+            wflags,
         })
     }
 }
@@ -554,9 +553,9 @@ impl Encoder {
 
         Ok(Encoder {
             eff_vislen: 0,
-            vars: vars,
-            vars_by_name: vars_by_name,
-            stream: stream,
+            vars,
+            vars_by_name,
+            stream,
             tot_nschan: 0,
             tot_nwchan: 0,
             ncorr: 0,
@@ -579,7 +578,7 @@ impl Encoder {
         const SIZE: u8 = 0;
         const DATA: u8 = 1;
 
-        if var.data.len() == 0 {
+        if var.data.is_empty() {
             return Err(MiriadFormatError::Generic(format!(
                 "may not write zero-size array for variable \"{}\"",
                 var.name
@@ -628,7 +627,7 @@ impl Encoder {
             )))?;
         let var = &mut self.vars[*num as usize];
 
-        if values.len() == 0 {
+        if values.is_empty() {
             return Err(MiriadFormatError::Generic(format!(
                 "may not write zero-size array for variable \"{}\"",
                 name
@@ -695,7 +694,7 @@ impl Encoder {
         const EOR: &[u8] = &[0u8, 0u8, 2u8, 0u8];
         self.stream.align_to(8)?;
         self.flushed = false;
-        Ok(self.stream.write_all(EOR)?)
+        self.stream.write_all(EOR)
     }
 
     /// Returns the number of visdata bytes written thus far.
