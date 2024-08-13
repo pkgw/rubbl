@@ -84,60 +84,60 @@ impl Type {
     }
 
     pub fn abbrev_char(&self) -> char {
-        match self {
-            &Type::Binary => '?',
-            &Type::Int8 => 'b',
-            &Type::Int16 => 'j',
-            &Type::Int32 => 'i',
-            &Type::Int64 => 'l',
-            &Type::Float32 => 'r',
-            &Type::Float64 => 'd',
-            &Type::Complex64 => 'c',
-            &Type::Text => 'a',
+        match *self {
+            Type::Binary => '?',
+            Type::Int8 => 'b',
+            Type::Int16 => 'j',
+            Type::Int32 => 'i',
+            Type::Int64 => 'l',
+            Type::Float32 => 'r',
+            Type::Float64 => 'd',
+            Type::Complex64 => 'c',
+            Type::Text => 'a',
         }
     }
 
     pub fn size(&self) -> usize {
-        match self {
-            &Type::Binary => 1,
-            &Type::Int8 => 1,
-            &Type::Int16 => 2,
-            &Type::Int32 => 4,
-            &Type::Int64 => 8,
-            &Type::Float32 => 4,
-            &Type::Float64 => 8,
-            &Type::Complex64 => 8,
-            &Type::Text => 1,
+        match *self {
+            Type::Binary => 1,
+            Type::Int8 => 1,
+            Type::Int16 => 2,
+            Type::Int32 => 4,
+            Type::Int64 => 8,
+            Type::Float32 => 4,
+            Type::Float64 => 8,
+            Type::Complex64 => 8,
+            Type::Text => 1,
         }
     }
 
     pub fn alignment(&self) -> u8 {
-        match self {
-            &Type::Binary => 1,
-            &Type::Int8 => 1,
-            &Type::Int16 => 2,
-            &Type::Int32 => 4,
-            &Type::Int64 => 8,
-            &Type::Float32 => 4,
-            &Type::Float64 => 8,
-            &Type::Complex64 => 4, // this is the only surprising one
-            &Type::Text => 1,
+        match *self {
+            Type::Binary => 1,
+            Type::Int8 => 1,
+            Type::Int16 => 2,
+            Type::Int32 => 4,
+            Type::Int64 => 8,
+            Type::Float32 => 4,
+            Type::Float64 => 8,
+            Type::Complex64 => 4, // this is the only surprising one
+            Type::Text => 1,
         }
     }
 }
 
 impl std::fmt::Display for Type {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        f.pad(match self {
-            &Type::Binary => "binary",
-            &Type::Int8 => "int8",
-            &Type::Int16 => "int16",
-            &Type::Int32 => "int32",
-            &Type::Int64 => "int64",
-            &Type::Float32 => "float32",
-            &Type::Float64 => "float64",
-            &Type::Complex64 => "complex64",
-            &Type::Text => "text",
+        f.pad(match *self {
+            Type::Binary => "binary",
+            Type::Int8 => "int8",
+            Type::Int16 => "int16",
+            Type::Int32 => "int32",
+            Type::Int64 => "int64",
+            Type::Float32 => "float32",
+            Type::Float64 => "float64",
+            Type::Complex64 => "complex64",
+            Type::Text => "text",
         })
     }
 }
@@ -439,7 +439,7 @@ impl MiriadMappedType for f32 {
         vec.clear();
 
         for chunk in buf.chunks(4) {
-            vec.push(BigEndian::read_f32(&chunk));
+            vec.push(BigEndian::read_f32(chunk));
         }
     }
 
@@ -479,7 +479,7 @@ impl MiriadMappedType for f64 {
         vec.clear();
 
         for chunk in buf.chunks(8) {
-            vec.push(BigEndian::read_f64(&chunk));
+            vec.push(BigEndian::read_f64(chunk));
         }
     }
 
@@ -599,15 +599,15 @@ impl std::fmt::Display for AnyMiriadValue {
         }
 
         match self {
-            &AnyMiriadValue::Binary(ref vec) => do_vec(f, vec),
-            &AnyMiriadValue::Int8(ref vec) => do_vec(f, vec),
-            &AnyMiriadValue::Int16(ref vec) => do_vec(f, vec),
-            &AnyMiriadValue::Int32(ref vec) => do_vec(f, vec),
-            &AnyMiriadValue::Int64(ref vec) => do_vec(f, vec),
-            &AnyMiriadValue::Float32(ref vec) => do_vec(f, vec),
-            &AnyMiriadValue::Float64(ref vec) => do_vec(f, vec),
-            &AnyMiriadValue::Complex64(ref vec) => do_vec(f, vec),
-            &AnyMiriadValue::Text(ref s) => {
+            AnyMiriadValue::Binary(vec) => do_vec(f, vec),
+            AnyMiriadValue::Int8(vec) => do_vec(f, vec),
+            AnyMiriadValue::Int16(vec) => do_vec(f, vec),
+            AnyMiriadValue::Int32(vec) => do_vec(f, vec),
+            AnyMiriadValue::Int64(vec) => do_vec(f, vec),
+            AnyMiriadValue::Float32(vec) => do_vec(f, vec),
+            AnyMiriadValue::Float64(vec) => do_vec(f, vec),
+            AnyMiriadValue::Complex64(vec) => do_vec(f, vec),
+            AnyMiriadValue::Text(s) => {
                 f.write_str("\"")?;
                 f.write_str(s)?;
                 f.write_str("\"")
@@ -631,7 +631,7 @@ struct InternalItemInfo {
 impl InternalItemInfo {
     pub fn new_small(ty: Type, data: Vec<u8>) -> Self {
         InternalItemInfo {
-            ty: ty,
+            ty,
             storage: ItemStorage::Small(data),
         }
     }
@@ -680,7 +680,7 @@ impl InternalItemInfo {
         }
 
         Ok(InternalItemInfo {
-            ty: ty,
+            ty,
             storage: ItemStorage::Large((data_size / ty.size() as u64) as usize),
         })
     }
@@ -881,10 +881,10 @@ impl DataSet {
                     )));
                 }
 
-                let mut data = Vec::with_capacity(n_bytes);
-                unsafe {
-                    data.set_len(n_bytes);
-                } // better way?
+                // This initializes the buffer to zeros just to overwrite them
+                // with header data, but this is semi-famously necessary; see e.g.
+                // https://github.com/rust-lang/rfcs/blob/master/text/2930-read-buf.md#summary
+                let mut data = vec![0; n_bytes];
                 header.read_exact(&mut data[..])?;
 
                 (ty, data)
@@ -925,7 +925,7 @@ impl DataSet {
         Ok(())
     }
 
-    pub fn item_names<'a>(&'a mut self) -> Result<DataSetItemNamesIterator<'a>, MiriadFormatError> {
+    pub fn item_names(&mut self) -> Result<DataSetItemNamesIterator<'_>, MiriadFormatError> {
         if !self.large_items_scanned {
             self.scan_large_items()?;
             self.large_items_scanned = true;
@@ -934,7 +934,7 @@ impl DataSet {
         Ok(DataSetItemNamesIterator::new(self))
     }
 
-    pub fn items<'a>(&'a mut self) -> Result<DataSetItemsIterator<'a>, MiriadFormatError> {
+    pub fn items(&mut self) -> Result<DataSetItemsIterator<'_>, MiriadFormatError> {
         if !self.large_items_scanned {
             self.scan_large_items()?;
             self.large_items_scanned = true;
@@ -1028,7 +1028,7 @@ impl DataSet {
         self.items.insert(
             name.to_owned(),
             InternalItemInfo {
-                ty: ty,
+                ty,
                 storage: ItemStorage::Large(0), // XXX size unknown
             },
         );
@@ -1179,7 +1179,7 @@ pub struct DataSetItemsIterator<'a> {
 impl<'a> DataSetItemsIterator<'a> {
     pub fn new(dset: &'a DataSet) -> Self {
         DataSetItemsIterator {
-            dset: dset,
+            dset,
             inner: dset.items.iter(),
         }
     }

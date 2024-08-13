@@ -75,7 +75,7 @@ pub struct AntPol {
 
 impl AntPol {
     pub fn new(ant: AntNum, pol: FeedPol) -> Self {
-        AntPol { ant: ant, pol: pol }
+        AntPol { ant, pol }
     }
 }
 
@@ -92,11 +92,7 @@ pub struct BasePol {
 
 impl BasePol {
     pub fn new(ant1: AntNum, ant2: AntNum, pol: VisPol) -> Self {
-        BasePol {
-            ant1: ant1,
-            ant2: ant2,
-            pol: pol,
-        }
+        BasePol { ant1, ant2, pol }
     }
 
     pub fn antpol1(self) -> AntPol {

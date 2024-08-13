@@ -58,6 +58,7 @@ namespace casacore { //# NAMESPACE CASACORE - BEGIN
 // <ul>
 //   <li> MVBaseline() creates point at origin (0,0,0)
 //   <li> MVBaseline(MVBaseline) creates a copy
+//   <li> MVBaseline(MVPosition) creates (x,y,z) from the given position
 //   <li> MVBaseline(Double, Double, Double) creates (x,y,z) with
 //		specified values (assuming meters)
 //   <li> MVBaseline(Quantity length,Double, Double) creates a MVBaseline assuming
@@ -113,7 +114,7 @@ public:
   //# Constructors
   // Default constructor generates a (0,0,0) Baseline
   MVBaseline();
-  // Copy constructor
+  // Creates from an MVPosition
   MVBaseline(const MVPosition &other);
   // Creates a specified vector
   MVBaseline(Double in0, Double in1, Double in2);
@@ -144,14 +145,6 @@ public:
   // <group>
   MVBaseline(const MVPosition &pos, const MVPosition &base);
   // </group>
-
-  MVBaseline(const MVBaseline&) = default;
-
-  // Copy assignment
-  MVBaseline &operator=(const MVBaseline &other);
-  
-  // Destructor
-  ~MVBaseline();
   
   //# Operators
   // Multiplication defined as in-product
@@ -181,7 +174,6 @@ public:
   
   // Tell me your type
   // <group>
-  virtual uInt type() const;
   static void assure(const MeasValue &in);
   // </group>
   

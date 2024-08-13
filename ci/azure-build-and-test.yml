@@ -6,13 +6,13 @@ parameters:
   default:
 
   - name: linux_stable
-    vmImage: ubuntu-20.04
+    vmImage: ubuntu-22.04
     vars:
       TARGET: x86_64-unknown-linux-gnu
       TOOLCHAIN: stable
 
   - name: linux_beta
-    vmImage: ubuntu-20.04
+    vmImage: ubuntu-22.04
     vars:
       TARGET: x86_64-unknown-linux-gnu
       TOOLCHAIN: beta
@@ -23,7 +23,32 @@ parameters:
       TARGET: x86_64-apple-darwin
       TOOLCHAIN: stable
 
+- name: crossBuilds
+  type: object
+  default:
+  - name: aarch64_unknown_linux_gnu
+    vmImage: ubuntu-latest
+    params: {}
+    vars:
+      TARGET: aarch64-unknown-linux-gnu
+
+  - name: powerpc64le_unknown_linux_gnu
+    vmImage: ubuntu-latest
+    params: {}
+    vars:
+      TARGET: powerpc64le-unknown-linux-gnu
+
+  - name: aarch64_apple_darwin
+    vmImage: macos-latest
+    params:
+      hostTriple: "x86_64-apple-darwin"
+      qemuAndTest: false
+    vars:
+      TARGET: aarch64-apple-darwin
+
 jobs:
+
+# Main builds
 - ${{ each build in parameters.builds }}:
   - job: ${{ format('build_{0}', build.name) }}
     pool:
@@ -45,3 +70,43 @@ jobs:
 
     variables:
       ${{ insert }}: ${{ build.vars }}
+
+# Cross builds
+- ${{ each build in parameters.crossBuilds }}:
+  - job: ${{ format('cross_{0}', build.name) }}
+    pool:
+      vmImage: ${{ build.vmImage }}
+    steps:
+    - template: azure-cross-build.yml
+      parameters:
+        ${{ insert }}: ${{ build.params }}
+    variables:
+      ${{ insert }}: ${{ build.vars }}
+
+
+# rustfmt check
+- job: rustfmt
+  pool:
+    vmImage: ubuntu-latest
+  steps:
+  - template: azure-job-setup.yml
+  - bash: rustup component add rustfmt
+    displayName: "Install rustfmt"
+  - bash: cargo fmt --all -- --check
+    displayName: "Check rustfmt (cargo)"
+  variables:
+    TOOLCHAIN: stable
+
+
+# clippy check
+- job: clippy
+  pool:
+    vmImage: ubuntu-latest
+  steps:
+  - template: azure-job-setup.yml
+  - bash: rustup component add clippy
+    displayName: "Install clippy"
+  - bash: cargo clippy --all --all-targets --all-features -- --deny warnings
+    displayName: "Check clippy (cargo)"
+  variables:
+    TOOLCHAIN: stable

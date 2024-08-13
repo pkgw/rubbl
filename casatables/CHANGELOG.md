@@ -1,10 +1,28 @@
 # rc: minor bump
 
+- Update to casacore 3.5.0! Among other benefits, this should allow this crate
+  to be used on a broader range of platforms. (#345, #389, @d3v-null, @pkgw)
+- Update to [ndarray] 0.16 (#393, @pkgw). If your code uses ndarray directly,
+  you should make sure to update the version requirement in your `Cargo.toml`
+  files correspondingly. Making this change required fixing some internal APIs
+  that worked with uninitialized data. These changes propagate into the public
+  `CasaDataType` trait, but downstream users should not be implementing that
+  trait themselves, so it shouldn’t break existing code.
+- Remove `casatables::NotScalarColumnError` (#390, @pkgw). This was superseded
+  in the transition to thiserror/anyhow (#220) but not removed. Newer code
+  should use the enum variant `TableError::NotScalarColumnError`.
+- Various internal cleanups.
+
+[ndarray]: https://github.com/rust-ndarray/ndarray
+
+
+# rubbl_casatables 0.7.0 (2023-01-23)
+
 - Start using the more modern `anyhow` and `thiserror` crates for error
   handling, rather than `failure` (#220, @cjordan).
 - Require and add docs for all public APIs (#184, @pkgw).
 - Clean up dependency specifications, and document them somewhat more clearly
-  (#220, @cjordan, @pkgw). 
+  (#220, @cjordan, @pkgw).
 - Update to the 4.x series of clap, when it's used (#198, @pkgw).
 
 # rubbl_casatables 0.6.0 (2021-11-16)
@@ -14,7 +32,7 @@ functionality needed to create Measurement Sets from scratch using the Rubbl
 framework!
 
 - Add the ability to work with keyword records for tables and individual columns
-  (#181, @derwentx). 
+  (#181, @derwentx).
 - Implement `Debug` for `Table` (#181, @derwentx).
 - Add `Table::file_name` (#181, @derwentx).
 - Expand and improve the API documentation (#181, @derwentx).

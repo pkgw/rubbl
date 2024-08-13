@@ -229,8 +229,7 @@ impl UvInflator {
 
         // Probably a better way to do this all, but I'm distracted.
 
-        let mut mir_to_hera = Vec::with_capacity(NANTS);
-        mir_to_hera.resize(NANTS, 0);
+        let mut mir_to_hera = vec![0; NANTS];
 
         for hera in 0..NANTS {
             mir_to_hera[hera_to_mir[hera]] = hera;
@@ -280,7 +279,7 @@ impl UvInflator {
             out_antnames.push_str(&format!(", fake{}", idx));
         }
 
-        out_antnames.push_str("]");
+        out_antnames.push(']');
         out_uv.write_scalar("antnames", out_antnames)?;
 
         // antpos has shape [3,in_nants_slots], where the nants axis is the one
@@ -346,7 +345,7 @@ impl UvInflator {
             out_st_type.push_str(st_types[out_ant_to_in[idx]]);
         }
 
-        out_st_type.push_str("]");
+        out_st_type.push(']');
         out_uv.write_scalar("st_type", out_st_type)?;
 
         // We're finally ready to actually copy the data! XXX hardcoding single
@@ -399,9 +398,9 @@ impl UvInflator {
             bl,
             Record {
                 update_time: time,
-                coord: coord,
-                corr: corr,
-                flags: flags,
+                coord,
+                corr,
+                flags,
             },
         );
 
@@ -412,34 +411,34 @@ impl UvInflator {
         coord_buf.resize(3, 0.);
 
         Ok(UvInflator {
-            pb: pb,
+            pb,
 
-            in_uv: in_uv,
-            in_flags: in_flags,
+            in_uv,
+            in_flags,
             in_n: 1, // one read already
 
-            out_ds: out_ds,
-            out_uv: out_uv,
-            out_flags: out_flags,
+            out_ds,
+            out_uv,
+            out_flags,
             out_n: 0,
 
-            hera_to_mir: hera_to_mir,
-            mir_to_hera: mir_to_hera,
-            out_ant_to_in: out_ant_to_in,
-            time: time,
-            lst: lst,
-            ra: ra,
+            hera_to_mir,
+            mir_to_hera,
+            out_ant_to_in,
+            time,
+            lst,
+            ra,
 
-            records: records,
-            time_var: time_var,
-            lst_var: lst_var,
-            ra_var: ra_var,
-            baseline_var: baseline_var,
-            coord_var: coord_var,
-            corr_var: corr_var,
+            records,
+            time_var,
+            lst_var,
+            ra_var,
+            baseline_var,
+            coord_var,
+            corr_var,
             corr_buf: Vec::new(),
-            coord_buf: coord_buf,
-            flag_buf: flag_buf,
+            coord_buf,
+            flag_buf,
         })
     }
 
@@ -465,19 +464,16 @@ impl UvInflator {
 
             let bl = decode_baseline(self.in_uv.get_scalar(self.baseline_var))?;
 
-            if !self.records.contains_key(&bl) {
+            if let std::collections::hash_map::Entry::Vacant(e) = self.records.entry(bl) {
                 let mut flags = Vec::new();
                 flags.resize(self.flag_buf.len(), false);
 
-                self.records.insert(
-                    bl,
-                    Record {
-                        update_time: new_time,
-                        coord: Vec::new(),
-                        corr: Vec::new(),
-                        flags: flags,
-                    },
-                );
+                e.insert(Record {
+                    update_time: new_time,
+                    coord: Vec::new(),
+                    corr: Vec::new(),
+                    flags,
+                });
             }
 
             let rec = self.records.get_mut(&bl).unwrap();
@@ -506,9 +502,7 @@ impl UvInflator {
                 let mut conj = false;
 
                 if src_mir_1 > src_mir_2 {
-                    let tmp = src_mir_1;
-                    src_mir_1 = src_mir_2;
-                    src_mir_2 = tmp;
+                    std::mem::swap(&mut src_mir_1, &mut src_mir_2);
                     conj = true;
                 }
 

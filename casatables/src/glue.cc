@@ -22,75 +22,76 @@
 
 #include <string.h>
 
-extern "C" {
-    void
-    handle_exception(ExcInfo &exc)
-    {
-        try {
-            throw;
-        } catch (const std::exception &e) {
-            strncpy(exc.message, e.what(), sizeof(exc.message) - 1);
-            exc.message[sizeof(exc.message) - 1] = '\0';
-        } catch (...) {
-            strcpy(exc.message, "unidentifiable C++ exception occurred");
-        }
+
+static void
+handle_exception(ExcInfo &exc)
+{
+    try {
+        throw;
+    } catch (const std::exception &e) {
+        strncpy(exc.message, e.what(), sizeof(exc.message) - 1);
+        exc.message[sizeof(exc.message) - 1] = '\0';
+    } catch (...) {
+        strcpy(exc.message, "unidentifiable C++ exception occurred");
     }
+}
 
-    // StringBridge
+static casacore::String
+bridge_string(const StringBridge &input)
+{
+    casacore::String result((const char *) input.data, input.n_bytes);
+    return result;
+}
 
-    casacore::String
-    bridge_string(const StringBridge &input)
-    {
-        casacore::String result((const char *) input.data, input.n_bytes);
-        return result;
-    }
+// To pass strings from C++ to Rust, we *always* have to copy the data. The
+// only time that could safely avoid copying would be if we were absolutely
+// sure that the string buffer pointed into a data structure whose lifetime
+// was longer than that of the calling Rust code ... but even then, we would
+// need to have Rust-side code to check that the C++ string data are valid
+// UTF-8, so that there's always a potential need to allocate anyway. The
+// only efficient way that I can come up with that will work 100% reliably
+// is to pass a Rust callback into the C++ code, so that the Rust code can
+// do its memory allocation inside a stack frame where we are *sure* that
+// the C++ pointer is still valid. So, that's what this function enforces.
+static void
+unbridge_string(const casacore::String &input, StringBridgeCallback callback, void *ctxt)
+{
+    StringBridge bridge;
+    bridge.data = input.data();
+    bridge.n_bytes = input.length();
+    callback(&bridge, ctxt);
+}
 
-    // To pass strings from C++ to Rust, we *always* have to copy the data. The
-    // only time that could safely avoid copying would be if we were absolutely
-    // sure that the string buffer pointed into a data structure whose lifetime
-    // was longer than that of the calling Rust code ... but even then, we would
-    // need to have Rust-side code to check that the C++ string data are valid
-    // UTF-8, so that there's always a potential need to allocate anyway. The
-    // only efficient way that I can come up with that will work 100% reliably
-    // is to pass a Rust callback into the C++ code, so that the Rust code can
-    // do its memory allocation inside a stack frame where we are *sure* that
-    // the C++ pointer is still valid. So, that's what this function enforces.
-    void
-    unbridge_string(const casacore::String &input, StringBridgeCallback callback, void *ctxt)
-    {
-        StringBridge bridge;
-        bridge.data = input.data();
-        bridge.n_bytes = input.length();
+static casacore::Array<casacore::String>
+bridge_string_array(const StringBridge *source, const casacore::IPosition &shape)
+{
+    casacore::Array<casacore::String> array(shape);
+    unsigned int n = 0;
+    casacore::Array<casacore::String>::iterator end = array.end();
+
+    for (casacore::Array<casacore::String>::iterator i = array.begin(); i != end; i++, n++)
+        *i = bridge_string(source[n]);
+
+    return array;
+}
+
+static void
+unbridge_string_array(const casacore::Array<casacore::String> &input,
+                        StringBridgeCallback callback, void *ctxt)
+{
+    StringBridge bridge;
+    casacore::Array<casacore::String>::const_iterator end = input.end();
+
+    for (casacore::Array<casacore::String>::const_iterator i = input.begin(); i != end; i++) {
+        bridge.data = (*i).data();
+        bridge.n_bytes = (*i).length();
         callback(&bridge, ctxt);
     }
+}
 
-    casacore::Array<casacore::String>
-    bridge_string_array(const StringBridge *source, const casacore::IPosition &shape)
-    {
-        casacore::Array<casacore::String> array(shape);
-        unsigned int n = 0;
-        casacore::Array<casacore::String>::iterator end = array.end();
+// The API helpers that we export to the Rust layer
 
-        for (casacore::Array<casacore::String>::iterator i = array.begin(); i != end; i++, n++)
-            *i = bridge_string(source[n]);
-
-        return array;
-    }
-
-    void
-    unbridge_string_array(const casacore::Array<casacore::String> &input,
-                          StringBridgeCallback callback, void *ctxt)
-    {
-        StringBridge bridge;
-        casacore::Array<casacore::String>::const_iterator end = input.end();
-
-        for (casacore::Array<casacore::String>::const_iterator i = input.begin(); i != end; i++) {
-            bridge.data = (*i).data();
-            bridge.n_bytes = (*i).length();
-            callback(&bridge, ctxt);
-        }
-    }
-
+extern "C" {
     // Data Types
 
     int
@@ -136,7 +137,7 @@ extern "C" {
 
     // Table Records
 
-    GlueTableRecord * 
+    GlueTableRecord *
     tablerec_create(ExcInfo &exc)
     {
         try {
@@ -148,7 +149,7 @@ extern "C" {
         }
     }
 
-    GlueTableRecord * 
+    GlueTableRecord *
     tablerec_copy(const GlueTableRecord& other, ExcInfo &exc)
     {
         try {
@@ -160,7 +161,7 @@ extern "C" {
         }
     }
 
-    bool 
+    bool
     tablerec_eq(const GlueTableRecord& rec, const GlueTableRecord& other)
     {
         return rec.description() == other.description();
@@ -168,9 +169,9 @@ extern "C" {
 
     int
     tablerec_get_keyword_info(
-        const GlueTableRecord &rec, 
-        KeywordInfoCallback callback, 
-        void *ctxt, 
+        const GlueTableRecord &rec,
+        KeywordInfoCallback callback,
+        void *ctxt,
         ExcInfo &exc
     )
     {
@@ -197,9 +198,9 @@ extern "C" {
 
     int
     tablerec_get_keyword_repr(
-        const GlueTableRecord &rec, 
-        KeywordReprCallback callback, 
-        void *ctxt, 
+        const GlueTableRecord &rec,
+        KeywordReprCallback callback,
+        void *ctxt,
         ExcInfo &exc
     )
     {
@@ -242,11 +243,11 @@ extern "C" {
 
     int
     tablerec_get_field_info(
-        const GlueTableRecord &rec, 
+        const GlueTableRecord &rec,
         const StringBridge &col_name,
-        GlueDataType *data_type, 
+        GlueDataType *data_type,
         int *n_dim,
-        unsigned long dims[8], 
+        unsigned long dims[8],
         ExcInfo &exc
     )
     {
@@ -278,12 +279,12 @@ extern "C" {
         }
         return 0;
     }
-    
+
     int
     tablerec_get_field(
-        const GlueTableRecord &rec, 
+        const GlueTableRecord &rec,
         const StringBridge &field_name,
-        void *data, 
+        void *data,
         ExcInfo &exc
     )
     {
@@ -298,7 +299,7 @@ extern "C" {
                 throw std::runtime_error(s);
             }
 
-            if (!desc.isScalar(field_num)) {                
+            if (!desc.isScalar(field_num)) {
                 shape = rec.shape(field_num);
             }
 
@@ -346,7 +347,7 @@ extern "C" {
 #undef SCALAR_CASE
 #undef VECTOR_CASE
 
-            case casacore::TpRecord: 
+            case casacore::TpRecord:
                 throw std::runtime_error("you must use tablerec_get_field_subrecord() for record fields");
             case casacore::TpString:
                 throw std::runtime_error("you must use tablerec_get_field_string() for string fields");
@@ -365,9 +366,9 @@ extern "C" {
 
     int
     tablerec_get_field_string(
-        const GlueTableRecord &rec, 
+        const GlueTableRecord &rec,
         const StringBridge &col_name,
-        StringBridgeCallback callback, 
+        StringBridgeCallback callback,
         void *ctxt,
         ExcInfo &exc
     )
@@ -397,7 +398,7 @@ extern "C" {
 
     int
     tablerec_get_field_string_array(
-        const GlueTableRecord &rec, 
+        const GlueTableRecord &rec,
         const StringBridge &col_name,
         StringBridgeCallback callback,
         void *ctxt,
@@ -431,7 +432,7 @@ extern "C" {
 
     int
     tablerec_get_field_subrecord(
-        const GlueTableRecord &rec, 
+        const GlueTableRecord &rec,
         const StringBridge &col_name,
         GlueTableRecord &sub_rec,
         ExcInfo &exc
@@ -448,7 +449,7 @@ extern "C" {
 
             if (rec.type(field_num) != casacore::TpRecord)
                 throw std::runtime_error("row cell must be of TpRecord type");
-            
+
             sub_rec.assign(rec.subRecord( field_num ));
         } catch (...) {
             handle_exception(exc);
@@ -460,12 +461,12 @@ extern "C" {
 
     int
     tablerec_put_field(
-        GlueTableRecord &rec, 
+        GlueTableRecord &rec,
         const StringBridge &field_name,
-        const GlueDataType data_type, 
+        const GlueDataType data_type,
         const unsigned long n_dims,
-        const unsigned long *dims, 
-        void *data, 
+        const unsigned long *dims,
+        void *data,
         ExcInfo &exc
     )
     {
@@ -801,11 +802,11 @@ extern "C" {
     int
     tabledesc_put_keyword(
         GlueTableDesc &table_desc,
-        const StringBridge &kw_name, 
-        const GlueDataType data_type, 
+        const StringBridge &kw_name,
+        const GlueDataType data_type,
         const unsigned long n_dims,
-        const unsigned long *dims, 
-        void *data, 
+        const unsigned long *dims,
+        void *data,
         ExcInfo &exc
     )
     {
@@ -838,7 +839,7 @@ extern "C" {
         }
     }
 
-    const GlueTableRecord * 
+    const GlueTableRecord *
     tabledesc_get_keywords( GlueTableDesc &table_desc, ExcInfo &exc )
     {
         try {
@@ -849,7 +850,7 @@ extern "C" {
         }
     }
 
-    const GlueTableRecord * 
+    const GlueTableRecord *
     tabledesc_get_column_keywords( GlueTableDesc &table_desc, const StringBridge &col_name, ExcInfo &exc )
     {
         try {
@@ -864,7 +865,7 @@ extern "C" {
 
     GlueTable *
     table_create(
-        const StringBridge &path, 
+        const StringBridge &path,
         // Description of columns and keys in the table
         GlueTableDesc &table_desc,
         // number of rows
@@ -873,7 +874,6 @@ extern "C" {
         ExcInfo &exc
     )
     {
-
         // TOOD: expose this as an argument?
         // the enum is either either `Plain` or `Memory`
         GlueTable::TableType type = GlueTable::TableType::Plain;
@@ -955,7 +955,7 @@ extern "C" {
     int
     table_get_file_name(
         const GlueTable &table,
-        StringBridgeCallback callback, 
+        StringBridgeCallback callback,
         void *ctxt,
         ExcInfo &exc
     )
@@ -999,11 +999,11 @@ extern "C" {
 
     // TODO: dedup this from tabledesc_add_scalar_column
 
-    int 
+    int
     table_add_scalar_column(
-        GlueTable &table, 
+        GlueTable &table,
         GlueDataType data_type,
-        const StringBridge &col_name, 
+        const StringBridge &col_name,
         const StringBridge &comment,
         // see casacore::ColumnDesc::Direct
         bool direct,
@@ -1197,9 +1197,9 @@ extern "C" {
 
     int
     table_get_keyword_info(
-        const GlueTable &table, 
-        KeywordInfoCallback callback, 
-        void *ctxt, 
+        const GlueTable &table,
+        KeywordInfoCallback callback,
+        void *ctxt,
         ExcInfo &exc
     )
     {
@@ -1213,10 +1213,10 @@ extern "C" {
 
     int
     table_get_column_keyword_info(
-        const GlueTable &table, 
-        const StringBridge &col_name, 
+        const GlueTable &table,
+        const StringBridge &col_name,
         KeywordInfoCallback callback,
-        void *ctxt, 
+        void *ctxt,
         ExcInfo &exc
     )
     {
@@ -1229,9 +1229,9 @@ extern "C" {
         }
     }
 
-    const GlueTableRecord* 
+    const GlueTableRecord*
     table_get_keywords(
-        GlueTable &table, 
+        GlueTable &table,
         ExcInfo &exc
     )
     {
@@ -1243,10 +1243,10 @@ extern "C" {
         }
     }
 
-    const GlueTableRecord* 
+    const GlueTableRecord*
     table_get_column_keywords(
-        GlueTable &table, 
-        const StringBridge &col_name, 
+        GlueTable &table,
+        const StringBridge &col_name,
         ExcInfo &exc
     )
     {
@@ -1261,12 +1261,12 @@ extern "C" {
 
     int
     table_put_keyword(
-        GlueTable &table, 
-        const StringBridge &kw_name, 
-        const GlueDataType data_type, 
+        GlueTable &table,
+        const StringBridge &kw_name,
+        const GlueDataType data_type,
         const unsigned long n_dims,
-        const unsigned long *dims, 
-        void *data, 
+        const unsigned long *dims,
+        void *data,
         ExcInfo &exc
     )
     {
@@ -1282,11 +1282,11 @@ extern "C" {
 
     int
     table_put_column_keyword(
-        GlueTable &table, 
-        const StringBridge &col_name, 
-        const StringBridge &kw_name, 
-        const GlueDataType data_type, 
-        const unsigned long n_dims, const unsigned long *dims, void *data, 
+        GlueTable &table,
+        const StringBridge &col_name,
+        const StringBridge &kw_name,
+        const GlueDataType data_type,
+        const unsigned long n_dims, const unsigned long *dims, void *data,
         ExcInfo &exc
     )
     {
@@ -1368,7 +1368,8 @@ extern "C" {
                                  void *data, ExcInfo &exc)
     {
         try {
-            const casacore::ColumnDesc &desc = casacore::TableColumn(table, bridge_string(col_name)).columnDesc();
+            const casacore::TableColumn col = casacore::TableColumn(table, bridge_string(col_name));
+            const casacore::ColumnDesc &desc = col.columnDesc();
             casacore::IPosition shape(1, table.nrow());
 
             switch (desc.dataType()) {

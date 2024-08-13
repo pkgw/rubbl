@@ -15,19 +15,22 @@ Interfacing to the CASA table format within the Rubbl framework.
 
 [package.metadata.internal_dep_versions]
 rubbl_casatables_impl = "thiscommit:2021-11-04:9Lgzrtq"
-rubbl_core = "thiscommit:2020-12-15:EiT8sa0a"
+rubbl_core = "thiscommit:2024-08-12:zKS3IWN"
 
 [dependencies]
-ndarray = "0.15.0"
-rubbl_casatables_impl = { version ="0.0.0-dev.0", path = "../casatables_impl" }
-rubbl_core = { version ="0.0.0-dev.0", path = "../core" }
-thiserror = "1.0.7"
+ndarray = "0.16.0"
+never = "0.1.0"
+rubbl_casatables_impl = { version = "0.0.0-dev.0", path = "../casatables_impl" }
+rubbl_core = { version = "0.0.0-dev.0", path = "../core" }
+thiserror = "1.0.63"
 
 [build-dependencies]
-cc = { version = "1.0.42", features = ["parallel"] }
+cc = { version = "1.1.10", features = ["parallel"] }
 
 [dev-dependencies]
-anyhow = "1.0.0"
-clap = { version = "4.0.26", features = ["cargo"] }
-rubbl_core = { version ="0.0.0-dev.0", path = "../core", features = ["notifications"] }
-tempfile = "3.3.0"
+anyhow = "1.0.86"
+clap = { version = "4.5.15", features = ["cargo"] }
+rubbl_core = { version = "0.0.0-dev.0", path = "../core", features = [
+    "notifications",
+] }
+tempfile = "3.12.0"

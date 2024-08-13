@@ -31,6 +31,7 @@
 
 //# Includes
 #include <casacore/casa/aips.h>
+#include <casacore/casa/Arrays/ArrayFwd.h>
 #include <casacore/tables/Tables/BaseColumn.h>
 #include <casacore/tables/Tables/ColumnSet.h>
 #include <casacore/tables/Tables/TableRecord.h>
@@ -43,7 +44,6 @@ class BaseColumnDesc;
 class DataManager;
 class DataManagerColumn;
 class AipsIO;
-template<class T> class Array;
 class IPosition;
 
 
@@ -104,7 +104,7 @@ public:
     // </group>
 
     // Get nr of rows in the column.
-    uInt nrow() const;
+    rownr_t nrow() const;
 
     // Define the shape of all arrays in the column.
     virtual void setShapeColumn (const IPosition& shape);

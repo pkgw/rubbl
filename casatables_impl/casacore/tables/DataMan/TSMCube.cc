@@ -40,6 +40,7 @@
 #include <casacore/casa/BasicMath/Math.h>
 #include <casacore/casa/IO/BucketCache.h>
 #include <casacore/casa/IO/AipsIO.h>
+#include <casacore/casa/IO/ArrayIO.h>
 #include <casacore/casa/OS/Conversion.h>
 #include <casacore/casa/OS/HostInfo.h>
 #include <casacore/casa/string.h>                           // for memcpy
@@ -285,7 +286,7 @@ void TSMCube::putObject (AipsIO& ios)
     flushCache();
     // If the offset is small enough, write it as an old style file,
     // so older software can still read it.
-    Bool vers1 = (fileOffset_p <= 2u*1024u*1024u*1024u);
+    Bool vers1 = (fileOffset_p < 2u*1024u*1024u*1024u);
     if (vers1) {
         ios << 1;                          // version 1
     } else {
@@ -408,7 +409,7 @@ Bool TSMCube::isExtensible() const
 }
 
 
-void TSMCube::extend (uInt nr, const Record& coordValues,
+void TSMCube::extend (uInt64 nr, const Record& coordValues,
                       const TSMColumn* lastCoordColumn)
 {
     if (!extensible_p) {
@@ -700,7 +701,7 @@ void TSMCube::deleteCallBack (void* owner, char* buffer)
 }
 char* TSMCube::initCallBack (void* owner)
 {
-    uInt size = ((TSMCube*)owner)->localTileLength();
+    uInt64 size = ((TSMCube*)owner)->localTileLength();
     char* buffer = new char[size];
     memset(buffer, 0, size);
     return buffer;
@@ -770,9 +771,9 @@ void TSMCube::setCacheSize (const IPosition& sliceShape,
 
 // Calculate the cache size for the given slice and access path.
 uInt TSMCube::calcCacheSize (const IPosition& sliceShape,
-			     const IPosition& windowStart,
-			     const IPosition& windowLength,
-			     const IPosition& axisPath) const
+                             const IPosition& windowStart,
+                             const IPosition& windowLength,
+                             const IPosition& axisPath) const
 {
     return calcCacheSize (cubeShape_p, tileShape_p, extensible_p,
                           sliceShape, windowStart, windowLength, axisPath,
@@ -783,9 +784,9 @@ uInt TSMCube::calcCacheSize (const IPosition& cubeShape,
                              const IPosition& tileShape,
                              Bool extensible,
                              const IPosition& sliceShape,
-			     const IPosition& windowStart,
-			     const IPosition& windowLength,
-			     const IPosition& axisPath,
+                             const IPosition& windowStart,
+                             const IPosition& windowLength,
+                             const IPosition& axisPath,
                              uInt maxCacheSize, uInt bucketSize)
 {
     uInt nrdim = cubeShape.nelements();
@@ -871,7 +872,7 @@ uInt TSMCube::calcCacheSize (const IPosition& cubeShape,
 	// of the remaining axes.
 	// If a tile is reused, we also need to take into account
 	// the number of tiles needed for the slice.
-        uInt cacheSize = 1;
+        uInt64 cacheSize = 1;
         for (i=0; i<nr; i++) {
             cacheSize *= ntiles(i);
         }

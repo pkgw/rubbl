@@ -165,6 +165,12 @@ impl NoopNotificationBackend {
     }
 }
 
+impl Default for NoopNotificationBackend {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl NotificationBackend for NoopNotificationBackend {
     fn notify(&mut self, _kind: NotificationKind, _args: Arguments, _err: Option<Error>) {}
 }
@@ -195,6 +201,12 @@ impl BufferingNotificationBackend {
         for info in self.buf.drain(..) {
             other.notify(info.kind, format_args!("{}", info.text), info.err);
         }
+    }
+}
+
+impl Default for BufferingNotificationBackend {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

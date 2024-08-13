@@ -1,4 +1,27 @@
-# rc: minor bump
+# rc: micro bump
+
+There are no code changes in this release of the Rubbl CLI. There are, however,
+significant version bumps of the dependencies `anyhow`, `clap`, and `thiserror`.
+
+Associated with this release is a new version of the `rubbl_casatables` crate,
+which updates to casacore 3.5.0 and should add the ability to build on a wider
+variety of platforms.
+
+In tandem, the Rubbl crates have updated to [ndarray] 0.16 (#393, @pkgw). If
+your code uses ndarray directly, you should make sure to update the version
+requirement in your `Cargo.toml` files correspondingly.
+
+[ndarray]: https://github.com/rust-ndarray/ndarray
+
+Besides the above, the other crates in the Rubbl family have also received new
+maintenance releases, but mostly don't contain comparably noteworthy changes.
+
+The DOI of this release is [xx.xxxx/dev-build.rubbl.version][vdoi].
+
+[vdoi]: https://doi.org/xx.xxxx/dev-build.rubbl.version
+
+
+# rubbl 0.3.0 (2023-01-23)
 
 This release of Rubbl adds automated DOI deposition to Zenodo (#230, @pkgw)!
 This means that releases of the Rubbl suite are now formally published and
@@ -13,9 +36,9 @@ Other changes include:
   (#220, @cjordan, @pkgw).
 - Update to the 4.x series of clap, when it's used (#198, @pkgw).
 
-The DOI of this release is [xx.xxxx/dev-build.rubbl.version][vdoi].
+The DOI of this release is [10.5281/zenodo.7563020][vdoi].
 
-[vdoi]: https://doi.org/xx.xxxx/dev-build.rubbl.version
+[vdoi]: https://doi.org/10.5281/zenodo.7563020
 
 
 # rubbl 0.2.2 (2020-12-15)

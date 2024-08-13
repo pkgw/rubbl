@@ -43,15 +43,12 @@
 #include <casacore/casa/Utilities/GenSort.h>
 #include <casacore/casa/Utilities/Notice.h>
 #include <casacore/casa/Utilities/PtrHolder.h>
-#include <casacore/casa/Utilities/RegSequence.h>
 #include <casacore/casa/Utilities/Regex.h>
-#include <casacore/casa/Utilities/Register.h>
 #include <casacore/casa/Utilities/Sequence.h>
 #include <casacore/casa/Utilities/Sort.h>
 #include <casacore/casa/Utilities/SortError.h>
 #include <casacore/casa/BasicSL/String.h>
 #include <casacore/casa/Utilities/ValType.h>
-#include <casacore/casa/Utilities/cregex.h>
 
 namespace casacore { //# NAMESPACE CASACORE - BEGIN
 
@@ -112,24 +109,19 @@ namespace casacore { //# NAMESPACE CASACORE - BEGIN
 //    enumerates the possible data types in the table system.
 //   <li> <linkto class=ValType>ValType</linkto>
 //    describes the data types and their undefined values.
-//   <li> <linkto group="Register.h#register">Register</linkto>
-//    provides runtime typing information.
 //  </ul> 
 //  <li> Other utilities
 //  <ul>
 //   <li> <linkto class=DynBuffer>Dynamic buffers</linkto>
 //    are used to store data in dynamically allocated buffers.
 //   <li> <linkto class=Regex>Regular expressions</linkto>
-//    are supported by the class <linkto class=Regex>Regex</linkto> and
-//    the associated function library 
-//    <a href="Utilities/cregex.html">cregex</a>.
+//    are supported by the class <linkto class=Regex>Regex</linkto>
+//    built on top of std::regex.
 //   <li> <linkto class=Sequence>Sequences</linkto>
 //    of any datatype can be derived from the base class
 //    <linkto class=Sequence>Sequence</linkto>.
 //    One example is <linkto class=uIntSequence>uIntSequence</linkto>,
-//    provided for general use. Another is
-//    <linkto class=RegSequence>RegSequence</linkto>, exclusively used
-//    by the <linkto group="Register.h#register">Register</linkto> function.
+//    provided for general use. 
 //   <li> <linkto class=String>Strings</linkto>.
 //    for the C++ preprocessor
 //  </ul>

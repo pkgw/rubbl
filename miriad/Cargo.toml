@@ -20,13 +20,13 @@ rubbl_core = "thiscommit:2020-12-15:aishi6Ae"
 rubbl_visdata = "thiscommit:2020-12-15:Rohw0kei"
 
 [dependencies]
-byteorder = "1.4.0"
+byteorder = "1.5.0"
 openat = "0.1.7"
 rubbl_core = { path = "../core", version ="0.0.0-dev.0"}
 rubbl_visdata = { path = "../visdata", version ="0.0.0-dev.0"}
-thiserror = "1.0.7"
+thiserror = "1.0.63"
 
 [dev-dependencies]
-anyhow = "1.0.0"
-clap = { version = "4.0.26", features = ["cargo"] }
-pbr = "1.0.0"
+anyhow = "1.0.86"
+clap = { version = "4.5.15", features = ["cargo"] }
+pbr = "1.1.1"

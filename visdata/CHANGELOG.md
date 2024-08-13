@@ -1,4 +1,10 @@
-# rc: minor bump
+# rc: micro bump
+
+- Various internal cleanups, including dependency updates and fixes for Clippy
+  complaints (#394, @pkgw). Functionality should not be changed.
+
+
+# rubbl_visdata 0.3.0 (2023-01-23)
 
 - Start using the more modern `anyhow` and `thiserror` crates for error
   handling, rather than `failure` (#220, @cjordan).

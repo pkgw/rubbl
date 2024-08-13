@@ -29,14 +29,13 @@
 #include <casacore/casa/Quanta/MVBaseline.h>
 #include <casacore/casa/Utilities/Assert.h>
 #include <casacore/casa/BasicMath/Math.h>
-#include <casacore/casa/Utilities/Register.h>
 #include <casacore/casa/Quanta/RotMatrix.h>
 #include <casacore/casa/Quanta/UnitVal.h>
 #include <casacore/casa/Quanta/QMath.h>
 #include <casacore/casa/Quanta/QLogical.h>
 #include <casacore/casa/Arrays/ArrayMath.h>
 #include <casacore/casa/Arrays/ArrayLogical.h>
-#include <casacore/casa/Arrays/ArrayIO.h>
+#include <casacore/casa/IO/ArrayIO.h>
 
 namespace casacore { //# NAMESPACE CASACORE - BEGIN
 
@@ -45,13 +44,6 @@ namespace casacore { //# NAMESPACE CASACORE - BEGIN
 //# Constructors
 MVBaseline::MVBaseline() :
   MVPosition() {}
-
-MVBaseline &MVBaseline::operator=(const MVBaseline &other) {
-  if (this != &other) {
-    xyz = other.xyz;
-  }
-  return *this;
-}
 
 MVBaseline::MVBaseline(Double in) :
   MVPosition(in) {}
@@ -93,9 +85,6 @@ MVBaseline::MVBaseline(const MVPosition &pos, const MVPosition &base) :
 
 MVBaseline::MVBaseline(const MVPosition &other) :
   MVPosition(other) {}
-
-//# Destructor
-MVBaseline::~MVBaseline() {}
 
 //# Operators
 Bool MVBaseline::
@@ -162,12 +151,8 @@ MVBaseline MVBaseline::operator-(const MVBaseline &right) const{
 
 //# Member functions
 
-uInt MVBaseline::type() const {
-  return Register(static_cast<MVBaseline *>(0));
-}
-
 void MVBaseline::assure(const MeasValue &in) {
-  if (in.type() != Register(static_cast<MVBaseline *>(0))) {
+  if (!dynamic_cast<const MVBaseline*>(&in)) {
     throw(AipsError("Illegal MeasValue type argument: MVBaseline"));
   }
 }
