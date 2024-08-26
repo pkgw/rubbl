@@ -15,4 +15,4 @@ A bundle of C++ code that can read the CASA table format for Rubbl.
 links = "casa"
 
 [build-dependencies]
-cc = { version = "1.1.13", features = ["parallel"] }
+cc = { version = "1.1.14", features = ["parallel"] }
