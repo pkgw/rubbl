@@ -4,7 +4,8 @@
 use std::{env, fs, path::PathBuf};
 
 fn main() {
-    cc::Build::new()
+    let mut builder = cc::Build::new();
+    builder
         .cpp(true)
         .warnings(true)
         .flag_if_supported("-std=c++11")
@@ -16,13 +17,16 @@ fn main() {
         .define("casacore", "rubbl_casacore")
         // Without this, using casa in multiple threads causes segfaults
         .define("USE_THREADS", "1")
-        // Enable interaction with MeasurementSets that have been compressed
-        // using Dysco compression. Value doesn't matter, its mere presence is
-        // enough.
-        .define("HAVE_DYSCO", None)
         .include(".")
-        .files(FILES)
-        .compile("libcasatables_impl.a");
+        .files(FILES);
+    // Enable interaction with MeasurementSets that have been compressed
+    // using Dysco compression. Value doesn't matter, its mere presence is
+    // enough.
+    #[cfg(feature = "dysco")]
+    {
+        builder.define("HAVE_DYSCO", None);
+    }
+    builder.compile("libcasatables_impl.a");
 
     for file in FILES {
         println!("cargo:rerun-if-changed={}", file);
