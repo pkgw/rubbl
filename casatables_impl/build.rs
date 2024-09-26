@@ -17,8 +17,9 @@ fn main() {
         // Without this, using casa in multiple threads causes segfaults
         .define("USE_THREADS", "1")
         // Enable interaction with MeasurementSets that have been compressed
-        // using Dysco compression.
-        .define("HAVE_DYSCO", "1")
+        // using Dysco compression. Value doesn't matter, its mere presence is
+        // enough.
+        .define("HAVE_DYSCO", None)
         .include(".")
         .files(FILES)
         .compile("libcasatables_impl.a");
