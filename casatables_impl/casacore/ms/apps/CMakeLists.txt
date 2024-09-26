@@ -1,0 +1,6 @@
+foreach(prog msselect writems readms)
+    add_executable (${prog}  ${prog}.cc)
+    add_pch_support(${prog})
+    target_link_libraries (${prog} casa_ms ${CASACORE_ARCH_LIBS})
+    install(TARGETS ${prog})
+endforeach(prog msselect)
