@@ -16,6 +16,9 @@ fn main() {
         .define("casacore", "rubbl_casacore")
         // Without this, using casa in multiple threads causes segfaults
         .define("USE_THREADS", "1")
+        // Enable interaction with MeasurementSets that have been compressed
+        // using Dysco compression.
+        .define("HAVE_DYSCO", "1")
         .include(".")
         .files(FILES)
         .compile("libcasatables_impl.a");
@@ -292,6 +295,15 @@ const FILES: &[&str] = &[
     "casacore/tables/DataMan/VirtColEng.cc",
     "casacore/tables/DataMan/VirtScaCol.cc",
     "casacore/tables/DataMan/VirtArrCol.cc",
+    "casacore/tables/Dysco/aftimeblockencoder.cc",
+    "casacore/tables/Dysco/dyscodatacolumn.cc",
+    "casacore/tables/Dysco/dyscostman.cc",
+    "casacore/tables/Dysco/dyscoweightcolumn.cc",
+    "casacore/tables/Dysco/rftimeblockencoder.cc",
+    "casacore/tables/Dysco/rowtimeblockencoder.cc",
+    "casacore/tables/Dysco/stochasticencoder.cc",
+    "casacore/tables/Dysco/threadeddyscocolumn.cc",
+    "casacore/tables/Dysco/weightencoder.cc",
     "casacore/tables/Tables/ArrayColumn_tmpl.cc",
     "casacore/tables/Tables/ArrColDesc_tmpl.cc",
     "casacore/tables/Tables/ArrayColumnBase.cc",
@@ -747,6 +759,27 @@ const HEADERS: &[&str] = &[
     "casacore/tables/DataMan/VSCEngine.tcc",
     "casacore/tables/DataMan/VACEngine.tcc",
     "casacore/tables/DataMan/VACEngine.h",
+    "casacore/tables/Dysco/aftimeblockencoder.h",
+    "casacore/tables/Dysco/bytepacker.h",
+    "casacore/tables/Dysco/dyscodatacolumn.h",
+    "casacore/tables/Dysco/dyscodistribution.h",
+    "casacore/tables/Dysco/dysconormalization.h",
+    "casacore/tables/Dysco/dyscostman.h",
+    "casacore/tables/Dysco/dyscostmancol.h",
+    "casacore/tables/Dysco/dyscostmanerror.h",
+    "casacore/tables/Dysco/dyscoweightcolumn.h",
+    "casacore/tables/Dysco/header.h",
+    "casacore/tables/Dysco/rftimeblockencoder.h",
+    "casacore/tables/Dysco/rowtimeblockencoder.h",
+    "casacore/tables/Dysco/serializable.h",
+    "casacore/tables/Dysco/stochasticencoder.h",
+    "casacore/tables/Dysco/threadeddyscocolumn.h",
+    "casacore/tables/Dysco/threadgroup.h",
+    "casacore/tables/Dysco/timeblockbuffer.h",
+    "casacore/tables/Dysco/timeblockencoder.h",
+    "casacore/tables/Dysco/uvector.h",
+    "casacore/tables/Dysco/weightblockencoder.h",
+    "casacore/tables/Dysco/weightencoder.h",
     "casacore/tables/LogTables.h",
     "casacore/tables/Tables/ArrayColumnFunc.h",
     "casacore/tables/Tables/ArrayColumn.h",
