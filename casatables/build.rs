@@ -32,4 +32,6 @@ fn main() {
     // elimination may cause link issues when we actually try to link
     // executables.
     println!("cargo:rustc-link-lib=static=casatables_impl");
+    println!("cargo:rustc-link-lib=gsl");
+    println!("cargo:rustc-link-lib=gslcblas");
 }
