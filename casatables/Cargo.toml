@@ -34,3 +34,6 @@ rubbl_core = { version = "0.0.0-dev.0", path = "../core", features = [
     "notifications",
 ] }
 tempfile = "3.13.0"
+
+[features]
+dysco = ["rubbl_casatables_impl/dysco"]

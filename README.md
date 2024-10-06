@@ -65,4 +65,4 @@ The bulk of the code is licensed under the MIT License. The `casatables_impl`
 crate contains code copied from
 [casacore](https://github.com/casacore/casacore), which is licensed under the
 GNU Library General Public License version 2, or any subsequent version at your
-discretion.
+discretion. In turn, it contains code copied from [dysco](https://github.com/aroffringa/dysco), which is licensed under the GNU Library General Public Licens version 3.
