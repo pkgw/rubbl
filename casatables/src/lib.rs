@@ -129,6 +129,7 @@ pub trait CasaDataType: Clone + PartialEq + Sized {
     const DATA_TYPE: glue::GlueDataType;
 
     #[cfg(test)]
+    /// Testing assertion.
     fn test_casa_data_size() {
         assert_eq!(
             std::mem::size_of::<Self>() as i32,
