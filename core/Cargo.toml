@@ -25,4 +25,4 @@ ndarray = "0.16.1"
 # ditto:
 num-complex = "0.4.6"
 termcolor = { version = "1.4.1", optional = true }
-thiserror = "1.0.68"
+thiserror = "2.0.0"
