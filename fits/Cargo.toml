@@ -20,7 +20,7 @@ rubbl_visdata = "thiscommit:2020-12-15:Ox8roFai"
 [dependencies]
 rubbl_core = { path = "../core", version ="0.0.0-dev.0"}
 rubbl_visdata = { path = "../visdata", version ="0.0.0-dev.0"}
-thiserror = "2.0.0"
+thiserror = "2.0.3"
 
 [dev-dependencies]
 anyhow = "1.0.93"
