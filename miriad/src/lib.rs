@@ -707,7 +707,7 @@ pub struct Item<'a> {
     info: &'a InternalItemInfo,
 }
 
-impl<'a> Item<'a> {
+impl Item<'_> {
     pub fn name(&self) -> &str {
         self.name
     }
