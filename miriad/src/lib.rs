@@ -418,7 +418,7 @@ impl MiriadMappedType for String {
 
     fn get_miriad_count(values: &[Self]) -> usize {
         assert_eq!(values.len(), 1);
-        values[0].as_bytes().len()
+        values[0].len()
     }
 }
 
