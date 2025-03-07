@@ -33,4 +33,4 @@ clap = { version = "4.5.31", features = ["cargo"] }
 rubbl_core = { version = "0.0.0-dev.0", path = "../core", features = [
     "notifications",
 ] }
-tempfile = "3.17.1"
+tempfile = "3.18.0"
