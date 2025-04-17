@@ -1,5 +1,12 @@
 # rc: micro bump
 
+There are no code changes in this release. There are, however, version bumps of
+the dependencies `anyhow`, `clap`, and `thiserror`. In particular, we are now
+using the 2.x series of `thiserror`.
+
+
+# rubbl_fits 0.3.1 (2024-08-13)
+
 - Various internal cleanups, including dependency updates and fixes for Clippy
   complaints (#394, @pkgw). Functionality should not be changed.
 

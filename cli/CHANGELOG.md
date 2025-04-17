@@ -1,6 +1,13 @@
 # rc: micro bump
 
 There are no code changes in this release of the Rubbl CLI. There are, however,
+version bumps of the dependencies `anyhow`, `clap`, and `thiserror`. In
+particular, we are now using the 2.x series of `thiserror`.
+
+
+# rubbl 0.3.1 (2024-08-13)
+
+There are no code changes in this release of the Rubbl CLI. There are, however,
 significant version bumps of the dependencies `anyhow`, `clap`, and `thiserror`.
 
 Associated with this release is a new version of the `rubbl_casatables` crate,
@@ -16,9 +23,9 @@ requirement in your `Cargo.toml` files correspondingly.
 Besides the above, the other crates in the Rubbl family have also received new
 maintenance releases, but mostly don't contain comparably noteworthy changes.
 
-The DOI of this release is [xx.xxxx/dev-build.rubbl.version][vdoi].
+The DOI of this release is [10.5281/zenodo.13315460][vdoi].
 
-[vdoi]: https://doi.org/xx.xxxx/dev-build.rubbl.version
+[vdoi]: https://doi.org/10.5281/zenodo.13315460
 
 
 # rubbl 0.3.0 (2023-01-23)

@@ -1,4 +1,9 @@
-# rc: force 0.4.35000
+# rc: micro bump
+
+- No code changes; just bump `cc` to 1.2.19.
+
+
+# rubbl_casatables_impl 0.4.35000 (2024-08-13)
 
 - Update to casacore 3.5.0! Among other benefits, this should allow this crate
   to be used on a broader range of platforms. (#345, #389, @d3v-null, @pkgw)

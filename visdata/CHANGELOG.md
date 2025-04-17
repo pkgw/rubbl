@@ -1,5 +1,10 @@
 # rc: micro bump
 
+No code changes; just bumping the `anyhow` version.
+
+
+# rubbl_visdata 0.3.1 (2024-08-13)
+
 - Various internal cleanups, including dependency updates and fixes for Clippy
   complaints (#394, @pkgw). Functionality should not be changed.
 
