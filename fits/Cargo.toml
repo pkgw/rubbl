@@ -3,7 +3,7 @@
 
 [package]
 name = "rubbl_fits"
-version = "0.3.1"
+version = "0.3.2"
 authors = ["Peter Williams <peter@newton.cx>"]
 license = "MIT"
 edition = "2018"
@@ -20,8 +20,8 @@ rubbl_visdata = "thiscommit:2020-12-15:Ox8roFai"
 [dependencies]
 rubbl_core = { path = "../core", version =">=0.2.0,<1"}
 rubbl_visdata = { path = "../visdata", version =">=0.2.0,<1"}
-thiserror = "1.0.63"
+thiserror = "2.0.12"
 
 [dev-dependencies]
-anyhow = "1.0.86"
-clap = { version = "4.5.15", features = ["cargo"] }
+anyhow = "1.0.98"
+clap = { version = "4.5.36", features = ["cargo"] }

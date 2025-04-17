@@ -1,3 +1,8 @@
+# rubbl_visdata 0.3.2 (2025-04-17)
+
+No code changes; just bumping the `anyhow` version.
+
+
 # rubbl_visdata 0.3.1 (2024-08-13)
 
 - Various internal cleanups, including dependency updates and fixes for Clippy

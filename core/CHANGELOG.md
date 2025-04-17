@@ -1,3 +1,10 @@
+# rubbl_core 0.5.1 (2025-04-17)
+
+There are no code changes in this release. There are, however, version bumps of
+the dependencies `anyhow`, `clap`, and `thiserror`. In particular, we are now
+using the 2.x series of `thiserror`.
+
+
 # rubbl_core 0.5.0 (2024-08-13)
 
 - Update to require [ndarray] 0.16 (#393, @pkgw). If your code uses ndarray

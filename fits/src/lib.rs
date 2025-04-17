@@ -681,7 +681,7 @@ impl<R: Read + Seek> FitsParser<R> {
             // If there's more stuff in the file, skip up to the next HDU
             // beginning (or maaaybe "special records").
 
-            hdu_header_offset = cur_offset + (((data_size + 2879) / 2880) * 2880) as u64;
+            hdu_header_offset = cur_offset + (data_size.div_ceil(2880) * 2880) as u64;
 
             if hdu_header_offset == file_size {
                 break;

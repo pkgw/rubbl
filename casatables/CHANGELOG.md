@@ -1,3 +1,13 @@
+# rubbl_casatables 0.9.0 (2025-04-17)
+
+- Mark `TableError` as inexhaustive and add a `UserMessage` variant (#490,
+  @pkgw). This can be useful if you have logic inside a function like
+  `Table::for_each_row` that might yield an application-specific error that
+  can't be sensibly described as one of the pre-existing variants. The
+  inhexaustive marker is technically an API break, but one that is easily
+  fixed if you happened to be matching on `TableErrors` exhaustively.
+
+
 # rubbl_casatables 0.8.0 (2024-08-13)
 
 - Update to casacore 3.5.0! Among other benefits, this should allow this crate

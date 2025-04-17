@@ -1,3 +1,8 @@
+# rubbl_casatables_impl 0.4.35001 (2025-04-17)
+
+- No code changes; just bump `cc` to 1.2.19.
+
+
 # rubbl_casatables_impl 0.4.35000 (2024-08-13)
 
 - Update to casacore 3.5.0! Among other benefits, this should allow this crate

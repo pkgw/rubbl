@@ -3,7 +3,7 @@
 
 [package]
 name = "rubbl_visdata"
-version = "0.3.1"
+version = "0.3.2"
 authors = ["Peter Williams <peter@newton.cx>"]
 license = "MIT"
 edition = "2018"
@@ -17,5 +17,5 @@ Preliminary work on generic data structures for radio interferometric visibility
 rubbl_core = "thiscommit:2020-12-15:Fiequ0wa"
 
 [dependencies]
-anyhow = "1.0.86"
+anyhow = "1.0.98"
 rubbl_core = { path = "../core", version =">=0.2.0,<1"}
