@@ -1059,6 +1059,7 @@ pub struct UnexpectedDataTypeError(glue::GlueDataType, glue::GlueDataType);
 /// An error type capturing all potential problems when interfacing with
 /// [`Table`]s.
 #[derive(Error, Debug)]
+#[non_exhaustive]
 pub enum TableError {
     /// Table paths must be representable as UTF-8 strings.
     #[error("table paths must be representable as UTF-8 strings")]
@@ -1080,6 +1081,15 @@ pub enum TableError {
     /// but do not.
     #[error(transparent)]
     DimensionMismatch(#[from] DimensionMismatchError),
+
+    /// An error type for when a casatables user wants to propagate a simple
+    /// message up the call chain.
+    ///
+    /// This variant can be useful in functions like [`Table::for_each_row`],
+    /// where you might have some custom logic leading to an error that isn't
+    /// easily describable using one of the more specific variants.
+    #[error("{0}")]
+    UserMessage(String),
 }
 
 /// A Rust wrapper for a casacore table.
