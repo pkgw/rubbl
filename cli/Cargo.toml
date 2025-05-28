@@ -18,6 +18,6 @@ rubbl_core = "thiscommit:2020-12-15:re8eeQu5"
 
 [dependencies]
 anyhow = "1.0.98"
-clap = { version = "4.5.38", features = ["cargo"] }
+clap = { version = "4.5.39", features = ["cargo"] }
 rubbl_core = { version ="0.0.0-dev.0", path = "../core" }
 thiserror = "2.0.12"
