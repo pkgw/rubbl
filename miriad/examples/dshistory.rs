@@ -36,6 +36,6 @@ fn main() {
         .expect("cannot open history")
     {
         let line = maybe_line.expect("error reading history");
-        println!("{}", line);
+        println!("{line}");
     }
 }

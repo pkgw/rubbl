@@ -2709,7 +2709,7 @@ impl Debug for TableRecord {
         write!(f, "TableRecord {{ ").unwrap();
         unsafe {
             invoke_tablerec_get_keyword_repr(self.handle, &mut exc_info, |name, type_, repr| {
-                write!(f, "{}:{} = {}, ", name, type_, repr).unwrap();
+                write!(f, "{name}:{type_} = {repr}, ").unwrap();
             })
         };
         write!(f, " }}")
@@ -3279,7 +3279,7 @@ mod tests {
             root_table_path.to_str().unwrap()
         );
 
-        let table_debug = format!("{:?}", root_table);
+        let table_debug = format!("{root_table:?}");
 
         assert!(table_debug.contains(root_table_path.to_str().unwrap()));
     }

@@ -29,7 +29,7 @@ fn main() {
         Err(e) => {
             println!("fatal error while processing {}", path.to_string_lossy());
             for cause in e.chain() {
-                println!("  caused by: {}", cause);
+                println!("  caused by: {cause}");
             }
             1
         }
@@ -47,7 +47,7 @@ fn inner(path: &OsStr) -> Result<i32, anyhow::Error> {
         println!("    bitpix: {:?}", hdu.bitpix());
 
         let (gcount, pcount, naxis) = hdu.shape();
-        println!("    shape: {:?} pcount={} gcount={}", naxis, pcount, gcount);
+        println!("    shape: {naxis:?} pcount={pcount} gcount={gcount}");
     }
 
     Ok(0)

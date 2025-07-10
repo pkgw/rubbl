@@ -49,7 +49,7 @@ fn main() {
                     out_path.to_string_lossy()
                 );
                 for cause in e.chain() {
-                    println!("  caused by: {}", cause);
+                    println!("  caused by: {cause}");
                 }
                 1
             }
@@ -124,7 +124,7 @@ impl UvInflator {
         let dur_secs = dur.subsec_nanos() as f64 * 1e-9 + dur.as_secs() as f64;
 
         inst.pb.finish();
-        println!("elapsed: {:.3} seconds", dur_secs);
+        println!("elapsed: {dur_secs:.3} seconds");
         println!(
             "input: {} records, {:.1} MiB => read {:.3} MiB/s",
             inst.in_n,
@@ -248,8 +248,7 @@ impl UvInflator {
         let mut in_index = 0;
 
         println!(
-            "numbers: {} live antennas in input set; {} fake antennas being added",
-            in_nants_live, n_new
+            "numbers: {in_nants_live} live antennas in input set; {n_new} fake antennas being added"
         );
 
         for _ in 0..n_new {
@@ -276,7 +275,7 @@ impl UvInflator {
         }
 
         for idx in 0..n_new {
-            out_antnames.push_str(&format!(", fake{}", idx));
+            out_antnames.push_str(&format!(", fake{idx}"));
         }
 
         out_antnames.push(']');

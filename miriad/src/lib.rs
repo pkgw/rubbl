@@ -592,7 +592,7 @@ impl std::fmt::Display for AnyMiriadValue {
                     f.write_str(", ")?;
                 }
 
-                f.write_fmt(format_args!("{}", item))?;
+                f.write_fmt(format_args!("{item}"))?;
             }
 
             f.write_str("]")
@@ -876,8 +876,7 @@ impl DataSet {
                 if n_bytes % ty.size() != 0 {
                     // TODO: warn and press on
                     return Err(MiriadFormatError::Generic(format!(
-                        "illegal array size {} for type {:?}",
-                        n_bytes, ty
+                        "illegal array size {n_bytes} for type {ty:?}"
                     )));
                 }
 
