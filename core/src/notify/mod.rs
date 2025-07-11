@@ -214,7 +214,7 @@ impl NotificationBackend for BufferingNotificationBackend {
     fn notify(&mut self, kind: NotificationKind, args: Arguments, err: Option<Error>) {
         self.buf.push(NotificationData {
             kind,
-            text: format!("{}", args),
+            text: format!("{args}"),
             err,
         });
     }

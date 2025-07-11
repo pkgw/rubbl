@@ -622,15 +622,13 @@ impl Encoder {
             .vars_by_name
             .get(name)
             .ok_or(MiriadFormatError::Generic(format!(
-                "target stream does not have variable named \"{}\"",
-                name
+                "target stream does not have variable named \"{name}\""
             )))?;
         let var = &mut self.vars[*num as usize];
 
         if values.is_empty() {
             return Err(MiriadFormatError::Generic(format!(
-                "may not write zero-size array for variable \"{}\"",
-                name
+                "may not write zero-size array for variable \"{name}\""
             )));
         }
 

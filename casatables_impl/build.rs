@@ -21,7 +21,7 @@ fn main() {
         .compile("libcasatables_impl.a");
 
     for file in FILES {
-        println!("cargo:rerun-if-changed={}", file);
+        println!("cargo:rerun-if-changed={file}");
     }
 
     // Install the C++ headers into the output directory so that dependent

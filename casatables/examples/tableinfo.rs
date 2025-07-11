@@ -85,7 +85,7 @@ fn main() {
                 println!("Sub-tables (table-type \"keywords\"):");
 
                 for n in &table_kw_names {
-                    println!("  {}", n);
+                    println!("  {n}");
                 }
             }
 
