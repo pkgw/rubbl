@@ -20,4 +20,4 @@ rubbl_core = "thiscommit:2020-12-15:re8eeQu5"
 anyhow = "1.0.99"
 clap = { version = "4.5.45", features = ["cargo"] }
 rubbl_core = { version ="0.0.0-dev.0", path = "../core" }
-thiserror = "2.0.14"
+thiserror = "2.0.15"
