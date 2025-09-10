@@ -8,6 +8,7 @@
 
 #include <stdexcept>
 #include <casacore/tables/Tables.h>
+#include <casacore/tables/DataMan/TSMOption.h>
 #include <casacore/casa/Containers/ValueHolder.h>
 
 #define CASA_TYPES_ALREADY_DECLARED
@@ -871,18 +872,13 @@ extern "C" {
         // number of rows
         unsigned long n_rows,
         const TableCreateMode mode,
+        bool initialize,
+        TSMOption tsm_opt,
         ExcInfo &exc
     )
     {
-        // TOOD: expose this as an argument?
         // the enum is either either `Plain` or `Memory`
         GlueTable::TableType type = GlueTable::TableType::Plain;
-
-        // TODO: expose this as an argument?
-        // const casacore::TSMOption tsmOption();
-
-        // TODO: expose this as an argument?
-        casacore::Bool initialize = true;
 
         // always use the local endianness
         GlueTable::EndianFormat endian_format = GlueTable::EndianFormat::LocalEndian;
@@ -903,7 +899,17 @@ extern "C" {
                 table_desc,
                 table_option
             );
-            return new GlueTable(newTable, type, n_rows, initialize, endian_format, casacore::TSMOption());
+            casacore::TSMOption::Option opt_enum;
+            switch (tsm_opt) {
+                case TSM_CACHE:   opt_enum = casacore::TSMOption::Cache;   break;
+                case TSM_BUFFER:  opt_enum = casacore::TSMOption::Buffer;  break;
+                case TSM_MMAP:    opt_enum = casacore::TSMOption::MMap;    break;
+                case TSM_DEFAULT: opt_enum = casacore::TSMOption::Default; break;
+                case TSM_AIPSRC:  opt_enum = casacore::TSMOption::Aipsrc;  break;
+                default:          opt_enum = casacore::TSMOption::Aipsrc;  break;
+            }
+            casacore::TSMOption tsmOption(opt_enum);
+            return new GlueTable(newTable, type, n_rows, initialize, endian_format, tsmOption);
         } catch (...) {
             handle_exception(exc);
             return NULL;

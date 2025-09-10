@@ -122,6 +122,24 @@ typedef void (*StringBridgeCallback)(const StringBridge *name, void *ctxt);
 typedef void (*KeywordInfoCallback)(const StringBridge *name, GlueDataType dtype, void *ctxt);
 typedef void (*KeywordReprCallback)(const StringBridge *name, GlueDataType dtype, const StringBridge *repr, void *ctxt);
 
+/** Tiled Storage Manager Option
+
+See: casatables_impl/casacore/tables/DataMan/TSMOption.h
+*/
+typedef enum TSMOption
+{
+    /**Use unbuffered file IO with internal TSM caching*/
+    TSM_CACHE,
+    /**Use memory-mapped IO*/
+    TSM_MMAP,
+    /**Use buffered file IO*/
+    TSM_BUFFER,
+    /**MMap for existing files on 64-bit systems, otherwise Buffer*/
+    TSM_DEFAULT,
+    /**Use the option as defined in the aipsrc file*/
+    TSM_AIPSRC,
+} TSMOption;
+
 typedef enum TableOpenMode
 {
     TOM_OPEN_READONLY = 1,
@@ -139,12 +157,29 @@ typedef enum TableCreateMode
     TCM_SCRATCH = 3,
 } TableCreateMode;
 
-/**Different modes for creating a CASA table description.*/
+/**Modes for creating a CASA table description.
+
+see: casatables_impl/casacore/tables/Tables/TableDesc.h
+
+additional options which could be enabled if needed:
+<ul>
+  <li> Old
+    Open an existing table description file as readonly.
+  <li> Update
+    Open an existing table description file as read/write
+    The TableDesc destructor will rewrite the possibly changed
+    description.
+  <li> Delete
+    Delete the table description file. This gets done by the destructor.
+</ul>
+
+Limited subset of GlueTableDesc::TDOption to avoid
+*/
 typedef enum TableDescCreateMode
 {
     // NB: bindgenc can't handle multiline docstrings here.
     /** Create a new table description file.*/
-    // "The TableDesc destructor will write the table description into the file.""
+    // "The TableDesc destructor will write the table description into the file."
     TDM_NEW,
 
     /** Create a new file, raising an error if it already exists.*/
@@ -157,15 +192,6 @@ typedef enum TableDescCreateMode
     // description (i.e. it copies the description when being constructed)."
     TDM_SCRATCH,
 
-    // Note, there are other options here which could be enabled if needed.
-    //  <li> Old
-    //    Open an existing table description file as readonly.
-    //  <li> Update
-    //    Open an existing table description file as read/write
-    //    The TableDesc destructor will rewrite the possibly changed
-    //    description.
-    //  <li> Delete
-    //    Delete the table description file. This gets done by the destructor.
 } TableDescOption;
 
 extern "C"
@@ -291,7 +317,8 @@ extern "C"
     // Table
 
     GlueTable *table_create(const StringBridge &path, GlueTableDesc &table_desc,
-                            unsigned long n_rows, const TableCreateMode mode, ExcInfo &exc);
+                            unsigned long n_rows, const TableCreateMode mode,
+                            bool initialize, TSMOption tsm_opt, ExcInfo &exc);
     GlueTable *table_alloc_and_open(const StringBridge &path, const TableOpenMode mode, ExcInfo &exc);
     void table_close_and_free(GlueTable *table, ExcInfo &exc);
     unsigned long table_n_rows(const GlueTable &table);

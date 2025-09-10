@@ -1,1 +1,5 @@
 /target/
+casatables/examples/*.strace
+casatables/examples/*.o
+casatables/examples/write_ms
+casatables/examples/*.tabdsc
