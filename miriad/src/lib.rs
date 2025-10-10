@@ -873,7 +873,7 @@ impl DataSet {
                 header.align_to(align)?;
                 let n_bytes = aligned_len as usize - align;
 
-                if n_bytes % ty.size() != 0 {
+                if !n_bytes.is_multiple_of(ty.size()) {
                     // TODO: warn and press on
                     return Err(MiriadFormatError::Generic(format!(
                         "illegal array size {n_bytes} for type {ty:?}"
