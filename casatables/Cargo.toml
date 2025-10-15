@@ -18,7 +18,7 @@ rubbl_casatables_impl = "thiscommit:2021-11-04:9Lgzrtq"
 rubbl_core = "thiscommit:2024-08-12:zKS3IWN"
 
 [dependencies]
-ndarray = "0.16.1"
+ndarray = "0.17.0"
 never = "0.1.0"
 rubbl_casatables_impl = { version = "0.0.0-dev.0", path = "../casatables_impl" }
 rubbl_core = { version = "0.0.0-dev.0", path = "../core" }
