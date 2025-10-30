@@ -29,7 +29,7 @@ cc = { version = "1.2.43", features = ["parallel"] }
 
 [dev-dependencies]
 anyhow = "1.0.100"
-clap = { version = "4.5.50", features = ["cargo"] }
+clap = { version = "4.5.51", features = ["cargo"] }
 rubbl_core = { version = "0.0.0-dev.0", path = "../core", features = [
     "notifications",
 ] }
