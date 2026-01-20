@@ -22,7 +22,7 @@ ndarray = "0.16.1"
 never = "0.1.0"
 rubbl_casatables_impl = { version = "0.0.0-dev.0", path = "../casatables_impl" }
 rubbl_core = { version = "0.0.0-dev.0", path = "../core" }
-thiserror = "2.0.17"
+thiserror = "2.0.18"
 
 [build-dependencies]
 cc = { version = "1.2.52", features = ["parallel"] }
