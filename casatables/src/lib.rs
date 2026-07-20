@@ -176,7 +176,7 @@ pub trait CasaDataType: Clone + PartialEq + Sized {
     /// Default behavior: fill the dest with a zero shape, i.e. report that we're a scalar.
     #[doc(hidden)]
     fn casatables_put_shape(&self, shape_dest: &mut Vec<u64>) {
-        shape_dest.truncate(0);
+        shape_dest.clear();
     }
 
     #[doc(hidden)]
@@ -374,7 +374,7 @@ impl CasaDataType for Vec<String> {
     }
 
     fn casatables_put_shape(&self, shape_dest: &mut Vec<u64>) {
-        shape_dest.truncate(0);
+        shape_dest.clear();
         shape_dest.push(self.len() as u64);
     }
 
@@ -408,7 +408,7 @@ impl<I: CasaScalarData + Copy, D: Dimension + DimFromShapeSlice<u64>> CasaDataTy
     }
 
     fn casatables_put_shape(&self, shape_dest: &mut Vec<u64>) {
-        shape_dest.truncate(0);
+        shape_dest.clear();
         for s in self.shape() {
             shape_dest.push(*s as u64);
         }
