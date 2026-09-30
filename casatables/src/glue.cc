@@ -9,6 +9,9 @@
 #include <stdexcept>
 #include <casacore/tables/Tables.h>
 #include <casacore/casa/Containers/ValueHolder.h>
+#include <casacore/tables/DataMan/TiledColumnStMan.h>
+#include <casacore/tables/DataMan/TiledShapeStMan.h>
+#include <casacore/tables/DataMan/StandardStManAccessor.h>
 
 #define CASA_TYPES_ALREADY_DECLARED
 #define GlueTable casacore::Table
@@ -1648,6 +1651,195 @@ extern "C" {
             return 1;
         }
 
+        return 0;
+    }
+
+    // Bulk write of a contiguous range of rows of one column.
+    //
+    // `data_type` is the *array* data type (e.g. TpArrayFloat) of the buffer.
+    // `dims` is the full shape of the buffer in row-major (C / Rust) order, with
+    // the row axis first: dims[0] == n_rows. For a scalar column n_dims == 1;
+    // for an array column dims[1..] is the cell shape (row-major). Because
+    // casacore arrays are column-major, reversing the dims yields exactly the
+    // casacore shape [cell..., n_rows] over the same memory, so no copy needed.
+    int
+    table_put_column_range(GlueTable &table, const StringBridge &col_name,
+                           const unsigned long start_row, const unsigned long n_rows,
+                           const GlueDataType data_type,
+                           const unsigned long n_dims, const unsigned long *dims,
+                           void *data, ExcInfo &exc)
+    {
+        try {
+            if (n_dims < 1)
+                throw std::runtime_error("table_put_column_range: need at least one dimension (rows)");
+            if (dims[0] != n_rows)
+                throw std::runtime_error("table_put_column_range: dims[0] must equal n_rows");
+            if (n_rows == 0)
+                return 0;
+            if (start_row + n_rows > table.nrow())
+                throw std::runtime_error("table_put_column_range: row range exceeds the number of rows in the table");
+
+            casacore::IPosition shape(n_dims);
+            for (casacore::uInt i = 0; i < n_dims; i++)
+                shape[i] = dims[n_dims - 1 - i];
+
+            casacore::RefRows rows(start_row, start_row + n_rows - 1);
+
+            switch (data_type) {
+
+#define CASE(DTYPE, CPPTYPE) \
+            case casacore::DTYPE: { \
+                if (n_dims == 1) { \
+                    casacore::ScalarColumn<CPPTYPE> col(table, bridge_string(col_name)); \
+                    casacore::Vector<CPPTYPE> vec(shape, (CPPTYPE *) data, casacore::SHARE); \
+                    col.putColumnCells(rows, vec); \
+                } else { \
+                    casacore::ArrayColumn<CPPTYPE> col(table, bridge_string(col_name)); \
+                    casacore::Array<CPPTYPE> array(shape, (CPPTYPE *) data, casacore::SHARE); \
+                    col.putColumnCells(rows, array); \
+                } \
+                break; \
+            }
+
+            CASE(TpArrayBool, casacore::Bool)
+            CASE(TpArrayChar, casacore::Char)
+            CASE(TpArrayUChar, casacore::uChar)
+            CASE(TpArrayShort, casacore::Short)
+            CASE(TpArrayUShort, casacore::uShort)
+            CASE(TpArrayInt, casacore::Int)
+            CASE(TpArrayUInt, casacore::uInt)
+            CASE(TpArrayInt64, casacore::Int64)
+            CASE(TpArrayFloat, float)
+            CASE(TpArrayDouble, double)
+            CASE(TpArrayComplex, casacore::Complex)
+            CASE(TpArrayDComplex, casacore::DComplex)
+
+#undef CASE
+
+            case casacore::TpArrayString: {
+                if (n_dims != 1)
+                    throw std::runtime_error("table_put_column_range: string array columns are not supported");
+                casacore::ScalarColumn<casacore::String> col(table, bridge_string(col_name));
+                casacore::Vector<casacore::String> vec(n_rows);
+                const StringBridge *sb = (const StringBridge *) data;
+                for (unsigned long i = 0; i < n_rows; i++)
+                    vec[i] = bridge_string(sb[i]);
+                col.putColumnCells(rows, vec);
+                break;
+            }
+
+            default:
+                throw std::runtime_error("table_put_column_range: unhandled data type");
+            }
+        } catch (...) {
+            handle_exception(exc);
+            return 1;
+        }
+
+        return 0;
+    }
+
+    // Add an array column bound to its own tiled storage manager: a
+    // TiledColumnStMan for a fixed-shape column, or a TiledShapeStMan (shape
+    // set per row, fixed number of dimensions) otherwise.
+    //
+    // `dims` is the cell shape in row-major (C / Rust) order (for a
+    // variable-shape column it only fixes the dimensionality and bounds the
+    // tile). `tile_dims` is the tile shape in row-major order *including the
+    // row axis first*, i.e. [tile_rows, cell tile dims...]; it must have
+    // n_dims + 1 elements. Both are reversed here to get casacore's
+    // column-major [cell..., rows] convention.
+    int
+    table_add_tiled_array_column(
+        GlueTable &table,
+        GlueDataType data_type,
+        const StringBridge &col_name,
+        const StringBridge &comment,
+        const unsigned long n_dims,
+        const unsigned long *dims,
+        const unsigned long *tile_dims,
+        const StringBridge &dm_name,
+        bool fixed_shape,
+        ExcInfo &exc
+    )
+    {
+        try {
+            casacore::IPosition shape(n_dims);
+            for (casacore::uInt i = 0; i < n_dims; i++)
+                shape[i] = dims[n_dims - 1 - i];
+
+            casacore::IPosition tile_shape(n_dims + 1);
+            for (casacore::uInt i = 0; i < n_dims + 1; i++)
+                tile_shape[i] = tile_dims[n_dims - i];
+
+            for (casacore::uInt i = 0; i < n_dims; i++) {
+                if (tile_shape[i] < 1 || tile_shape[i] > shape[i])
+                    throw std::runtime_error("table_add_tiled_array_column: tile shape must be between 1 and the cell shape on every cell axis");
+            }
+            if (tile_shape[n_dims] < 1)
+                throw std::runtime_error("table_add_tiled_array_column: tile shape must have at least one row");
+
+            casacore::TiledColumnStMan fixed_stman(bridge_string(dm_name), tile_shape);
+            casacore::TiledShapeStMan var_stman(bridge_string(dm_name), tile_shape);
+            const casacore::DataManager &stman = fixed_shape
+                ? static_cast<const casacore::DataManager &>(fixed_stman)
+                : static_cast<const casacore::DataManager &>(var_stman);
+
+            switch (data_type) {
+
+#define CASE(DTYPE, CPPTYPE) \
+            case casacore::DTYPE: { \
+                if (fixed_shape) { \
+                    table.addColumn(casacore::ArrayColumnDesc<CPPTYPE>( \
+                        bridge_string(col_name), bridge_string(comment), \
+                        shape, casacore::ColumnDesc::FixedShape), stman); \
+                } else { \
+                    table.addColumn(casacore::ArrayColumnDesc<CPPTYPE>( \
+                        bridge_string(col_name), bridge_string(comment), \
+                        (casacore::Int) n_dims), stman); \
+                } \
+                break; \
+            }
+
+            CASE(TpBool, casacore::Bool)
+            CASE(TpChar, casacore::Char)
+            CASE(TpUChar, casacore::uChar)
+            CASE(TpShort, casacore::Short)
+            CASE(TpUShort, casacore::uShort)
+            CASE(TpInt, casacore::Int)
+            CASE(TpUInt, casacore::uInt)
+            CASE(TpFloat, float)
+            CASE(TpDouble, double)
+            CASE(TpComplex, casacore::Complex)
+            CASE(TpDComplex, casacore::DComplex)
+#undef CASE
+
+            default:
+                throw std::runtime_error("unhandled tiled array column data type");
+            }
+        } catch (...) {
+            handle_exception(exc);
+            return 1;
+        }
+        return 0;
+    }
+
+    // Set the bucket cache size (in buckets) of a StandardStMan data manager.
+    int
+    table_set_standard_stman_cache_size(
+        GlueTable &table,
+        const StringBridge &dm_name,
+        const unsigned long n_buckets,
+        ExcInfo &exc
+    )
+    {
+        try {
+            casacore::ROStandardStManAccessor accessor(table, bridge_string(dm_name));
+            accessor.setCacheSize(n_buckets, casacore::True);
+        } catch (...) {
+            handle_exception(exc);
+            return 1;
+        }
         return 0;
     }
 

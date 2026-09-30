@@ -609,6 +609,41 @@ extern "C" {
     ) -> ::std::os::raw::c_int;
 }
 extern "C" {
+    pub fn table_put_column_range(
+        table: *mut GlueTable,
+        col_name: *const StringBridge,
+        start_row: ::std::os::raw::c_ulong,
+        n_rows: ::std::os::raw::c_ulong,
+        data_type: GlueDataType,
+        n_dims: ::std::os::raw::c_ulong,
+        dims: *const ::std::os::raw::c_ulong,
+        data: *mut ::std::os::raw::c_void,
+        exc: *mut ExcInfo,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn table_add_tiled_array_column(
+        table: *mut GlueTable,
+        data_type: GlueDataType,
+        col_name: *const StringBridge,
+        comment: *const StringBridge,
+        n_dims: ::std::os::raw::c_ulong,
+        dims: *const ::std::os::raw::c_ulong,
+        tile_dims: *const ::std::os::raw::c_ulong,
+        dm_name: *const StringBridge,
+        fixed_shape: bool,
+        exc: *mut ExcInfo,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn table_set_standard_stman_cache_size(
+        table: *mut GlueTable,
+        dm_name: *const StringBridge,
+        n_buckets: ::std::os::raw::c_ulong,
+        exc: *mut ExcInfo,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
     pub fn table_add_rows(
         table: *mut GlueTable,
         n_rows: ::std::os::raw::c_ulong,
