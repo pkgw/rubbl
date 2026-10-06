@@ -2025,6 +2025,217 @@ impl Table {
         Ok(())
     }
 
+    /// Put values into a contiguous range of rows of a *scalar* column in a
+    /// single call.
+    ///
+    /// `values[i]` is written to row `start_row + i`. The rows must already
+    /// exist (see [`Self::add_rows`]). This maps onto casacore's
+    /// `ScalarColumn<T>::putColumnCells()` and is dramatically faster than
+    /// calling [`Self::put_cell`] once per row, because the storage manager's
+    /// buckets and indirect-array file are touched sequentially rather than
+    /// being thrashed by interleaved per-row, per-column writes.
+    pub fn put_column_range_scalar<T: CasaScalarData>(
+        &mut self,
+        col_name: &str,
+        start_row: u64,
+        values: &[T],
+    ) -> Result<(), CasacoreError> {
+        let ccol_name = glue::StringBridge::from_rust(col_name);
+        let n_rows = values.len() as u64;
+        let dims = [n_rows];
+
+        let rv = if T::DATA_TYPE == glue::GlueDataType::TpString {
+            let strings: Vec<String> = values
+                .iter()
+                .map(|v| T::casatables_string_pass_through_out(v))
+                .collect();
+            let bridges: Vec<glue::StringBridge> = strings
+                .iter()
+                .map(|s| glue::StringBridge::from_rust(s))
+                .collect();
+            unsafe {
+                glue::table_put_column_range(
+                    self.handle,
+                    &ccol_name,
+                    start_row,
+                    n_rows,
+                    T::VECTOR_TYPE,
+                    1,
+                    dims.as_ptr(),
+                    bridges.as_ptr() as _,
+                    &mut self.exc_info,
+                )
+            }
+        } else {
+            unsafe {
+                glue::table_put_column_range(
+                    self.handle,
+                    &ccol_name,
+                    start_row,
+                    n_rows,
+                    T::VECTOR_TYPE,
+                    1,
+                    dims.as_ptr(),
+                    values.as_ptr() as _,
+                    &mut self.exc_info,
+                )
+            }
+        };
+
+        if rv != 0 {
+            return self.exc_info.as_err();
+        }
+
+        Ok(())
+    }
+
+    /// Put arrays into a contiguous range of rows of an *array* column in a
+    /// single call.
+    ///
+    /// The first axis of `values` is the row axis (so `values.shape()[0]` rows
+    /// are written, starting at `start_row`); the remaining axes are the cell
+    /// shape, in the same (row-major) convention used by [`Self::put_cell`]
+    /// and [`Self::get_cell`]. The rows must already exist. Non-contiguous
+    /// inputs are copied into standard layout first. This maps onto casacore's
+    /// `ArrayColumn<T>::putColumnCells()`.
+    pub fn put_column_range_array<T, S, D>(
+        &mut self,
+        col_name: &str,
+        start_row: u64,
+        values: &ArrayBase<S, D>,
+    ) -> Result<(), CasacoreError>
+    where
+        T: CasaScalarData + Copy,
+        S: ndarray::Data<Elem = T>,
+        D: Dimension,
+    {
+        if values.ndim() < 2 {
+            return Err(CasacoreError(format!(
+                "put_column_range_array: `values` must have at least 2 dimensions \
+                 (rows, cell...) but has shape {:?}",
+                values.shape()
+            )));
+        }
+
+        if T::DATA_TYPE == glue::GlueDataType::TpString {
+            return Err(CasacoreError(
+                "put_column_range_array: string array columns are not supported".to_owned(),
+            ));
+        }
+
+        let ccol_name = glue::StringBridge::from_rust(col_name);
+        let dims: Vec<u64> = values.shape().iter().map(|&s| s as u64).collect();
+        let n_rows = dims[0];
+        let contiguous = values.as_standard_layout();
+
+        let rv = unsafe {
+            glue::table_put_column_range(
+                self.handle,
+                &ccol_name,
+                start_row,
+                n_rows,
+                T::VECTOR_TYPE,
+                dims.len() as u64,
+                dims.as_ptr(),
+                contiguous.as_ptr() as _,
+                &mut self.exc_info,
+            )
+        };
+
+        if rv != 0 {
+            return self.exc_info.as_err();
+        }
+
+        Ok(())
+    }
+
+    /// Add an array column stored in its own tiled data manager named
+    /// `dm_name`: a
+    /// [`TiledColumnStMan`](https://casacore.github.io/casacore/classcasacore_1_1TiledColumnStMan.html)
+    /// if `fixed_shape`, otherwise a
+    /// [`TiledShapeStMan`](https://casacore.github.io/casacore/classcasacore_1_1TiledShapeStMan.html)
+    /// (the shape of each cell is set when it is first written, but the
+    /// number of dimensions is fixed).
+    ///
+    /// `shape` is the cell shape (for a variable-shape column it only fixes
+    /// the dimensionality and bounds the tile) and `tile_shape` the tile
+    /// shape, both in the row-major convention of this crate; `tile_shape`
+    /// has one more element than `shape`, its *first* element being the
+    /// number of rows per tile. Tiled storage writes whole tiles at once,
+    /// which makes it far cheaper than the default `StandardStMan` (an
+    /// indirect array per row) for large data columns such as `DATA`, `FLAG`
+    /// and `WEIGHT_SPECTRUM`.
+    #[allow(clippy::too_many_arguments)]
+    pub fn add_tiled_array_column(
+        &mut self,
+        data_type: glue::GlueDataType,
+        col_name: &str,
+        comment: Option<&str>,
+        shape: &[u64],
+        tile_shape: &[u64],
+        dm_name: &str,
+        fixed_shape: bool,
+    ) -> Result<(), TableError> {
+        if tile_shape.len() != shape.len() + 1 {
+            return Err(CasacoreError(format!(
+                "add_tiled_array_column: tile_shape must have {} elements (rows first) but has {}",
+                shape.len() + 1,
+                tile_shape.len()
+            ))
+            .into());
+        }
+        let ccol_name = glue::StringBridge::from_rust(col_name);
+        let ccomment = glue::StringBridge::from_rust(comment.unwrap_or(""));
+        let cdm_name = glue::StringBridge::from_rust(dm_name);
+
+        let rv = unsafe {
+            glue::table_add_tiled_array_column(
+                self.handle,
+                data_type,
+                &ccol_name,
+                &ccomment,
+                shape.len() as u64,
+                shape.as_ptr(),
+                tile_shape.as_ptr(),
+                &cdm_name,
+                fixed_shape,
+                &mut self.exc_info,
+            )
+        };
+        if rv != 0 {
+            return self.exc_info.as_err();
+        }
+        Ok(())
+    }
+
+    /// Set the number of buckets cached in memory by the `StandardStMan`
+    /// data manager named `dm_name` (typically `"StandardStMan"`).
+    ///
+    /// The default cache is tiny (a couple of buckets), so writing a range of
+    /// rows one column at a time re-reads and re-writes every bucket once per
+    /// column. Making the cache large enough to hold all buckets touched by a
+    /// batch of rows means each bucket is read and written once. The setting
+    /// is not persisted in the table.
+    pub fn set_standard_stman_cache_size(
+        &mut self,
+        dm_name: &str,
+        n_buckets: u64,
+    ) -> Result<(), CasacoreError> {
+        let cdm_name = glue::StringBridge::from_rust(dm_name);
+        let rv = unsafe {
+            glue::table_set_standard_stman_cache_size(
+                self.handle,
+                &cdm_name,
+                n_buckets,
+                &mut self.exc_info,
+            )
+        };
+        if rv != 0 {
+            return self.exc_info.as_err();
+        }
+        Ok(())
+    }
+
     /// Add additional, empty rows to the table.
     pub fn add_rows(&mut self, n_rows: usize) -> Result<(), CasacoreError> {
         if unsafe { glue::table_add_rows(self.handle, n_rows as u64, &mut self.exc_info) != 0 } {
@@ -3282,5 +3493,235 @@ mod tests {
         let table_debug = format!("{root_table:?}");
 
         assert!(table_debug.contains(root_table_path.to_str().unwrap()));
+    }
+
+    #[test]
+    fn table_put_column_range() {
+        let tmp_dir = tempdir().unwrap();
+        let table_path = tmp_dir.path().join("test.ms");
+
+        let mut table_desc = TableDesc::new("", TableDescCreateMode::TDM_SCRATCH).unwrap();
+        table_desc
+            .add_scalar_column(GlueDataType::TpDouble, "TIME", None, false, false)
+            .unwrap();
+        table_desc
+            .add_scalar_column(GlueDataType::TpInt, "ANTENNA1", None, false, false)
+            .unwrap();
+        table_desc
+            .add_scalar_column(GlueDataType::TpBool, "FLAG_ROW", None, false, false)
+            .unwrap();
+        table_desc
+            .add_scalar_column(GlueDataType::TpString, "NAME", None, false, false)
+            .unwrap();
+        table_desc
+            .add_array_column(GlueDataType::TpDouble, "UVW", None, Some(&[3]), true, false)
+            .unwrap();
+        // fixed-shape, indirect (like Marlu's DATA / WEIGHT_SPECTRUM)
+        table_desc
+            .add_array_column(
+                GlueDataType::TpComplex,
+                "DATA",
+                None,
+                Some(&[3, 4]),
+                false,
+                false,
+            )
+            .unwrap();
+        // variable-shape, indirect (like the MS template's FLAG / WEIGHT)
+        table_desc
+            .add_array_column(GlueDataType::TpBool, "FLAG", None, None, false, false)
+            .unwrap();
+        table_desc
+            .add_array_column(GlueDataType::TpFloat, "WEIGHT", None, None, false, false)
+            .unwrap();
+
+        let n_rows = 7usize;
+        let mut table = Table::new(&table_path, table_desc, 0, TableCreateMode::New).unwrap();
+        table.add_rows(n_rows).unwrap();
+
+        let times: Vec<f64> = (0..n_rows).map(|i| 1e9 + i as f64).collect();
+        let ants: Vec<i32> = (0..n_rows).map(|i| i as i32 * 3).collect();
+        let flag_rows: Vec<bool> = (0..n_rows).map(|i| i % 2 == 0).collect();
+        let names: Vec<String> = (0..n_rows).map(|i| format!("ant{i}")).collect();
+        let uvw = Array::from_shape_fn((n_rows, 3), |(r, i)| (r * 10 + i) as f64);
+        let data = Array::from_shape_fn((n_rows, 3, 4), |(r, c, p)| {
+            Complex::new((r * 100 + c * 10 + p) as f32, -(r as f32))
+        });
+        let flag = Array::from_shape_fn((n_rows, 3, 4), |(r, c, p)| (r + c + p) % 3 == 0);
+        let weight = Array::from_shape_fn((n_rows, 4), |(r, p)| (r * 4 + p) as f32);
+
+        // write first two rows one way and the rest the other, to exercise start_row
+        table
+            .put_column_range_scalar("TIME", 0, &times[..2])
+            .unwrap();
+        table
+            .put_column_range_scalar("TIME", 2, &times[2..])
+            .unwrap();
+        table.put_column_range_scalar("ANTENNA1", 0, &ants).unwrap();
+        table
+            .put_column_range_scalar("FLAG_ROW", 0, &flag_rows)
+            .unwrap();
+        table.put_column_range_scalar("NAME", 0, &names).unwrap();
+        table.put_column_range_array("UVW", 0, &uvw).unwrap();
+        table.put_column_range_array("DATA", 0, &data).unwrap();
+        // pass a non-contiguous view to check the standard-layout fallback
+        table
+            .put_column_range_array("FLAG", 0, &flag.view().reversed_axes().reversed_axes())
+            .unwrap();
+        table
+            .put_column_range_array("FLAG", 0, &flag.slice(ndarray::s![.., .., ..]))
+            .unwrap();
+        table.put_column_range_array("WEIGHT", 0, &weight).unwrap();
+
+        // wrong number of rows must fail cleanly
+        assert!(table.put_column_range_scalar("TIME", 5, &times).is_err());
+        assert!(table
+            .put_column_range_array("UVW", 0, &Array::from(times.clone()))
+            .is_err());
+
+        for r in 0..n_rows {
+            assert_eq!(table.get_cell::<f64>("TIME", r as u64).unwrap(), times[r]);
+            assert_eq!(
+                table.get_cell::<i32>("ANTENNA1", r as u64).unwrap(),
+                ants[r]
+            );
+            assert_eq!(
+                table.get_cell::<bool>("FLAG_ROW", r as u64).unwrap(),
+                flag_rows[r]
+            );
+            assert_eq!(
+                table.get_cell::<String>("NAME", r as u64).unwrap(),
+                names[r]
+            );
+            let got_uvw: Vec<f64> = table.get_cell_as_vec("UVW", r as u64).unwrap();
+            assert_eq!(got_uvw, uvw.row(r).to_vec());
+            // (flat, row-major cell contents; this is how Marlu reads cells back)
+            let got_data: Vec<Complex<f32>> = table.get_cell_as_vec("DATA", r as u64).unwrap();
+            let exp_data: Vec<Complex<f32>> = data
+                .index_axis(ndarray::Axis(0), r)
+                .iter()
+                .copied()
+                .collect();
+            assert_eq!(got_data, exp_data);
+            let got_flag: Vec<bool> = table.get_cell_as_vec("FLAG", r as u64).unwrap();
+            let exp_flag: Vec<bool> = flag
+                .index_axis(ndarray::Axis(0), r)
+                .iter()
+                .copied()
+                .collect();
+            assert_eq!(got_flag, exp_flag);
+            let got_weight: Vec<f32> = table.get_cell_as_vec("WEIGHT", r as u64).unwrap();
+            assert_eq!(got_weight, weight.row(r).to_vec());
+        }
+    }
+
+    #[test]
+    fn table_tiled_column_and_ssm_cache() {
+        let tmp_dir = tempdir().unwrap();
+        let table_path = tmp_dir.path().join("test.ms");
+
+        let mut table_desc = TableDesc::new("", TableDescCreateMode::TDM_SCRATCH).unwrap();
+        table_desc
+            .add_scalar_column(GlueDataType::TpDouble, "TIME", None, false, false)
+            .unwrap();
+        let mut table = Table::new(&table_path, table_desc, 0, TableCreateMode::New).unwrap();
+
+        // tiles of 5 rows over 11 rows: exercises partially filled tiles
+        table
+            .add_tiled_array_column(
+                GlueDataType::TpComplex,
+                "DATA",
+                Some("tiled"),
+                &[3, 4],
+                &[5, 3, 4],
+                "TiledDATA",
+                true,
+            )
+            .unwrap();
+        // variable-shape (TiledShapeStMan), like an MS FLAG column
+        table
+            .add_tiled_array_column(
+                GlueDataType::TpBool,
+                "FLAG",
+                None,
+                &[3, 4],
+                &[5, 3, 4],
+                "TiledFLAG",
+                false,
+            )
+            .unwrap();
+        // bad tile shapes are rejected
+        assert!(table
+            .add_tiled_array_column(
+                GlueDataType::TpFloat,
+                "BAD1",
+                None,
+                &[3, 4],
+                &[5, 4],
+                "T1",
+                true
+            )
+            .is_err());
+        assert!(table
+            .add_tiled_array_column(
+                GlueDataType::TpFloat,
+                "BAD2",
+                None,
+                &[3, 4],
+                &[5, 3, 8],
+                "T2",
+                true
+            )
+            .is_err());
+
+        let n_rows = 11usize;
+        table.add_rows(n_rows).unwrap();
+        table
+            .set_standard_stman_cache_size("StandardStMan", 100)
+            .unwrap();
+        assert!(table
+            .set_standard_stman_cache_size("NoSuchStMan", 100)
+            .is_err());
+
+        let data = Array::from_shape_fn((n_rows, 3, 4), |(r, c, p)| {
+            Complex::new((r * 100 + c * 10 + p) as f32, r as f32)
+        });
+        let flag = Array::from_shape_fn((n_rows, 3, 4), |(r, c, p)| (r + c + p) % 2 == 0);
+        let times: Vec<f64> = (0..n_rows).map(|i| i as f64).collect();
+        table
+            .put_column_range_array("DATA", 0, &data.slice(ndarray::s![..7, .., ..]))
+            .unwrap();
+        table
+            .put_column_range_array("DATA", 7, &data.slice(ndarray::s![7.., .., ..]))
+            .unwrap();
+        table.put_column_range_array("FLAG", 0, &flag).unwrap();
+        table.put_column_range_scalar("TIME", 0, &times).unwrap();
+        drop(table);
+
+        let mut table = Table::open(&table_path, TableOpenMode::Read).unwrap();
+        assert_eq!(table.n_rows(), n_rows as u64);
+        let desc = table.get_col_desc("DATA").unwrap();
+        assert!(desc.is_fixed_shape());
+        assert_eq!(desc.shape().unwrap(), &[3, 4]);
+        let desc = table.get_col_desc("FLAG").unwrap();
+        assert!(!desc.is_fixed_shape());
+        assert!(desc.shape().is_none());
+        for (r, &time) in times.iter().enumerate().take(n_rows) {
+            let got: Vec<Complex<f32>> = table.get_cell_as_vec("DATA", r as u64).unwrap();
+            let exp: Vec<Complex<f32>> = data
+                .index_axis(ndarray::Axis(0), r)
+                .iter()
+                .copied()
+                .collect();
+            assert_eq!(got, exp);
+            let got: Vec<bool> = table.get_cell_as_vec("FLAG", r as u64).unwrap();
+            let exp: Vec<bool> = flag
+                .index_axis(ndarray::Axis(0), r)
+                .iter()
+                .copied()
+                .collect();
+            assert_eq!(got, exp);
+            assert_eq!(table.get_cell::<f64>("TIME", r as u64).unwrap(), time);
+        }
     }
 }

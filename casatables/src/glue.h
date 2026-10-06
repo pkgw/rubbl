@@ -358,6 +358,18 @@ extern "C"
                        const unsigned long row_number, const GlueDataType data_type,
                        const unsigned long n_dims, const unsigned long *dims,
                        void *data, ExcInfo &exc);
+    int table_put_column_range(GlueTable &table, const StringBridge &col_name,
+                               const unsigned long start_row, const unsigned long n_rows,
+                               const GlueDataType data_type,
+                               const unsigned long n_dims, const unsigned long *dims,
+                               void *data, ExcInfo &exc);
+    int table_add_tiled_array_column(GlueTable &table, GlueDataType data_type,
+                                     const StringBridge &col_name, const StringBridge &comment,
+                                     const unsigned long n_dims, const unsigned long *dims,
+                                     const unsigned long *tile_dims, const StringBridge &dm_name,
+                                     bool fixed_shape, ExcInfo &exc);
+    int table_set_standard_stman_cache_size(GlueTable &table, const StringBridge &dm_name,
+                                            const unsigned long n_buckets, ExcInfo &exc);
     int table_add_rows(GlueTable &table, const unsigned long n_rows, ExcInfo &exc);
 
     GlueTableRow *table_row_alloc(const GlueTable &table, const unsigned char is_read_only, ExcInfo &exc);
