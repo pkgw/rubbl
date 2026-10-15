@@ -1,5 +1,10 @@
 # rc: micro bump
 
+- No code changes; just bump `cc` to 1.2.63.
+
+
+# rubbl_casatables_impl 0.4.35001 (2025-04-17)
+
 - No code changes; just bump `cc` to 1.2.19.
 
 

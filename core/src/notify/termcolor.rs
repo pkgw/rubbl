@@ -116,10 +116,10 @@ impl TermcolorNotificationBackend {
         };
 
         self.styled(kind, |s| {
-            write!(s, "{}", text).expect("failed to write to standard stream");
+            write!(s, "{text}").expect("failed to write to standard stream");
         });
         self.with_stream(kind, |s| {
-            writeln!(s, " {}", args).expect("failed to write to standard stream");
+            writeln!(s, " {args}").expect("failed to write to standard stream");
         });
     }
 
@@ -139,7 +139,7 @@ impl TermcolorNotificationBackend {
             self.generic_message(
                 NotificationKind::Severe,
                 Some(prefix),
-                format_args!("{}", fail),
+                format_args!("{fail}"),
             );
             prefix = "caused by:";
         }
@@ -151,7 +151,7 @@ impl TermcolorNotificationBackend {
             format_args!("backtrace follows:"),
         );
         self.with_stream(NotificationKind::Severe, |s| {
-            writeln!(s, "{:?}", backtrace).expect("backtrace dump failed");
+            writeln!(s, "{backtrace:?}").expect("backtrace dump failed");
         });
     }
 }
@@ -162,13 +162,13 @@ impl NotificationBackend for TermcolorNotificationBackend {
 
         if let Some(e) = err {
             for fail in e.chain() {
-                self.generic_message(kind, Some("caused by:"), format_args!("{}", fail));
+                self.generic_message(kind, Some("caused by:"), format_args!("{fail}"));
             }
 
             let backtrace = e.backtrace();
             self.generic_message(kind, Some("debugging:"), format_args!("backtrace follows:"));
             self.with_stream(kind, |s| {
-                writeln!(s, "{:?}", backtrace).expect("backtrace dump failed");
+                writeln!(s, "{backtrace:?}").expect("backtrace dump failed");
             });
         }
     }

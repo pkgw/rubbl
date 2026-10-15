@@ -22,15 +22,15 @@ ndarray = "0.16.1"
 never = "0.1.0"
 rubbl_casatables_impl = { version = "0.0.0-dev.0", path = "../casatables_impl" }
 rubbl_core = { version = "0.0.0-dev.0", path = "../core" }
-thiserror = "2.0.12"
+thiserror = "2.0.18"
 
 [build-dependencies]
-cc = { version = "1.2.19", features = ["parallel"] }
+cc = { version = "1.2.63", features = ["parallel"] }
 
 [dev-dependencies]
-anyhow = "1.0.98"
-clap = { version = "4.5.36", features = ["cargo"] }
+anyhow = "1.0.102"
+clap = { version = "4.6.1", features = ["cargo"] }
 rubbl_core = { version = "0.0.0-dev.0", path = "../core", features = [
     "notifications",
 ] }
-tempfile = "3.19.1"
+tempfile = "3.27.0"

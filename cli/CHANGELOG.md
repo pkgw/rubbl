@@ -1,6 +1,12 @@
 # rc: micro bump
 
 There are no code changes in this release of the Rubbl CLI. There are, however,
+version bumps of the dependencies `anyhow`, `clap`, and `thiserror`.
+
+
+# rubbl 0.3.2 (2025-04-17)
+
+There are no code changes in this release of the Rubbl CLI. There are, however,
 version bumps of the dependencies `anyhow`, `clap`, and `thiserror`. In
 particular, we are now using the 2.x series of `thiserror`.
 

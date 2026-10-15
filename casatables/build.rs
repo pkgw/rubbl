@@ -24,7 +24,7 @@ fn main() {
         .compile("libcasatables_glue.a");
 
     for file in FILES {
-        println!("cargo:rerun-if-changed={}", file);
+        println!("cargo:rerun-if-changed={file}");
     }
 
     // Because our glue.cc references casatables C++ directly, we need to make
