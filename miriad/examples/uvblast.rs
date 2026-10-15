@@ -27,7 +27,7 @@ fn main() {
         Err(e) => {
             println!("fatal error while processing {}", path.to_string_lossy());
             for cause in e.chain() {
-                println!("  caused by: {}", cause);
+                println!("  caused by: {cause}");
             }
             1
         }

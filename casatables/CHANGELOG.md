@@ -1,3 +1,13 @@
+# rubbl_casatables 0.10.0 (2026-10-15)
+
+- Add bulk column-range writes and tiled/SSM-cache table controls ([#601],
+  @d3v-null). These can increase I/O efficiency by one or two orders of
+  magnitude if used properly — see the pull request.
+- Minor dependency updates
+
+[#601]: https://github.com/pkgw/rubbl/pull/601
+
+
 # rubbl_casatables 0.9.0 (2025-04-17)
 
 - Mark `TableError` as inexhaustive and add a `UserMessage` variant (#490,

@@ -1,3 +1,8 @@
+# rubbl_visdata 0.3.3 (2026-10-15)
+
+No code changes; just bumping the `anyhow` version.
+
+
 # rubbl_visdata 0.3.2 (2025-04-17)
 
 No code changes; just bumping the `anyhow` version.

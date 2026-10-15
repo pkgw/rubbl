@@ -125,7 +125,7 @@ fn do_list(_matches: &ArgMatches, _nbe: &mut dyn NotificationBackend) -> Result<
     println!("Currently available \"rubbl\" sub-commands:");
 
     for command in list_commands() {
-        println!("    {}", command);
+        println!("    {command}");
     }
 
     Ok(0)
@@ -145,12 +145,12 @@ fn do_show(matches: &ArgMatches, nbe: &mut dyn NotificationBackend) -> Result<i3
                 );
             }
 
-            println!("{}", doi);
+            println!("{doi}");
         }
 
         Some(("version-doi", _)) => {
             // For releases, this will be rewritten to the real DOI:
-            let doi = "10.5281/zenodo.15237276";
+            let doi = "10.5281/zenodo.23382962";
 
             if doi.starts_with("xx.") {
                 rn_warning!(
@@ -159,7 +159,7 @@ fn do_show(matches: &ArgMatches, nbe: &mut dyn NotificationBackend) -> Result<i3
                 );
             }
 
-            println!("{}", doi);
+            println!("{doi}");
         }
 
         Some(_) | None => {

@@ -1,3 +1,9 @@
+# rubbl_miriad 0.3.3 (2026-10-15)
+
+There are no code changes in this release. There are, however, version bumps of
+the dependencies `anyhow`, `clap`, and `thiserror`.
+
+
 # rubbl_miriad 0.3.2 (2025-04-17)
 
 There are no code changes in this release. There are, however, version bumps of

@@ -31,7 +31,7 @@ fn main() {
         Err(e) => {
             println!("fatal error while processing {}", path.to_string_lossy());
             for cause in e.chain() {
-                println!("  caused by: {}", cause);
+                println!("  caused by: {cause}");
             }
             1
         }
@@ -56,7 +56,7 @@ fn inner(path: &OsStr) -> Result<i32, anyhow::Error> {
                 }
 
                 LowLevelFitsItem::EndOfHeaders(n_bytes) => {
-                    println!("-- end of headers (expect {} bytes of data) --", n_bytes);
+                    println!("-- end of headers (expect {n_bytes} bytes of data) --");
                     last_was_data = false;
                 }
 
