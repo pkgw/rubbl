@@ -22,9 +22,21 @@ fn main() {
     // Enable interaction with MeasurementSets that have been compressed
     // using Dysco compression. Value doesn't matter, its mere presence is
     // enough.
+    //
+    // The Dysco sources are only compiled when the feature is enabled, since
+    // they require GSL headers and libraries. We also rename their namespace,
+    // for the same reason that we rename `casacore`: so that rubbl can coexist
+    // with a system casacore that has loaded `libdyscostman`.
     #[cfg(feature = "dysco")]
     {
-        builder.define("HAVE_DYSCO", None);
+        builder
+            .define("HAVE_DYSCO", None)
+            .define("dyscostman", "rubbl_dyscostman")
+            .files(DYSCO_FILES);
+
+        for file in DYSCO_FILES {
+            println!("cargo:rerun-if-changed={file}");
+        }
     }
     builder.compile("libcasatables_impl.a");
 
@@ -300,15 +312,6 @@ const FILES: &[&str] = &[
     "casacore/tables/DataMan/VirtColEng.cc",
     "casacore/tables/DataMan/VirtScaCol.cc",
     "casacore/tables/DataMan/VirtArrCol.cc",
-    "casacore/tables/Dysco/aftimeblockencoder.cc",
-    "casacore/tables/Dysco/dyscodatacolumn.cc",
-    "casacore/tables/Dysco/dyscostman.cc",
-    "casacore/tables/Dysco/dyscoweightcolumn.cc",
-    "casacore/tables/Dysco/rftimeblockencoder.cc",
-    "casacore/tables/Dysco/rowtimeblockencoder.cc",
-    "casacore/tables/Dysco/stochasticencoder.cc",
-    "casacore/tables/Dysco/threadeddyscocolumn.cc",
-    "casacore/tables/Dysco/weightencoder.cc",
     "casacore/tables/Tables/ArrayColumn_tmpl.cc",
     "casacore/tables/Tables/ArrColDesc_tmpl.cc",
     "casacore/tables/Tables/ArrayColumnBase.cc",
@@ -364,6 +367,19 @@ const FILES: &[&str] = &[
     "casacore/tables/Tables/TableSyncData.cc",
     "casacore/tables/Tables/TableTrace.cc",
     "casacore/tables/Tables/TabPath.cc",
+];
+
+#[cfg(feature = "dysco")]
+const DYSCO_FILES: &[&str] = &[
+    "casacore/tables/Dysco/aftimeblockencoder.cc",
+    "casacore/tables/Dysco/dyscodatacolumn.cc",
+    "casacore/tables/Dysco/dyscostman.cc",
+    "casacore/tables/Dysco/dyscoweightcolumn.cc",
+    "casacore/tables/Dysco/rftimeblockencoder.cc",
+    "casacore/tables/Dysco/rowtimeblockencoder.cc",
+    "casacore/tables/Dysco/stochasticencoder.cc",
+    "casacore/tables/Dysco/threadeddyscocolumn.cc",
+    "casacore/tables/Dysco/weightencoder.cc",
 ];
 
 const HEADERS: &[&str] = &[
