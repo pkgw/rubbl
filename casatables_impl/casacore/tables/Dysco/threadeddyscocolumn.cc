@@ -6,7 +6,6 @@
 #include "bytepacker.h"
 #include "threadgroup.h"
 
-#include <casacore/ms/MeasurementSets/MeasurementSet.h>
 #include <casacore/tables/Tables/ScalarColumn.h>
 
 #include <algorithm>
