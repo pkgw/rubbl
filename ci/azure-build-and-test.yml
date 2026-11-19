@@ -68,6 +68,14 @@ jobs:
     - bash: cargo test --all --release
       displayName: "cargo test (release)"
 
+    - bash: |
+        set -xeuo pipefail
+        sudo apt-get update
+        sudo apt-get install -y libgsl-dev
+        cargo test -p rubbl_casatables --features dysco --release
+      displayName: "cargo test casatables with Dysco (release)"
+      condition: and(succeeded(), eq(variables['Agent.OS'], 'Linux'))
+
     variables:
       ${{ insert }}: ${{ build.vars }}
 
@@ -106,6 +114,11 @@ jobs:
   - template: azure-job-setup.yml
   - bash: rustup component add clippy
     displayName: "Install clippy"
+  - bash: |
+      set -xeuo pipefail
+      sudo apt-get update
+      sudo apt-get install -y libgsl-dev
+    displayName: "Install GSL (for the casatables dysco feature)"
   - bash: cargo clippy --all --all-targets --all-features -- --deny warnings
     displayName: "Check clippy (cargo)"
   variables:

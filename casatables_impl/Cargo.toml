@@ -16,3 +16,6 @@ links = "casa"
 
 [build-dependencies]
 cc = { version = "1.2.63", features = ["parallel"] }
+
+[features]
+dysco = []
